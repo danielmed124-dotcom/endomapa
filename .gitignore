@@ -1,0 +1,16 @@
+# Dependências instaladas no computador
+node_modules/
+
+# Segredos e configurações locais
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+
+# Chaves e certificados privados
+*.key
+*.pem
+
+# Configuração local do Cloudflare
+.wrangler/
