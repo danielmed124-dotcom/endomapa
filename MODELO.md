@@ -46,6 +46,7 @@ Guarda o trabalho iniciado a partir de um ditado. O armazenamento e o histórico
 | medico_id | texto | Identificador do médico responsável pela revisão. |
 | texto_bruto | texto | Transcrição integral do ditado antes da interpretação pela IA. |
 | confianca | número | Quanto a IA confia no conjunto de informações que entendeu. A escala ainda é uma decisão pendente. |
+| vistas | lista fechada: coronal, sagital, ambas | Define quais vistas anatômicas serão representadas no mapa. |
 | status | lista fechada: em revisão, aguardando confirmação, confirmado, PDF gerado | Etapa atual do mapa. |
 | criado_em | data e hora | Momento em que o mapa foi iniciado. |
 | confirmado_em | data e hora | Momento da confirmação humana; fica vazio enquanto não houver confirmação. |

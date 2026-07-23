@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Seleção demonstrativa do médico responsável pelo mapa no Endomapa."
+    />
+    <title>Selecionar médico | Endomapa</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo__conteudo">
+        <a class="logo" href="index.html" aria-label="Página inicial do Endomapa">Endo<span>mapa</span></a>
+        <span class="area-atual">Área protegida</span>
+      </div>
+    </header>
+
+    <main class="conteudo">
+      <section class="cartao cartao--alinhado tela" data-tela="selecao-medico" aria-labelledby="titulo-medico">
+        <div class="clinica">
+          <div class="clinica__logo" aria-label="Logomarca demonstrativa da clínica">C</div>
+          <p class="clinica__nome">Centrus MG Diagnóstico por Imagem</p>
+        </div>
+
+        <header class="cabecalho-tela">
+          <div class="selo">Responsável pelo mapa</div>
+          <h1 class="titulo-tela" id="titulo-medico">Selecione o médico</h1>
+          <p class="texto-apoio">
+            A assinatura configurada para o médico escolhido será usada no mapa demonstrativo.
+          </p>
+        </header>
+
+        <form>
+          <fieldset class="lista-opcoes">
+            <legend>Médicos ativos</legend>
+
+            <label class="opcao-medico">
+              <span class="opcao-medico__nome">Dr. Daniel Martins</span>
+              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
+              <input type="radio" name="medico_id" value="medico-daniel" checked />
+            </label>
+
+            <label class="opcao-medico">
+              <span class="opcao-medico__nome">Dra. Mariana Alves</span>
+              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
+              <input type="radio" name="medico_id" value="medico-mariana" />
+            </label>
+
+            <label class="opcao-medico">
+              <span class="opcao-medico__nome">Dr. Rafael Nogueira</span>
+              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
+              <input type="radio" name="medico_id" value="medico-rafael" />
+            </label>
+
+            <label class="opcao-medico">
+              <span class="opcao-medico__nome">Dra. Camila Ribeiro</span>
+              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
+              <input type="radio" name="medico_id" value="medico-camila" />
+            </label>
+
+            <label class="opcao-medico">
+              <span class="opcao-medico__nome">Dr. Gustavo Lima</span>
+              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
+              <input type="radio" name="medico_id" value="medico-gustavo" />
+            </label>
+          </fieldset>
+
+          <div class="acoes">
+            <button
+              class="botao"
+              type="button"
+              data-tela-alvo="novo-mapa"
+              data-escolher-medico
+            >
+              Continuar
+            </button>
+            <button
+              class="botao botao--secundario"
+              type="button"
+              data-tela-alvo="novo-mapa"
+              data-modo-visitante
+            >
+              Continuar como médico visitante
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="novo-mapa"
+        aria-labelledby="titulo-novo-mapa"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Novo mapa</div>
+          <h1 class="titulo-tela" id="titulo-novo-mapa">Dite os achados</h1>
+          <p class="texto-apoio">
+            Hoje esta área é apenas visual. O reconhecimento de voz será conectado em uma etapa futura.
+          </p>
+        </header>
+
+        <div class="resumo-contexto" aria-label="Dados do mapa demonstrativo">
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Status</span>
+            <strong class="resumo-contexto__valor estado">Em revisão</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Criado em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:40</strong>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label class="campo__rotulo" for="texto_bruto">Texto bruto do ditado</label>
+          <p class="campo__ajuda">O conteúdo ditado pelo médico aparecerá aqui.</p>
+          <textarea
+            id="texto_bruto"
+            name="texto_bruto"
+            placeholder="Nenhum ditado informado."
+          ></textarea>
+        </div>
+
+        <fieldset class="opcoes-vistas">
+          <legend>Vistas do mapa</legend>
+
+          <label class="opcao-vista">
+            Coronal
+            <input type="radio" name="vistas" value="coronal" />
+          </label>
+
+          <label class="opcao-vista">
+            Sagital
+            <input type="radio" name="vistas" value="sagital" />
+          </label>
+
+          <label class="opcao-vista">
+            Ambas
+            <input type="radio" name="vistas" value="ambas" checked />
+          </label>
+        </fieldset>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-mensagem="O reconhecimento de voz será conectado em uma etapa futura."
+          >
+            Iniciar ditado
+          </button>
+          <button
+            class="botao botao--secundario"
+            type="button"
+            data-mensagem="A interpretação deste texto será conectada no dia 9."
+          >
+            Interpretar e continuar
+          </button>
+          <button
+            class="botao botao--secundario"
+            type="button"
+            data-tela-alvo="duvidas"
+          >
+            Ver demonstração com dados fixos
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="selecao-medico">
+            Trocar médico
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="duvidas"
+        aria-labelledby="titulo-duvidas"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Confirmação médica</div>
+          <h1 class="titulo-tela" id="titulo-duvidas">Confirme uma dúvida</h1>
+          <p class="texto-apoio">
+            O exemplo repetiu o lado direito. O mapa não pode avançar com uma lateralidade duvidosa.
+          </p>
+        </header>
+
+        <article class="duvida">
+          <div class="duvida__topo">
+            <span class="duvida__rotulo">Pergunta</span>
+            <span class="etiqueta-estado">Respondida</span>
+          </div>
+
+          <p class="duvida__pergunta">
+            A lesão de 0,6 × 0,2 cm está no ligamento uterossacro esquerdo?
+          </p>
+
+          <div class="campo">
+            <label class="campo__rotulo" for="resposta">Resposta</label>
+            <input
+              id="resposta"
+              name="resposta"
+              type="text"
+              value="Sim, corrigir a segunda lesão para o lado esquerdo."
+            />
+          </div>
+        </article>
+
+        <div class="resumo-contexto" aria-label="Datas da dúvida demonstrativa">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Criada em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:41</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Respondida em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:42</strong>
+          </div>
+        </div>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-tela-alvo="revisao"
+          >
+            Confirmar resposta e revisar mapas
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">
+            Voltar ao ditado
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="revisao"
+        aria-labelledby="titulo-revisao"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Revisão médica</div>
+          <h1 class="titulo-tela" id="titulo-revisao">Confira os mapas</h1>
+          <p class="texto-apoio">
+            Revise as duas vistas e os achados estruturados antes de confirmar o resultado.
+          </p>
+        </header>
+
+        <div class="resumo-contexto" aria-label="Estado do mapa demonstrativo">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Status</span>
+            <strong class="resumo-contexto__valor estado">Aguardando confirmação</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
+          </div>
+        </div>
+
+        <section class="secao-dados" aria-labelledby="titulo-mapas-base">
+          <h2 class="secao-dados__titulo" id="titulo-mapas-base">Mapas-base</h2>
+          <p class="texto-apoio">
+            A montagem futura começará por estas imagens sem lesões. A assinatura acompanha o médico selecionado.
+          </p>
+
+          <div class="mapas-grid">
+            <figure class="mapa-visual" data-vista="coronal">
+              <img
+                src="assets/mapa-base-coronal.png"
+                data-mapa-base
+                data-src-clinica="assets/mapa-base-coronal.png"
+                data-src-visitante="assets/mapa-base-coronal-visitante.png"
+                alt="Mapa-base anatômico coronal sem lesões"
+              />
+              <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
+                <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+              </span>
+              <figcaption>Mapa-base · vista coronal</figcaption>
+            </figure>
+
+            <figure class="mapa-visual" data-vista="sagital">
+              <img
+                src="assets/mapa-base-sagital.png"
+                data-mapa-base
+                data-src-clinica="assets/mapa-base-sagital.png"
+                data-src-visitante="assets/mapa-base-sagital-visitante.png"
+                alt="Mapa-base anatômico sagital sem lesões"
+              />
+              <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
+                <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+              </span>
+              <figcaption>Mapa-base · vista sagital</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section class="secao-dados" aria-labelledby="titulo-lesoes">
+          <h2 class="secao-dados__titulo" id="titulo-lesoes">Lesões interpretadas</h2>
+          <p class="texto-apoio">
+            Os dados abaixo pertencem ao ditado demonstrativo. Hoje eles ainda não são desenhados sobre os mapas-base.
+          </p>
+          <div class="lista-achados">
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Endometriose</h3>
+                <span class="achado__lado">Direito</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Ligamento uterossacro</dd>
+                <dt>Medidas</dt>
+                <dd>0,8 × 0,3 cm</dd>
+              </dl>
+            </article>
+
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Endometriose</h3>
+                <span class="achado__lado">Esquerdo</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Ligamento uterossacro</dd>
+                <dt>Medidas</dt>
+                <dd>0,6 × 0,2 cm</dd>
+              </dl>
+            </article>
+
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Endometriose</h3>
+                <span class="achado__lado">Central</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Região retrocervical</dd>
+                <dt>Medidas</dt>
+                <dd>0,3 × 0,2 cm</dd>
+              </dl>
+            </article>
+
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Adenomiose</h3>
+                <span class="achado__lado">Central</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Útero</dd>
+                <dt>Observação</dt>
+                <dd>Parede uterina anterior</dd>
+              </dl>
+            </article>
+
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Mioma</h3>
+                <span class="achado__lado">Central</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Útero</dd>
+                <dt>Observação</dt>
+                <dd>Parede uterina corporal posterior</dd>
+              </dl>
+            </article>
+
+            <article class="achado">
+              <div class="achado__cabecalho">
+                <h3 class="achado__categoria">Lesão ovariana</h3>
+                <span class="achado__lado">Direito</span>
+              </div>
+              <dl>
+                <dt>Localização</dt>
+                <dd>Ovário</dd>
+                <dt>Medidas</dt>
+                <dd>2,7 × 3,3 cm</dd>
+                <dt>Observação</dt>
+                <dd>Endometrioma</dd>
+              </dl>
+            </article>
+          </div>
+        </section>
+
+        <section class="secao-dados" aria-labelledby="titulo-relacoes">
+          <h2 class="secao-dados__titulo" id="titulo-relacoes">Relação anatômica</h2>
+          <article class="achado">
+            <dl>
+              <dt>Origem</dt>
+              <dd>Reto ou sigmoide · central</dd>
+              <dt>Relação</dt>
+              <dd>Aderido a</dd>
+              <dt>Destino</dt>
+              <dd>Ovário · esquerdo</dd>
+            </dl>
+          </article>
+        </section>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-tela-alvo="conclusao"
+          >
+            Confirmar mapa
+          </button>
+          <button
+            class="botao botao--secundario"
+            type="button"
+            data-mensagem="A correção por voz será conectada em uma etapa futura."
+          >
+            Corrigir por voz
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="duvidas">
+            Voltar à dúvida
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao tela"
+        data-tela="conclusao"
+        aria-labelledby="titulo-conclusao"
+        hidden
+      >
+        <div class="sucesso" aria-hidden="true">✓</div>
+        <div class="selo">Mapa confirmado</div>
+        <h1 class="titulo-tela" id="titulo-conclusao">PDF pronto para impressão</h1>
+        <p class="texto-apoio">
+          Esta conclusão é demonstrativa. Nenhum arquivo real foi criado ou salvo hoje.
+        </p>
+
+        <div class="resumo-contexto" aria-label="Dados finais do mapa demonstrativo">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Status</span>
+            <strong class="resumo-contexto__valor estado">PDF gerado</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Confirmado em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:44</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">PDF gerado em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:44</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-clinica>
+            <span class="resumo-contexto__rotulo">Clínica</span>
+            <strong class="resumo-contexto__valor">Centrus MG</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
+          </div>
+        </div>
+
+        <div class="assinatura-demo assinatura-caligrafica" data-assinatura-final>
+          <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+        </div>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-mensagem="O PDF real será conectado em uma etapa futura. Hoje esta tela é somente uma simulação."
+          >
+            Visualizar PDF
+          </button>
+          <button class="botao botao--secundario" type="button" data-tela-alvo="selecao-medico">
+            Iniciar outro mapa
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="revisao">
+            Voltar à revisão
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <nav class="navegacao" aria-label="Navegação principal">
+      <div class="navegacao__conteudo">
+        <a class="navegacao__item" href="index.html">Área pública</a>
+        <a class="navegacao__item" href="app.html" aria-current="page">Área protegida</a>
+      </div>
+    </nav>
+
+    <p class="aviso" role="status" aria-live="polite" data-aviso hidden></p>
+    <script src="prototipo.js"></script>
+  </body>
+</html>
