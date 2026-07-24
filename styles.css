@@ -62,6 +62,36 @@ button {
   gap: 12px;
 }
 
+.autenticacao-pendente main,
+.autenticacao-pendente nav {
+  visibility: hidden;
+}
+
+.topo__acoes {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.botao-sair {
+  min-height: 36px;
+  padding: 7px 11px;
+  color: var(--texto-suave);
+  border: 1px solid rgba(184, 192, 185, 0.2);
+  border-radius: 999px;
+  background: transparent;
+  font-size: 0.76rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.botao-sair:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
 .logo {
   color: var(--texto);
   font-family: Georgia, "Times New Roman", serif;
@@ -119,6 +149,69 @@ button {
 
 .cartao--alinhado {
   text-align: left;
+}
+
+.cartao--autenticacao {
+  max-width: 560px;
+}
+
+.alternador-autenticacao {
+  display: grid;
+  margin: 28px 0 22px;
+  padding: 4px;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  background: rgba(11, 15, 13, 0.62);
+}
+
+.alternador-autenticacao__item {
+  min-height: 48px;
+  padding: 11px 14px;
+  color: var(--texto-suave);
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.alternador-autenticacao__item.ativo {
+  color: var(--texto);
+  background: var(--superficie-alta);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+}
+
+.formulario-autenticacao {
+  display: grid;
+  gap: 18px;
+  text-align: left;
+}
+
+.formulario-autenticacao .botao {
+  margin-top: 4px;
+}
+
+.mensagem-formulario {
+  margin: 0;
+  padding: 13px 14px;
+  color: var(--verde-claro);
+  border: 1px solid rgba(172, 187, 141, 0.26);
+  border-radius: 12px;
+  background: rgba(111, 127, 82, 0.12);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.mensagem-formulario--erro {
+  color: #ffd0c8;
+  border-color: rgba(218, 116, 98, 0.34);
+  background: rgba(120, 44, 35, 0.2);
+}
+
+.mensagem-formulario[hidden] {
+  display: none;
 }
 
 .tela[hidden] {
@@ -715,6 +808,12 @@ h1 span {
 
 .botao:active {
   transform: translateY(1px);
+}
+
+.botao:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
 }
 
 .link-voltar {

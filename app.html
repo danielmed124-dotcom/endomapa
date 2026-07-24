@@ -10,11 +10,14 @@
     <title>Selecionar médico | Endomapa</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
+  <body class="autenticacao-pendente">
     <header class="topo">
       <div class="topo__conteudo">
         <a class="logo" href="index.html" aria-label="Página inicial do Endomapa">Endo<span>mapa</span></a>
-        <span class="area-atual">Área protegida</span>
+        <div class="topo__acoes">
+          <span class="area-atual">Área protegida</span>
+          <button class="botao-sair" type="button" data-sair>Sair</button>
+        </div>
       </div>
     </header>
 
@@ -486,6 +489,9 @@
     </nav>
 
     <p class="aviso" role="status" aria-live="polite" data-aviso hidden></p>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="app-auth.js"></script>
     <script src="prototipo.js"></script>
   </body>
 </html>

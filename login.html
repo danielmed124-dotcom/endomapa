@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Acesso demonstrativo ao protótipo navegável do Endomapa."
+      content="Entre ou crie sua conta para acessar a área protegida do Endomapa."
     />
     <title>Entrar | Endomapa</title>
     <link rel="stylesheet" href="styles.css" />
@@ -19,35 +19,66 @@
     </header>
 
     <main class="conteudo">
-      <section class="cartao" aria-labelledby="titulo">
-        <div class="selo">Acesso demonstrativo</div>
-        <h1 class="titulo-tela" id="titulo">Entre no protótipo</h1>
-        <p class="texto-apoio">
-          Hoje você pode passear pela aparência do Endomapa sem criar uma conta. O login verdadeiro será
-          conectado ao Supabase em uma etapa futura.
+      <section class="cartao cartao--autenticacao" aria-labelledby="titulo-autenticacao">
+        <div class="selo">Acesso seguro</div>
+        <h1 class="titulo-tela" id="titulo-autenticacao">Entre no Endomapa</h1>
+        <p class="texto-apoio" id="texto-autenticacao">
+          Use seu e-mail e sua senha para acessar seus próprios mapas.
         </p>
 
-        <div class="acoes">
-          <a class="botao" href="app.html">Entrar no protótipo</a>
-          <a class="link-voltar" href="index.html">Voltar à apresentação</a>
+        <div class="alternador-autenticacao" aria-label="Escolha entrar ou criar uma conta">
+          <button class="alternador-autenticacao__item ativo" type="button" data-modo="entrar">
+            Entrar
+          </button>
+          <button class="alternador-autenticacao__item" type="button" data-modo="cadastrar">
+            Cadastrar
+          </button>
         </div>
+
+        <form class="formulario-autenticacao" data-form-autenticacao novalidate>
+          <label class="campo">
+            <span class="campo__rotulo">E-mail</span>
+            <input
+              type="email"
+              name="email"
+              autocomplete="email"
+              inputmode="email"
+              placeholder="medico@clinica.com.br"
+              required
+            />
+          </label>
+
+          <label class="campo">
+            <span class="campo__rotulo">Senha</span>
+            <input
+              type="password"
+              name="senha"
+              autocomplete="current-password"
+              minlength="6"
+              placeholder="Digite sua senha"
+              required
+            />
+            <span class="campo__ajuda" data-ajuda-senha>A senha precisa ter pelo menos 6 caracteres.</span>
+          </label>
+
+          <p class="mensagem-formulario" role="status" aria-live="polite" data-mensagem-auth hidden></p>
+
+          <button class="botao" type="submit" data-botao-auth>Entrar</button>
+        </form>
+
+        <a class="link-voltar" href="index.html">Voltar à apresentação</a>
       </section>
     </main>
 
     <nav class="navegacao" aria-label="Navegação principal">
       <div class="navegacao__conteudo">
-        <a class="navegacao__item" href="index.html" aria-current="page">Área pública</a>
-        <button
-          class="navegacao__item"
-          type="button"
-          data-mensagem="A área protegida de demonstração será adicionada nas próximas telas."
-        >
-          Área protegida
-        </button>
+        <a class="navegacao__item" href="index.html">Apresentação</a>
+        <a class="navegacao__item" href="login.html" aria-current="page">Entrar</a>
       </div>
     </nav>
 
-    <p class="aviso" role="status" aria-live="polite" data-aviso hidden></p>
-    <script src="prototipo.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="auth.js"></script>
   </body>
 </html>
