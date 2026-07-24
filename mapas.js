@@ -51,7 +51,7 @@
     definirCarregamento(true);
 
     try {
-      const { error } = await clienteSupabase
+      const { data, error } = await clienteSupabase
         .from("mapas")
         .insert({
           clinica_id: CLINICA_CENTRUS_ID,
@@ -59,7 +59,9 @@
           texto_bruto: textoBruto,
           vistas: vistaSelecionada,
           status: "em revisão",
-        });
+        })
+        .select("id, user_id, criado_em")
+        .single();
 
       if (error) {
         mostrarMensagem(traduzirErro(error), true);
@@ -67,10 +69,19 @@
         return;
       }
 
+      if (!data || !data.id || !data.user_id) {
+        mostrarMensagem(
+          "O banco não confirmou a criação do mapa. Nenhum sucesso foi registrado; tente novamente.",
+          true,
+        );
+        definirCarregamento(false);
+        return;
+      }
+
       mapaJaSalvo = true;
       botaoSalvar.textContent = "Mapa salvo";
       botaoSalvar.disabled = true;
-      mostrarMensagem("Mapa salvo com segurança.", false);
+      mostrarMensagem(`Mapa salvo com segurança. Identificador: ${data.id}`, false);
     } catch (erro) {
       mostrarMensagem(
         "Não foi possível falar com o Supabase. Confira sua internet e tente novamente.",
