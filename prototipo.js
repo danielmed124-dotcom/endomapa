@@ -36,10 +36,14 @@ function abrirTela(nomeDaTela) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function aplicarMedico(nomeDoMedico, modoVisitante) {
+function aplicarMedico(nomeDoMedico, modoVisitante, medicoId) {
   const primeiroNome = modoVisitante
     ? ""
     : nomeDoMedico.replace(/^Dr(a)?\.\s*/, "").trim().split(/\s+/)[0];
+
+  document.body.dataset.medicoId = modoVisitante
+    ? "10000000-0000-4000-8000-000000000099"
+    : medicoId;
 
   destinosDoNome.forEach((destino) => {
     destino.textContent = modoVisitante ? "Médico visitante" : nomeDoMedico;
@@ -92,13 +96,13 @@ function aplicarVistas() {
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
     if (elemento.hasAttribute("data-modo-visitante")) {
-      aplicarMedico("", true);
+      aplicarMedico("", true, "");
     } else if (elemento.hasAttribute("data-escolher-medico")) {
       const medicoSelecionado = document.querySelector('input[name="medico_id"]:checked');
       const nomeDoMedico = medicoSelecionado?.closest(".opcao-medico")?.querySelector(".opcao-medico__nome")?.textContent;
 
       if (nomeDoMedico) {
-        aplicarMedico(nomeDoMedico, false);
+        aplicarMedico(nomeDoMedico, false, medicoSelecionado.value);
       }
     }
 

@@ -43,31 +43,31 @@
             <label class="opcao-medico">
               <span class="opcao-medico__nome">Dr. Daniel Martins</span>
               <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="medico-daniel" checked />
+              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000001" checked />
             </label>
 
             <label class="opcao-medico">
               <span class="opcao-medico__nome">Dra. Mariana Alves</span>
               <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="medico-mariana" />
+              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000002" />
             </label>
 
             <label class="opcao-medico">
               <span class="opcao-medico__nome">Dr. Rafael Nogueira</span>
               <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="medico-rafael" />
+              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000003" />
             </label>
 
             <label class="opcao-medico">
               <span class="opcao-medico__nome">Dra. Camila Ribeiro</span>
               <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="medico-camila" />
+              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000004" />
             </label>
 
             <label class="opcao-medico">
               <span class="opcao-medico__nome">Dr. Gustavo Lima</span>
               <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="medico-gustavo" />
+              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000005" />
             </label>
           </fieldset>
 
@@ -151,6 +151,16 @@
         </fieldset>
 
         <div class="acoes">
+          <p
+            class="mensagem-formulario mensagem-salvamento"
+            role="status"
+            aria-live="polite"
+            data-mensagem-salvamento
+            hidden
+          ></p>
+          <button class="botao" type="button" data-salvar-mapa>
+            Salvar mapa
+          </button>
           <button
             class="botao"
             type="button"
@@ -493,5 +503,6 @@
     <script src="supabase-config.js"></script>
     <script src="app-auth.js"></script>
     <script src="prototipo.js"></script>
+    <script src="mapas.js"></script>
   </body>
 </html>

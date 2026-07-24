@@ -214,6 +214,11 @@ button {
   display: none;
 }
 
+.mensagem-salvamento {
+  width: 100%;
+  text-align: left;
+}
+
 .tela[hidden] {
   display: none;
 }
