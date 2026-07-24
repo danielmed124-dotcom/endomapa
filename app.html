@@ -489,12 +489,48 @@
           </button>
         </div>
       </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="meus-mapas"
+        aria-labelledby="titulo-meus-mapas"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Histórico protegido</div>
+          <h1 class="titulo-tela" id="titulo-meus-mapas">Meus mapas</h1>
+          <p class="texto-apoio">
+            O Supabase mostra somente os mapas pertencentes ao usuário que está logado.
+          </p>
+        </header>
+
+        <p
+          class="mensagem-formulario"
+          role="status"
+          aria-live="polite"
+          data-estado-lista-mapas
+        >
+          Carregando seus mapas...
+        </p>
+
+        <div class="lista-mapas-salvos" data-lista-mapas></div>
+
+        <div class="acoes">
+          <button class="botao" type="button" data-tela-alvo="selecao-medico">
+            Criar novo mapa
+          </button>
+        </div>
+      </section>
     </main>
 
     <nav class="navegacao" aria-label="Navegação principal">
       <div class="navegacao__conteudo">
-        <a class="navegacao__item" href="index.html">Área pública</a>
-        <a class="navegacao__item" href="app.html" aria-current="page">Área protegida</a>
+        <button class="navegacao__item" type="button" data-tela-alvo="selecao-medico">
+          Novo mapa
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="meus-mapas">
+          Meus mapas
+        </button>
       </div>
     </nav>
 

@@ -219,6 +219,51 @@ button {
   text-align: left;
 }
 
+.lista-mapas-salvos {
+  display: grid;
+  margin-top: 18px;
+  gap: 14px;
+}
+
+.mapa-salvo {
+  padding: 18px;
+  border: 1px solid rgba(184, 192, 185, 0.16);
+  border-radius: 17px;
+  background: rgba(25, 33, 28, 0.72);
+}
+
+.mapa-salvo__topo {
+  display: flex;
+  margin-bottom: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mapa-salvo__data {
+  color: var(--texto-suave);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.mapa-salvo__texto {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.mapa-salvo__vista {
+  margin: 13px 0 0;
+  color: var(--dourado);
+  font-size: 0.78rem;
+  font-weight: 780;
+}
+
 .tela[hidden] {
   display: none;
 }
