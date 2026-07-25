@@ -125,6 +125,8 @@
           vistas,
           status,
           criado_em,
+          confirmado_em,
+          pdf_gerado_em,
           lesoes (
             id,
             categoria,
@@ -211,8 +213,136 @@
     }
 
     topo.append(status, dataCriacao);
-    artigo.append(topo, texto, vista, blocoLesoes);
+    const controleStatus = criarControleStatus(mapa, lesoes.length);
+
+    artigo.append(topo, texto, vista, blocoLesoes, controleStatus);
     listaMapas.append(artigo);
+  }
+
+  function criarControleStatus(mapa, quantidadeLesoes) {
+    const controle = document.createElement("div");
+    controle.className = "controle-status";
+
+    const mensagemStatus = document.createElement("p");
+    mensagemStatus.className = "controle-status__mensagem";
+    mensagemStatus.hidden = true;
+    controle.append(mensagemStatus);
+
+    if (mapa.status === "em revisão") {
+      if (quantidadeLesoes === 0) {
+        mensagemStatus.textContent =
+          "O mapa precisa ter pelo menos uma lesão estruturada antes da confirmação.";
+        mensagemStatus.hidden = false;
+        return controle;
+      }
+
+      controle.append(
+        criarBotaoStatus(
+          "Enviar para confirmação",
+          mapa,
+          "aguardando confirmação",
+          mensagemStatus,
+        ),
+      );
+      return controle;
+    }
+
+    if (mapa.status === "aguardando confirmação") {
+      controle.append(
+        criarBotaoStatus("Confirmar mapa", mapa, "confirmado", mensagemStatus),
+      );
+      return controle;
+    }
+
+    if (mapa.status === "confirmado") {
+      mensagemStatus.textContent =
+        "Mapa confirmado. A geração real do PDF será conectada em uma etapa futura.";
+      mensagemStatus.hidden = false;
+      return controle;
+    }
+
+    mensagemStatus.textContent = "PDF gerado.";
+    mensagemStatus.hidden = false;
+    return controle;
+  }
+
+  function criarBotaoStatus(rotulo, mapa, proximoStatus, mensagemStatus) {
+    const botao = document.createElement("button");
+    botao.className = "botao botao--status";
+    botao.type = "button";
+    botao.textContent = rotulo;
+
+    botao.addEventListener("click", async function () {
+      if (
+        proximoStatus === "confirmado"
+        && !window.confirm("Você conferiu os achados e deseja confirmar este mapa?")
+      ) {
+        return;
+      }
+
+      botao.disabled = true;
+      botao.textContent = "Atualizando...";
+      mensagemStatus.hidden = true;
+
+      try {
+        const { data, error } = await clienteSupabase
+          .from("mapas")
+          .update({ status: proximoStatus })
+          .eq("id", mapa.id)
+          .select("id, status, confirmado_em, pdf_gerado_em")
+          .single();
+
+        if (error) {
+          mostrarErroStatus(error, mensagemStatus);
+          botao.disabled = false;
+          botao.textContent = rotulo;
+          return;
+        }
+
+        if (!data || data.status !== proximoStatus) {
+          mensagemStatus.textContent =
+            "O banco não confirmou a mudança de status. Tente novamente.";
+          mensagemStatus.classList.add("controle-status__mensagem--erro");
+          mensagemStatus.hidden = false;
+          botao.disabled = false;
+          botao.textContent = rotulo;
+          return;
+        }
+
+        await carregarMeusMapas();
+      } catch (erro) {
+        mensagemStatus.textContent =
+          "Não foi possível falar com o Supabase. Confira sua internet e tente novamente.";
+        mensagemStatus.classList.add("controle-status__mensagem--erro");
+        mensagemStatus.hidden = false;
+        botao.disabled = false;
+        botao.textContent = rotulo;
+      }
+    });
+
+    return botao;
+  }
+
+  function mostrarErroStatus(erro, mensagemStatus) {
+    const codigo = String(erro.code || "");
+    const textoErro = String(erro.message || "").toLowerCase();
+
+    if (codigo === "23514" && textoErro.includes("pelo menos uma lesão")) {
+      mensagemStatus.textContent =
+        "O mapa precisa ter pelo menos uma lesão antes da confirmação.";
+    } else if (codigo === "23514") {
+      mensagemStatus.textContent =
+        "Esta mudança de status não segue a ordem permitida.";
+    } else if (codigo === "42501" || textoErro.includes("permission")) {
+      mensagemStatus.textContent =
+        "Seu acesso não permitiu alterar este mapa. Saia, entre novamente e tente outra vez.";
+    } else {
+      mensagemStatus.textContent =
+        "Não foi possível mudar o status. Tente novamente.";
+    }
+
+    mensagemStatus.classList.add("controle-status__mensagem--erro");
+    mensagemStatus.hidden = false;
   }
 
   function criarResumoLesao(lesao) {

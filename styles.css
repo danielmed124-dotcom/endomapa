@@ -337,6 +337,31 @@ button {
   border-top: 1px solid rgba(184, 192, 185, 0.1);
 }
 
+.controle-status {
+  display: grid;
+  margin-top: 17px;
+  padding-top: 16px;
+  gap: 12px;
+  border-top: 1px solid rgba(184, 192, 185, 0.14);
+}
+
+.controle-status__mensagem {
+  margin: 0;
+  color: var(--verde-claro);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.controle-status__mensagem--erro {
+  color: #ffd0c8;
+}
+
+.botao--status {
+  min-height: 48px;
+  padding: 12px 16px;
+  font-size: 0.86rem;
+}
+
 .tela[hidden] {
   display: none;
 }
