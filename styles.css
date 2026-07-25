@@ -264,6 +264,79 @@ button {
   font-weight: 780;
 }
 
+.mapa-salvo__lesoes {
+  display: grid;
+  margin-top: 17px;
+  padding-top: 16px;
+  gap: 10px;
+  border-top: 1px solid rgba(184, 192, 185, 0.14);
+}
+
+.mapa-salvo__titulo-lesoes {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.76rem;
+  font-weight: 780;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mapa-salvo__sem-lesoes {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.lesao-salva {
+  padding: 14px;
+  border: 1px solid rgba(201, 162, 77, 0.16);
+  border-radius: 14px;
+  background: rgba(11, 15, 13, 0.42);
+}
+
+.lesao-salva__cabecalho {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lesao-salva__categoria {
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.lesao-salva__lado {
+  color: var(--dourado);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.lesao-salva__localizacao,
+.lesao-salva__medidas,
+.lesao-salva__observacao {
+  margin: 7px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.lesao-salva__localizacao {
+  color: var(--texto-suave);
+}
+
+.lesao-salva__medidas {
+  color: var(--verde-claro);
+  font-weight: 760;
+}
+
+.lesao-salva__observacao {
+  padding-top: 8px;
+  color: var(--texto-suave);
+  border-top: 1px solid rgba(184, 192, 185, 0.1);
+}
+
 .tela[hidden] {
   display: none;
 }

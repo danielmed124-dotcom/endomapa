@@ -119,7 +119,24 @@
     try {
       const { data, error } = await clienteSupabase
         .from("mapas")
-        .select("id, texto_bruto, vistas, status, criado_em")
+        .select(`
+          id,
+          texto_bruto,
+          vistas,
+          status,
+          criado_em,
+          lesoes (
+            id,
+            categoria,
+            localizacao,
+            lado,
+            medida_1,
+            medida_2,
+            medida_3,
+            observacao,
+            criado_em
+          )
+        `)
         .order("criado_em", { ascending: false });
 
       if (error) {
@@ -166,9 +183,72 @@
     vista.className = "mapa-salvo__vista";
     vista.textContent = `Vista: ${formatarVista(mapa.vistas)}`;
 
+    const lesoes = Array.isArray(mapa.lesoes)
+      ? [...mapa.lesoes].sort(function (primeira, segunda) {
+          return new Date(primeira.criado_em) - new Date(segunda.criado_em);
+        })
+      : [];
+
+    const blocoLesoes = document.createElement("section");
+    blocoLesoes.className = "mapa-salvo__lesoes";
+
+    const tituloLesoes = document.createElement("h3");
+    tituloLesoes.className = "mapa-salvo__titulo-lesoes";
+    tituloLesoes.textContent =
+      lesoes.length === 1 ? "1 lesão estruturada" : `${lesoes.length} lesões estruturadas`;
+
+    blocoLesoes.append(tituloLesoes);
+
+    if (lesoes.length === 0) {
+      const estadoVazio = document.createElement("p");
+      estadoVazio.className = "mapa-salvo__sem-lesoes";
+      estadoVazio.textContent = "Nenhuma lesão estruturada neste mapa.";
+      blocoLesoes.append(estadoVazio);
+    } else {
+      lesoes.forEach(function (lesao) {
+        blocoLesoes.append(criarResumoLesao(lesao));
+      });
+    }
+
     topo.append(status, dataCriacao);
-    artigo.append(topo, texto, vista);
+    artigo.append(topo, texto, vista, blocoLesoes);
     listaMapas.append(artigo);
+  }
+
+  function criarResumoLesao(lesao) {
+    const resumo = document.createElement("article");
+    resumo.className = "lesao-salva";
+
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "lesao-salva__cabecalho";
+
+    const categoria = document.createElement("strong");
+    categoria.className = "lesao-salva__categoria";
+    categoria.textContent = primeiraMaiuscula(lesao.categoria);
+
+    const lado = document.createElement("span");
+    lado.className = "lesao-salva__lado";
+    lado.textContent = primeiraMaiuscula(lesao.lado);
+
+    const localizacao = document.createElement("p");
+    localizacao.className = "lesao-salva__localizacao";
+    localizacao.textContent = primeiraMaiuscula(lesao.localizacao);
+
+    const medidas = document.createElement("p");
+    medidas.className = "lesao-salva__medidas";
+    medidas.textContent = formatarMedidas(lesao);
+
+    cabecalho.append(categoria, lado);
+    resumo.append(cabecalho, localizacao, medidas);
+
+    if (lesao.observacao) {
+      const observacao = document.createElement("p");
+      observacao.className = "lesao-salva__observacao";
+      observacao.textContent = lesao.observacao;
+      resumo.append(observacao);
+    }
+
+    return resumo;
   }
 
   function mostrarEstadoLista(texto, erro) {
@@ -198,6 +278,23 @@
     };
 
     return nomes[vista] || vista;
+  }
+
+  function formatarMedidas(lesao) {
+    const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3]
+      .filter(function (medida) {
+        return medida !== null && medida !== undefined;
+      })
+      .map(function (medida) {
+        return Number(medida).toLocaleString("pt-BR");
+      });
+
+    return medidas.length > 0 ? `${medidas.join(" × ")} cm` : "Medidas não informadas";
+  }
+
+  function primeiraMaiuscula(texto) {
+    const valor = String(texto || "");
+    return valor ? valor.charAt(0).toLocaleUpperCase("pt-BR") + valor.slice(1) : "";
   }
 
   function definirCarregamento(carregando) {
