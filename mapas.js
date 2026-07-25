@@ -9,6 +9,7 @@
   const botoesMeusMapas = document.querySelectorAll('[data-tela-alvo="meus-mapas"]');
   const listaMapas = document.querySelector("[data-lista-mapas]");
   const estadoLista = document.querySelector("[data-estado-lista-mapas]");
+  const botaoTentarLista = document.querySelector("[data-tentar-carregar-mapas]");
 
   const CLINICA_CENTRUS_ID = "20000000-0000-4000-8000-000000000001";
   let mapaJaSalvo = false;
@@ -25,6 +26,7 @@
   botoesMeusMapas.forEach(function (botao) {
     botao.addEventListener("click", carregarMeusMapas);
   });
+  botaoTentarLista?.addEventListener("click", carregarMeusMapas);
 
   async function salvarMapa() {
     const textoBruto = campoTexto.value.trim();
@@ -114,6 +116,7 @@
     }
 
     listaMapas.replaceChildren();
+    botaoTentarLista.hidden = true;
     mostrarEstadoLista("Carregando seus mapas...", false);
 
     try {
@@ -147,7 +150,10 @@
       }
 
       if (!data || data.length === 0) {
-        mostrarEstadoLista("Você ainda não possui mapas salvos.", false);
+        mostrarEstadoLista(
+          "Você ainda não possui mapas salvos. Toque em Criar novo mapa para começar.",
+          false,
+        );
         return;
       }
 
@@ -385,6 +391,7 @@
     estadoLista.textContent = texto;
     estadoLista.classList.toggle("mensagem-formulario--erro", erro);
     estadoLista.hidden = false;
+    botaoTentarLista.hidden = !erro;
   }
 
   function formatarData(data) {
