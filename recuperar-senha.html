@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Recupere com segurança a senha de acesso ao Endomapa."
+    />
+    <title>Recuperar senha | Endomapa</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo__conteudo">
+        <a class="logo" href="index.html" aria-label="Página inicial do Endomapa">Endo<span>mapa</span></a>
+        <span class="area-atual">Área pública</span>
+      </div>
+    </header>
+
+    <main class="conteudo">
+      <section class="cartao cartao--autenticacao" aria-labelledby="titulo-recuperacao">
+        <div class="selo">Acesso seguro</div>
+
+        <div data-etapa-solicitar>
+          <h1 class="titulo-tela" id="titulo-recuperacao">Recupere sua senha</h1>
+          <p class="texto-apoio">
+            Informe seu e-mail para receber um link seguro de recuperação.
+          </p>
+
+          <div class="formulario-autenticacao bloco-recuperacao" data-bloco-solicitar>
+            <label class="campo">
+              <span class="campo__rotulo">E-mail</span>
+              <input
+                type="email"
+                name="email_recuperacao"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="medico@clinica.com.br"
+              />
+            </label>
+            <button class="botao" type="button" data-enviar-recuperacao>
+              Enviar link de recuperação
+            </button>
+          </div>
+        </div>
+
+        <div data-etapa-alterar hidden>
+          <h1 class="titulo-tela">Crie uma nova senha</h1>
+          <p class="texto-apoio">
+            Use uma senha nova, diferente daquela que foi exposta.
+          </p>
+
+          <div class="formulario-autenticacao bloco-recuperacao" data-bloco-alterar>
+            <label class="campo">
+              <span class="campo__rotulo">Nova senha</span>
+              <input
+                type="password"
+                name="nova_senha"
+                autocomplete="new-password"
+                minlength="8"
+                placeholder="Pelo menos 8 caracteres"
+              />
+            </label>
+            <label class="campo">
+              <span class="campo__rotulo">Confirmar nova senha</span>
+              <input
+                type="password"
+                name="confirmar_senha"
+                autocomplete="new-password"
+                minlength="8"
+                placeholder="Digite a mesma senha novamente"
+              />
+            </label>
+            <button class="botao" type="button" data-atualizar-senha>
+              Salvar nova senha
+            </button>
+          </div>
+        </div>
+
+        <p
+          class="mensagem-formulario"
+          role="status"
+          aria-live="polite"
+          data-mensagem-recuperacao
+          hidden
+        ></p>
+
+        <a class="link-voltar" href="login.html">Voltar ao login</a>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="recuperar-senha.js"></script>
+  </body>
+</html>
