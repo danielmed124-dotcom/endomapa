@@ -193,6 +193,51 @@ button {
   text-align: left;
 }
 
+.campos-cadastro {
+  display: grid;
+  gap: 18px;
+}
+
+.escolha-titulo {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  border: 0;
+}
+
+.escolha-titulo legend {
+  margin-bottom: 9px;
+  padding: 0;
+  font-size: 0.84rem;
+  font-weight: 780;
+}
+
+.escolha-titulo__opcao {
+  position: relative;
+  display: grid;
+  min-height: 52px;
+  place-items: center;
+  border: 1px solid rgba(184, 192, 185, 0.22);
+  border-radius: 14px;
+  background: rgba(11, 15, 13, 0.72);
+  font-weight: 780;
+  cursor: pointer;
+}
+
+.escolha-titulo__opcao:has(input:checked) {
+  color: var(--texto);
+  border-color: var(--dourado);
+  background: rgba(111, 127, 82, 0.17);
+}
+
+.escolha-titulo__opcao input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .formulario-autenticacao .botao {
   margin-top: 4px;
 }

@@ -36,6 +36,31 @@
         </div>
 
         <form class="formulario-autenticacao" data-form-autenticacao novalidate>
+          <div class="campos-cadastro" data-campos-cadastro hidden>
+            <fieldset class="escolha-titulo">
+              <legend>Título profissional</legend>
+              <label class="escolha-titulo__opcao">
+                <input type="radio" name="titulo" value="Dr." disabled />
+                <span>Dr.</span>
+              </label>
+              <label class="escolha-titulo__opcao">
+                <input type="radio" name="titulo" value="Dra." disabled />
+                <span>Dra.</span>
+              </label>
+            </fieldset>
+
+            <label class="campo">
+              <span class="campo__rotulo">Nome completo</span>
+              <input
+                type="text"
+                name="nome"
+                autocomplete="name"
+                placeholder="Ex.: Daniel de Souza Carneiro"
+                disabled
+              />
+            </label>
+          </div>
+
           <label class="campo">
             <span class="campo__rotulo">E-mail</span>
             <input

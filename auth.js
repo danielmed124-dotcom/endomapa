@@ -9,6 +9,7 @@
   const mensagem = document.querySelector("[data-mensagem-auth]");
   const ajudaSenha = document.querySelector("[data-ajuda-senha]");
   const campoSenha = formulario?.elements.senha;
+  const camposCadastro = document.querySelector("[data-campos-cadastro]");
 
   if (!formulario || !window.supabase || !window.ENDOMAPA_SUPABASE) {
     if (mensagem) {
@@ -24,6 +25,7 @@
 
   let modo = "entrar";
 
+  alterarModo("entrar", false);
   mostrarMotivoDoRedirecionamento();
   verificarSessao();
 
@@ -40,6 +42,8 @@
     const dados = new FormData(formulario);
     const email = String(dados.get("email") || "").trim();
     const senha = String(dados.get("senha") || "");
+    const nome = String(dados.get("nome") || "").trim();
+    const tituloProfissional = String(dados.get("titulo") || "");
 
     if (!email || !senha) {
       mostrarMensagem("Preencha o e-mail e a senha para continuar.", true);
@@ -51,11 +55,22 @@
       return;
     }
 
+    if (modo === "cadastrar" && !tituloProfissional) {
+      mostrarMensagem("Escolha Dr. ou Dra. para continuar.", true);
+      return;
+    }
+
+    if (modo === "cadastrar" && !nome) {
+      mostrarMensagem("Preencha o nome completo do médico.", true);
+      formulario.elements.nome.focus();
+      return;
+    }
+
     definirCarregamento(true);
 
     try {
       if (modo === "cadastrar") {
-        await cadastrar(email, senha);
+        await cadastrar(email, senha, nome, tituloProfissional);
       } else {
         await entrar(email, senha);
       }
@@ -94,10 +109,16 @@
     window.location.replace("app.html");
   }
 
-  async function cadastrar(email, senha) {
+  async function cadastrar(email, senha, nome, tituloProfissional) {
     const { data, error } = await clienteSupabase.auth.signUp({
       email: email,
       password: senha,
+      options: {
+        data: {
+          nome: nome,
+          titulo: tituloProfissional,
+        },
+      },
     });
 
     if (error) {
@@ -120,11 +141,17 @@
 
   function alterarModo(novoModo, limpar = true) {
     modo = novoModo === "cadastrar" ? "cadastrar" : "entrar";
+    const cadastroAtivo = modo === "cadastrar";
 
     botoesModo.forEach(function (botao) {
       const ativo = botao.dataset.modo === modo;
       botao.classList.toggle("ativo", ativo);
       botao.setAttribute("aria-pressed", String(ativo));
+    });
+
+    camposCadastro.hidden = !cadastroAtivo;
+    camposCadastro.querySelectorAll("input").forEach(function (campo) {
+      campo.disabled = !cadastroAtivo;
     });
 
     if (modo === "cadastrar") {
@@ -203,6 +230,10 @@
 
     if (textoErro.includes("rate limit")) {
       return "Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.";
+    }
+
+    if (textoErro.includes("database error saving new user")) {
+      return "Não foi possível criar o perfil médico. Confira nome, título e e-mail e tente novamente.";
     }
 
     return "Não foi possível concluir a operação. Confira os dados e tente novamente.";
