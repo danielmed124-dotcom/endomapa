@@ -8,7 +8,9 @@
   const botaoEnviar = document.querySelector("[data-botao-auth]");
   const mensagem = document.querySelector("[data-mensagem-auth]");
   const ajudaSenha = document.querySelector("[data-ajuda-senha]");
-  const campoSenha = formulario?.elements.senha;
+  const campoEmail = formulario?.querySelector('[name="email"]');
+  const campoSenha = formulario?.querySelector('[name="senha"]');
+  const campoNome = formulario?.querySelector('[name="nome"]');
   const camposCadastro = document.querySelector("[data-campos-cadastro]");
 
   if (!formulario || !window.supabase || !window.ENDOMAPA_SUPABASE) {
@@ -35,15 +37,23 @@
     });
   });
 
-  formulario.addEventListener("submit", async function (evento) {
-    evento.preventDefault();
+  botaoEnviar.addEventListener("click", processarAutenticacao);
+  formulario.addEventListener("keydown", function (evento) {
+    if (evento.key === "Enter") {
+      evento.preventDefault();
+      processarAutenticacao();
+    }
+  });
+
+  async function processarAutenticacao() {
     limparMensagem();
 
-    const dados = new FormData(formulario);
-    const email = String(dados.get("email") || "").trim();
-    const senha = String(dados.get("senha") || "");
-    const nome = String(dados.get("nome") || "").trim();
-    const tituloProfissional = String(dados.get("titulo") || "");
+    const email = String(campoEmail.value || "").trim();
+    const senha = String(campoSenha.value || "");
+    const nome = String(campoNome.value || "").trim();
+    const tituloProfissional = String(
+      formulario.querySelector('[name="titulo"]:checked')?.value || "",
+    );
 
     if (!email || !senha) {
       mostrarMensagem("Preencha o e-mail e a senha para continuar.", true);
@@ -62,7 +72,7 @@
 
     if (modo === "cadastrar" && !nome) {
       mostrarMensagem("Preencha o nome completo do médico.", true);
-      formulario.elements.nome.focus();
+      campoNome.focus();
       return;
     }
 
@@ -79,7 +89,7 @@
     } finally {
       definirCarregamento(false);
     }
-  });
+  }
 
   async function verificarSessao() {
     const { data, error } = await clienteSupabase.auth.getSession();
