@@ -530,15 +530,101 @@
           </button>
         </div>
       </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="painel-dia"
+        aria-labelledby="titulo-painel-dia"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Visão de hoje</div>
+          <h1 class="titulo-tela" id="titulo-painel-dia">Painel do dia</h1>
+          <p class="texto-apoio">
+            Acompanhe somente os seus mapas criados hoje, sem alterar nenhum registro.
+          </p>
+        </header>
+
+        <p
+          class="mensagem-formulario"
+          role="status"
+          aria-live="polite"
+          data-estado-painel
+        >
+          Carregando o painel do dia...
+        </p>
+
+        <button
+          class="botao botao--secundario"
+          type="button"
+          data-tentar-carregar-painel
+          hidden
+        >
+          Tentar novamente
+        </button>
+
+        <div data-conteudo-painel hidden>
+          <section class="painel-total" aria-label="Total de mapas criados hoje">
+            <span class="painel-total__rotulo">Mapas criados hoje</span>
+            <strong class="painel-total__numero" data-total-mapas-hoje>0</strong>
+            <span class="painel-total__data" data-data-painel></span>
+          </section>
+
+          <div class="painel-contadores" aria-label="Mapas de hoje por status">
+            <button class="painel-contador" type="button" data-filtro-status="em revisão">
+              <strong data-contador-revisao>0</strong>
+              <span>Em revisão</span>
+            </button>
+            <button class="painel-contador" type="button" data-filtro-status="aguardando confirmação">
+              <strong data-contador-aguardando>0</strong>
+              <span>Aguardando</span>
+            </button>
+            <button class="painel-contador" type="button" data-filtro-status="confirmado">
+              <strong data-contador-confirmados>0</strong>
+              <span>Confirmados</span>
+            </button>
+            <button class="painel-contador" type="button" data-filtro-status="PDF gerado">
+              <strong data-contador-pdf>0</strong>
+              <span>PDFs gerados</span>
+            </button>
+          </div>
+
+          <p class="painel-lesoes">
+            <strong data-total-lesoes-hoje>0</strong>
+            <span>lesões estruturadas nos mapas de hoje</span>
+          </p>
+
+          <label class="campo painel-busca">
+            <span class="campo__rotulo">Buscar nos achados de hoje</span>
+            <input
+              type="search"
+              inputmode="search"
+              placeholder="Ex.: ligamento uterossacro"
+              data-busca-painel
+            />
+          </label>
+
+          <div class="painel-filtro-atual" data-filtro-atual hidden>
+            <span data-texto-filtro-atual></span>
+            <button type="button" data-limpar-filtro>Mostrar todos</button>
+          </div>
+
+          <p class="mensagem-formulario" data-estado-lista-painel hidden></p>
+          <div class="lista-mapas-salvos" data-lista-painel></div>
+        </div>
+      </section>
     </main>
 
     <nav class="navegacao" aria-label="Navegação principal">
-      <div class="navegacao__conteudo">
+      <div class="navegacao__conteudo navegacao__conteudo--app">
         <button class="navegacao__item" type="button" data-tela-alvo="selecao-medico">
           Novo mapa
         </button>
         <button class="navegacao__item" type="button" data-tela-alvo="meus-mapas">
           Meus mapas
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="painel-dia">
+          Painel do dia
         </button>
       </div>
     </nav>

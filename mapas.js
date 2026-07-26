@@ -10,9 +10,22 @@
   const listaMapas = document.querySelector("[data-lista-mapas]");
   const estadoLista = document.querySelector("[data-estado-lista-mapas]");
   const botaoTentarLista = document.querySelector("[data-tentar-carregar-mapas]");
+  const botoesPainel = document.querySelectorAll('[data-tela-alvo="painel-dia"]');
+  const estadoPainel = document.querySelector("[data-estado-painel]");
+  const botaoTentarPainel = document.querySelector("[data-tentar-carregar-painel]");
+  const conteudoPainel = document.querySelector("[data-conteudo-painel]");
+  const listaPainel = document.querySelector("[data-lista-painel]");
+  const estadoListaPainel = document.querySelector("[data-estado-lista-painel]");
+  const campoBuscaPainel = document.querySelector("[data-busca-painel]");
+  const botoesFiltroPainel = document.querySelectorAll("[data-filtro-status]");
+  const filtroAtualPainel = document.querySelector("[data-filtro-atual]");
+  const textoFiltroAtual = document.querySelector("[data-texto-filtro-atual]");
+  const botaoLimparFiltro = document.querySelector("[data-limpar-filtro]");
 
   const CLINICA_CENTRUS_ID = "20000000-0000-4000-8000-000000000001";
   let mapaJaSalvo = false;
+  let mapasDoPainel = [];
+  let statusFiltradoNoPainel = "";
 
   if (!clienteSupabase || !botaoSalvar || !mensagem || !campoTexto) {
     return;
@@ -27,6 +40,23 @@
     botao.addEventListener("click", carregarMeusMapas);
   });
   botaoTentarLista?.addEventListener("click", carregarMeusMapas);
+  botoesPainel.forEach(function (botao) {
+    botao.addEventListener("click", carregarPainelDoDia);
+  });
+  botaoTentarPainel?.addEventListener("click", carregarPainelDoDia);
+  campoBuscaPainel?.addEventListener("input", renderizarListaDoPainel);
+  botoesFiltroPainel.forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      statusFiltradoNoPainel = botao.dataset.filtroStatus;
+      atualizarFiltroVisualDoPainel();
+      renderizarListaDoPainel();
+    });
+  });
+  botaoLimparFiltro?.addEventListener("click", function () {
+    statusFiltradoNoPainel = "";
+    atualizarFiltroVisualDoPainel();
+    renderizarListaDoPainel();
+  });
 
   async function salvarMapa() {
     const textoBruto = campoTexto.value.trim();
@@ -165,6 +195,187 @@
         true,
       );
     }
+  }
+
+  async function carregarPainelDoDia() {
+    if (!estadoPainel || !conteudoPainel || !listaPainel) {
+      return;
+    }
+
+    const agora = new Date();
+    const inicioDoDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+    const inicioDoProximoDia = new Date(
+      agora.getFullYear(),
+      agora.getMonth(),
+      agora.getDate() + 1,
+    );
+
+    estadoPainel.textContent = "Carregando o painel do dia...";
+    estadoPainel.classList.remove("mensagem-formulario--erro");
+    estadoPainel.hidden = false;
+    botaoTentarPainel.hidden = true;
+    conteudoPainel.hidden = true;
+
+    try {
+      const { data, error } = await clienteSupabase
+        .from("mapas")
+        .select(`
+          id,
+          texto_bruto,
+          vistas,
+          status,
+          criado_em,
+          lesoes (id)
+        `)
+        .gte("criado_em", inicioDoDia.toISOString())
+        .lt("criado_em", inicioDoProximoDia.toISOString())
+        .order("criado_em", { ascending: false });
+
+      if (error) {
+        mostrarErroDoPainel(traduzirErroDeLeitura(error));
+        return;
+      }
+
+      mapasDoPainel = Array.isArray(data) ? data : [];
+      statusFiltradoNoPainel = "";
+      campoBuscaPainel.value = "";
+      preencherResumoDoPainel(agora);
+      atualizarFiltroVisualDoPainel();
+      renderizarListaDoPainel();
+
+      estadoPainel.hidden = true;
+      conteudoPainel.hidden = false;
+    } catch (erro) {
+      mostrarErroDoPainel(
+        "Não foi possível carregar o painel. Confira sua internet e tente novamente.",
+      );
+    }
+  }
+
+  function preencherResumoDoPainel(dataAtual) {
+    const totais = {
+      "em revisão": 0,
+      "aguardando confirmação": 0,
+      confirmado: 0,
+      "PDF gerado": 0,
+    };
+
+    mapasDoPainel.forEach(function (mapa) {
+      if (Object.hasOwn(totais, mapa.status)) {
+        totais[mapa.status] += 1;
+      }
+    });
+
+    const totalLesoes = mapasDoPainel.reduce(function (soma, mapa) {
+      return soma + (Array.isArray(mapa.lesoes) ? mapa.lesoes.length : 0);
+    }, 0);
+
+    document.querySelector("[data-total-mapas-hoje]").textContent = mapasDoPainel.length;
+    document.querySelector("[data-contador-revisao]").textContent = totais["em revisão"];
+    document.querySelector("[data-contador-aguardando]").textContent =
+      totais["aguardando confirmação"];
+    document.querySelector("[data-contador-confirmados]").textContent = totais.confirmado;
+    document.querySelector("[data-contador-pdf]").textContent = totais["PDF gerado"];
+    document.querySelector("[data-total-lesoes-hoje]").textContent = totalLesoes;
+    document.querySelector("[data-data-painel]").textContent = new Intl.DateTimeFormat("pt-BR", {
+      dateStyle: "full",
+    }).format(dataAtual);
+  }
+
+  function renderizarListaDoPainel() {
+    if (!listaPainel || !estadoListaPainel || !campoBuscaPainel) {
+      return;
+    }
+
+    const termo = normalizarTexto(campoBuscaPainel.value.trim());
+    const mapasFiltrados = mapasDoPainel.filter(function (mapa) {
+      const correspondeAoStatus = !statusFiltradoNoPainel || mapa.status === statusFiltradoNoPainel;
+      const correspondeABusca = !termo || normalizarTexto(mapa.texto_bruto).includes(termo);
+      return correspondeAoStatus && correspondeABusca;
+    });
+
+    listaPainel.replaceChildren();
+
+    if (mapasDoPainel.length === 0) {
+      mostrarEstadoDaListaDoPainel(
+        "Nenhum mapa foi criado hoje. Toque em Novo mapa para iniciar o primeiro.",
+      );
+      return;
+    }
+
+    if (mapasFiltrados.length === 0) {
+      mostrarEstadoDaListaDoPainel("Nenhum mapa de hoje corresponde à busca ou ao filtro.");
+      return;
+    }
+
+    estadoListaPainel.hidden = true;
+    mapasFiltrados.forEach(renderizarMapaDoPainel);
+  }
+
+  function renderizarMapaDoPainel(mapa) {
+    const artigo = document.createElement("article");
+    artigo.className = "mapa-salvo";
+
+    const topo = document.createElement("div");
+    topo.className = "mapa-salvo__topo";
+
+    const status = document.createElement("span");
+    status.className = "etiqueta-estado";
+    status.textContent = mapa.status;
+
+    const dataCriacao = document.createElement("time");
+    dataCriacao.className = "mapa-salvo__data";
+    dataCriacao.dateTime = mapa.criado_em;
+    dataCriacao.textContent = formatarData(mapa.criado_em);
+
+    const texto = document.createElement("p");
+    texto.className = "mapa-salvo__texto";
+    texto.textContent = mapa.texto_bruto || "Sem texto bruto informado.";
+
+    const detalhes = document.createElement("p");
+    detalhes.className = "mapa-salvo__vista";
+    const quantidadeLesoes = Array.isArray(mapa.lesoes) ? mapa.lesoes.length : 0;
+    detalhes.textContent = `${formatarVista(mapa.vistas)} · ${quantidadeLesoes} ${
+      quantidadeLesoes === 1 ? "lesão" : "lesões"
+    }`;
+
+    topo.append(status, dataCriacao);
+    artigo.append(topo, texto, detalhes);
+    listaPainel.append(artigo);
+  }
+
+  function atualizarFiltroVisualDoPainel() {
+    botoesFiltroPainel.forEach(function (botao) {
+      botao.setAttribute(
+        "aria-pressed",
+        String(botao.dataset.filtroStatus === statusFiltradoNoPainel),
+      );
+    });
+
+    filtroAtualPainel.hidden = !statusFiltradoNoPainel;
+    textoFiltroAtual.textContent = statusFiltradoNoPainel
+      ? `Filtro: ${primeiraMaiuscula(statusFiltradoNoPainel)}`
+      : "";
+  }
+
+  function mostrarEstadoDaListaDoPainel(texto) {
+    estadoListaPainel.textContent = texto;
+    estadoListaPainel.hidden = false;
+  }
+
+  function mostrarErroDoPainel(texto) {
+    estadoPainel.textContent = texto;
+    estadoPainel.classList.add("mensagem-formulario--erro");
+    estadoPainel.hidden = false;
+    botaoTentarPainel.hidden = false;
+    conteudoPainel.hidden = true;
+  }
+
+  function normalizarTexto(texto) {
+    return String(texto || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLocaleLowerCase("pt-BR");
   }
 
   function renderizarMapa(mapa) {
