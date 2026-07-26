@@ -28,9 +28,10 @@ Guarda os médicos disponíveis para seleção e a assinatura aplicada ao PDF.
 |---|---|---|
 | id | texto | Identificador único do médico. |
 | user_id | texto | Identificador do dono deste dado. |
-| clinica_id | texto | Identificador da clínica à qual o médico pertence. |
-| nome | texto | Nome do médico exibido na seleção. |
-| assinatura | texto | Referência para o arquivo da assinatura. |
+| clinica_id | texto | Identificador da clínica à qual o médico pertence; fica vazio quando o médico usa os mapas neutros. |
+| titulo | lista fechada: Dr., Dra. | Tratamento escolhido pelo médico no cadastro. |
+| nome | texto | Nome completo exibido como responsável pelo mapa. |
+| assinatura | texto | Primeiro nome usado para gerar a assinatura cursiva no mapa. |
 | ativo | lista fechada: sim, não | Define se o médico aparece para seleção. |
 | criado_em | data e hora | Momento em que o médico foi cadastrado. |
 
@@ -120,7 +121,7 @@ Guarda a aparência aprovada para cada categoria de lesão. A IA não inventará
 
 ## Relações entre as tabelas
 
-- Uma clínica tem vários médicos; cada médico pertence a uma clínica.
+- Uma clínica tem vários médicos; um médico pode pertencer a uma clínica ou usar os mapas neutros sem clínica vinculada.
 - Uma clínica tem vários mapas; cada mapa pertence a uma clínica.
 - Um médico pode revisar vários mapas; cada mapa tem um médico responsável.
 - Um mapa tem várias lesões; cada lesão pertence a um mapa.
