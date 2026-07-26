@@ -10,6 +10,8 @@ O radiologista precisa produzir, com mais rapidez, um mapa profissional para exa
 
 O médico radiologista entra no sistema para ditar os achados de um exame e sair com mapas anatômicos coronal e sagital revisados, com as lesões e alterações descritas, em um PDF pronto para impressão.
 
+Cada médico cria sua conta com nome completo, título profissional, e-mail e senha. Depois do login, entra diretamente na própria área de trabalho; o nome e o primeiro nome usado na assinatura vêm do perfil autenticado, sem seleção manual. A conta `danielmed124@gmail.com` usa a identidade Centrus MG, e os demais médicos usam mapas neutros, sem logomarca nem marca-d'água.
+
 ## 3. O QUE A PESSOA FAZ HOJE
 
 O médico realiza o exame, identifica as lesões e depois as desenha manualmente, com canetinhas, sobre uma figura anatômica já impressa. Essa confecção leva de dois a três minutos e produz um resultado com pouca definição anatômica e aparência pouco profissional.
@@ -36,8 +38,7 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 - Representação de estruturas além de útero, ovários, tubas uterinas, ligamentos uterossacros, região retrocervical, reto/sigmoide, bexiga e recessos pélvicos.
 - IA inventando uma aparência diferente para cada exame; será usada uma aparência visual aprovada para cada categoria de lesão.
 - Painel de vendas, cobrança ou administração de várias clínicas na mesma instalação.
-- Contas de usuário; os médicos e suas assinaturas serão cadastrados na implantação.
-- Várias identidades visuais na mesma instalação; cada instalação atenderá uma clínica.
+- Cadastro e configuração de identidades visuais para outras clínicas; nesta etapa, somente a conta definida do proprietário usa Centrus MG e as demais usam mapas neutros.
 
 ## 7. CASOS DE BORDA
 

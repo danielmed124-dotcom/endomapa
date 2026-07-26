@@ -2,7 +2,7 @@
 
 ## Limite deste documento
 
-Este documento mostra a arquitetura futura do Endomapa. O site de apresentação já publicado continua estático; Supabase, login, banco de dados, Edge Function e IA permanecem fora do MVP de dez dias e só serão construídos depois.
+Este documento mostra a arquitetura atual e futura do Endomapa. O site está publicado no Cloudflare Pages; Supabase, login, perfis médicos, mapas, lesões e RLS já estão ligados. Edge Function, IA e geração real do PDF continuam como etapas futuras.
 
 ## 1. Tela no navegador
 
@@ -13,8 +13,8 @@ Essa parte será um front estático: arquivos visuais entregues prontos ao naveg
 Responsabilidades da tela:
 
 - Mostrar a apresentação pública do Endomapa.
-- Mostrar o login futuro.
-- Permitir a seleção do médico.
+- Mostrar cadastro, login e recuperação de senha.
+- Carregar automaticamente o perfil do médico autenticado.
 - Capturar o ditado ao vivo.
 - Mostrar dúvidas que precisam de confirmação.
 - Exibir os mapas coronal e sagital para revisão.
@@ -23,17 +23,17 @@ Responsabilidades da tela:
 
 ## 2. Banco de dados e login no Supabase
 
-O Supabase será usado no futuro para o login e para o banco de dados. Banco de dados é o local organizado onde ficam as informações descritas no `MODELO.md`.
+O Supabase é usado para login e banco de dados. Banco de dados é o local organizado onde ficam as informações descritas no `MODELO.md`.
 
 Responsabilidades do Supabase:
 
 - Confirmar quem entrou no sistema.
 - Associar cada linha de dado ao seu dono por meio do `user_id`.
-- Guardar clínicas, médicos, assinaturas e modelos visuais aprovados.
-- Guardar mapas, lesões, relações anatômicas e dúvidas somente quando o armazenamento futuro entrar no escopo.
+- Guardar perfis médicos, assinaturas geradas, mapas e lesões.
+- Guardar futuramente clínicas configuráveis, modelos visuais, relações anatômicas e dúvidas.
 - Impedir que um usuário acesse dados pertencentes a outro dono.
 
-O login e o armazenamento de mapas não fazem parte do MVP de dez dias. Até essa etapa futura, a escolha do médico continuará sendo feita por uma lista previamente configurada, sem conta individual.
+O médico cria a conta com nome completo e título Dr. ou Dra. Depois do login, entra diretamente na área de trabalho; não existe seleção manual de médico nem modo visitante. A conta `danielmed124@gmail.com` usa a identidade Centrus MG, e as demais contas usam mapas neutros.
 
 ## 3. Edge Function: o cofre da IA
 
@@ -83,5 +83,5 @@ Nenhuma mudança será feita diretamente no banco sem o arquivo correspondente n
 
 - O GitHub guarda os documentos, arquivos visuais e o histórico do projeto.
 - O Cloudflare Pages publica a parte visual que roda no navegador.
-- No futuro, o Supabase cuidará do login, dos dados e da Edge Function.
+- O Supabase cuida do login e dos dados; futuramente também hospedará a Edge Function.
 - Uma mudança só seguirá para publicação depois de explicada, aprovada, testada e registrada no Git.

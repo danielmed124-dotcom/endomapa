@@ -2,7 +2,7 @@
 
 ## Limite deste documento
 
-Este é o desenho da arquitetura futura com Supabase e login. Ele não coloca login, banco de dados ou histórico de mapas dentro do MVP de dez dias.
+Este documento descreve o modelo usado pelo banco Supabase do Endomapa. Login, perfis médicos, mapas e lesões já possuem tabelas reais; as demais tabelas continuam como desenho das etapas futuras.
 
 Cada linha de dado nasce com um `user_id` porque o sistema precisa saber quem é o dono desde a criação; acrescentar o dono depois deixaria dados antigos sem uma separação segura.
 

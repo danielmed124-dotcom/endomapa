@@ -1,7 +1,7 @@
 # COMO VOCÊ TRABALHA COMIGO
 
 - Eu nunca programei. Explique tudo em português claro, com acentuação correta, sem jargão. Se usar um termo técnico, explique na hora.
-- Antes de escrever qualquer código, explique o PLANO em português e espere eu concordar.
+- Antes de escrever qualquer código, explique o PLANO em português e prossiga com as atualizações necessárias sem esperar confirmação. Peça minha decisão somente quando faltar uma escolha que mude o produto, houver risco relevante ou a ação ultrapassar o escopo.
 - Construa em passos pequenos. A cada passo, diga o que eu vou ver na tela.
 - Se der erro, explique a CAUSA em português antes de corrigir, porque eu quero aprender junto e entender o porquê.
 - Nunca faça mais do que eu pedi. Se achar que falta algo, sugira e espere eu decidir.
