@@ -22,81 +22,10 @@
     </header>
 
     <main class="conteudo">
-      <section class="cartao cartao--alinhado tela" data-tela="selecao-medico" aria-labelledby="titulo-medico">
-        <div class="clinica">
-          <div class="clinica__logo" aria-label="Logomarca demonstrativa da clínica">C</div>
-          <p class="clinica__nome">Centrus MG Diagnóstico por Imagem</p>
-        </div>
-
-        <header class="cabecalho-tela">
-          <div class="selo">Responsável pelo mapa</div>
-          <h1 class="titulo-tela" id="titulo-medico">Selecione o médico</h1>
-          <p class="texto-apoio">
-            A assinatura configurada para o médico escolhido será usada no mapa demonstrativo.
-          </p>
-        </header>
-
-        <form>
-          <fieldset class="lista-opcoes">
-            <legend>Médicos ativos</legend>
-
-            <label class="opcao-medico">
-              <span class="opcao-medico__nome">Dr. Daniel Martins</span>
-              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000001" checked />
-            </label>
-
-            <label class="opcao-medico">
-              <span class="opcao-medico__nome">Dra. Mariana Alves</span>
-              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000002" />
-            </label>
-
-            <label class="opcao-medico">
-              <span class="opcao-medico__nome">Dr. Rafael Nogueira</span>
-              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000003" />
-            </label>
-
-            <label class="opcao-medico">
-              <span class="opcao-medico__nome">Dra. Camila Ribeiro</span>
-              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000004" />
-            </label>
-
-            <label class="opcao-medico">
-              <span class="opcao-medico__nome">Dr. Gustavo Lima</span>
-              <span class="opcao-medico__estado">Ativo · assinatura configurada</span>
-              <input type="radio" name="medico_id" value="10000000-0000-4000-8000-000000000005" />
-            </label>
-          </fieldset>
-
-          <div class="acoes">
-            <button
-              class="botao"
-              type="button"
-              data-tela-alvo="novo-mapa"
-              data-escolher-medico
-            >
-              Continuar
-            </button>
-            <button
-              class="botao botao--secundario"
-              type="button"
-              data-tela-alvo="novo-mapa"
-              data-modo-visitante
-            >
-              Continuar como médico visitante
-            </button>
-          </div>
-        </form>
-      </section>
-
       <section
         class="cartao cartao--alinhado tela"
         data-tela="novo-mapa"
         aria-labelledby="titulo-novo-mapa"
-        hidden
       >
         <header class="cabecalho-tela">
           <div class="selo">Novo mapa</div>
@@ -181,9 +110,6 @@
             data-tela-alvo="duvidas"
           >
             Ver demonstração com dados fixos
-          </button>
-          <button class="link-voltar" type="button" data-tela-alvo="selecao-medico">
-            Trocar médico
           </button>
         </div>
       </section>
@@ -481,7 +407,7 @@
           >
             Visualizar PDF
           </button>
-          <button class="botao botao--secundario" type="button" data-tela-alvo="selecao-medico">
+          <button class="botao botao--secundario" type="button" data-tela-alvo="novo-mapa">
             Iniciar outro mapa
           </button>
           <button class="link-voltar" type="button" data-tela-alvo="revisao">
@@ -525,7 +451,7 @@
         <div class="lista-mapas-salvos" data-lista-mapas></div>
 
         <div class="acoes">
-          <button class="botao" type="button" data-tela-alvo="selecao-medico">
+          <button class="botao" type="button" data-tela-alvo="novo-mapa">
             Criar novo mapa
           </button>
         </div>
@@ -617,7 +543,7 @@
 
     <nav class="navegacao" aria-label="Navegação principal">
       <div class="navegacao__conteudo navegacao__conteudo--app">
-        <button class="navegacao__item" type="button" data-tela-alvo="selecao-medico">
+        <button class="navegacao__item" type="button" data-tela-alvo="novo-mapa">
           Novo mapa
         </button>
         <button class="navegacao__item" type="button" data-tela-alvo="meus-mapas">

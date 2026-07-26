@@ -36,36 +36,34 @@ function abrirTela(nomeDaTela) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function aplicarMedico(nomeDoMedico, modoVisitante, medicoId) {
-  const primeiroNome = modoVisitante
-    ? ""
-    : nomeDoMedico.replace(/^Dr(a)?\.\s*/, "").trim().split(/\s+/)[0];
+function aplicarPerfilMedico(perfil) {
+  const nomeDoMedico = `${perfil.titulo} ${perfil.nome}`;
+  const primeiroNome = perfil.assinatura || perfil.nome.trim().split(/\s+/)[0];
+  const usarIdentidadeCentrus = Boolean(perfil.clinica_id);
 
-  document.body.dataset.medicoId = modoVisitante
-    ? "10000000-0000-4000-8000-000000000099"
-    : medicoId;
+  document.body.dataset.medicoId = perfil.id;
 
   destinosDoNome.forEach((destino) => {
-    destino.textContent = modoVisitante ? "Médico visitante" : nomeDoMedico;
+    destino.textContent = nomeDoMedico;
   });
 
   linhasDeIdentificacao.forEach((linha) => {
-    linha.hidden = modoVisitante;
+    linha.hidden = false;
   });
 
   identificacoesDaClinica.forEach((identificacao) => {
-    identificacao.hidden = modoVisitante;
+    identificacao.hidden = !usarIdentidadeCentrus;
   });
 
   mapasBase.forEach((mapa) => {
-    mapa.src = modoVisitante ? mapa.dataset.srcVisitante : mapa.dataset.srcClinica;
+    mapa.src = usarIdentidadeCentrus ? mapa.dataset.srcClinica : mapa.dataset.srcVisitante;
   });
 
   const desenharAssinatura = (assinatura) => {
     assinatura.replaceChildren();
-    assinatura.hidden = modoVisitante;
+    assinatura.hidden = !primeiroNome;
 
-    if (modoVisitante || !primeiroNome) return;
+    if (!primeiroNome) return;
 
     const inicial = document.createElement("span");
     inicial.className = "assinatura__inicial";
@@ -95,18 +93,15 @@ function aplicarVistas() {
 
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
-    if (elemento.hasAttribute("data-modo-visitante")) {
-      aplicarMedico("", true, "");
-    } else if (elemento.hasAttribute("data-escolher-medico")) {
-      const medicoSelecionado = document.querySelector('input[name="medico_id"]:checked');
-      const nomeDoMedico = medicoSelecionado?.closest(".opcao-medico")?.querySelector(".opcao-medico__nome")?.textContent;
-
-      if (nomeDoMedico) {
-        aplicarMedico(nomeDoMedico, false, medicoSelecionado.value);
-      }
-    }
-
     aplicarVistas();
     abrirTela(elemento.dataset.telaAlvo);
   });
 });
+
+window.addEventListener("endomapa:perfil-carregado", (evento) => {
+  aplicarPerfilMedico(evento.detail);
+});
+
+if (window.endomapaMedico) {
+  aplicarPerfilMedico(window.endomapaMedico);
+}

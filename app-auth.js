@@ -34,6 +34,24 @@
         return;
       }
 
+      const { data: perfil, error: erroPerfil } = await clienteSupabase
+        .from("medicos")
+        .select("id, user_id, clinica_id, titulo, nome, assinatura, ativo")
+        .eq("user_id", data.user.id)
+        .single();
+
+      if (erroPerfil || !perfil || perfil.ativo !== "sim") {
+        await clienteSupabase.auth.signOut();
+        enviarParaLogin("perfil");
+        return;
+      }
+
+      window.endomapaMedico = perfil;
+      window.dispatchEvent(
+        new CustomEvent("endomapa:perfil-carregado", {
+          detail: perfil,
+        }),
+      );
       corpo.classList.remove("autenticacao-pendente");
     } catch (erro) {
       enviarParaLogin();
@@ -62,8 +80,8 @@
     }
   }
 
-  function enviarParaLogin() {
-    window.location.replace("login.html?motivo=acesso");
+  function enviarParaLogin(motivo = "acesso") {
+    window.location.replace(`login.html?motivo=${motivo}`);
   }
 
   function mostrarErro(texto) {

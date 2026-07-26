@@ -203,6 +203,14 @@
       mostrarMensagem("Entre para acessar a área protegida do Endomapa.", true);
       window.history.replaceState({}, "", "login.html");
     }
+
+    if (parametros.get("motivo") === "perfil") {
+      mostrarMensagem(
+        "Não foi possível abrir o perfil médico. Entre novamente ou procure o responsável pelo sistema.",
+        true,
+      );
+      window.history.replaceState({}, "", "login.html");
+    }
   }
 
   function traduzirErro(erro) {
