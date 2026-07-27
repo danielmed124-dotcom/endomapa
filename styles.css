@@ -756,6 +756,70 @@ h1 span {
   box-shadow: 0 0 0 3px rgba(201, 162, 77, 0.12);
 }
 
+.controle-ditado {
+  display: grid;
+  margin-top: 18px;
+  padding: 18px;
+  gap: 16px;
+  border: 1px solid var(--borda);
+  border-radius: 18px;
+  background: rgba(25, 33, 28, 0.7);
+}
+
+.controle-ditado__titulo {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.controle-ditado__ajuda,
+.estado-ditado {
+  margin: 6px 0 0;
+  color: var(--texto-suave);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.controle-ditado__acoes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.estado-ditado {
+  min-height: 2.5em;
+  margin: 0;
+}
+
+.estado-ditado[data-tipo="ouvindo"] {
+  color: var(--dourado);
+}
+
+.estado-ditado[data-tipo="sucesso"] {
+  color: var(--verde-claro);
+}
+
+.estado-ditado[data-tipo="erro"] {
+  color: #f0a8a8;
+}
+
+.botao--gravando span {
+  color: #8b241f;
+  animation: pulso-gravacao 1s ease-in-out infinite;
+}
+
+@keyframes pulso-gravacao {
+  50% {
+    opacity: 0.3;
+    transform: scale(0.78);
+  }
+}
+
+@media (min-width: 560px) {
+  .controle-ditado__acoes {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .campo input {
   width: 100%;
   min-height: 52px;

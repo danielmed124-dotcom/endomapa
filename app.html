@@ -31,7 +31,7 @@
           <div class="selo">Novo mapa</div>
           <h1 class="titulo-tela" id="titulo-novo-mapa">Dite os achados</h1>
           <p class="texto-apoio">
-            Hoje esta área é apenas visual. O reconhecimento de voz será conectado em uma etapa futura.
+            Use o microfone para transcrever os achados ao vivo e confira o texto antes de salvar.
           </p>
         </header>
 
@@ -59,6 +59,34 @@
             placeholder="Nenhum ditado informado."
           ></textarea>
         </div>
+
+        <section class="controle-ditado" aria-labelledby="titulo-controle-ditado">
+          <div>
+            <h2 class="controle-ditado__titulo" id="titulo-controle-ditado">Comando de voz</h2>
+            <p class="controle-ditado__ajuda">
+              Fale em português e acompanhe a transcrição na caixa acima.
+            </p>
+          </div>
+
+          <div class="controle-ditado__acoes">
+            <button class="botao" type="button" data-iniciar-ditado>
+              <span aria-hidden="true">●</span>
+              Iniciar ditado
+            </button>
+            <button class="botao botao--secundario" type="button" data-parar-ditado disabled>
+              Parar ditado
+            </button>
+          </div>
+
+          <p
+            class="estado-ditado"
+            role="status"
+            aria-live="polite"
+            data-estado-ditado
+          >
+            Microfone pronto.
+          </p>
+        </section>
 
         <fieldset class="opcoes-vistas">
           <legend>Vistas do mapa</legend>
@@ -89,13 +117,6 @@
           ></p>
           <button class="botao" type="button" data-salvar-mapa>
             Salvar mapa
-          </button>
-          <button
-            class="botao"
-            type="button"
-            data-mensagem="O reconhecimento de voz será conectado em uma etapa futura."
-          >
-            Iniciar ditado
           </button>
           <button
             class="botao botao--secundario"
@@ -561,5 +582,6 @@
     <script src="app-auth.js"></script>
     <script src="prototipo.js"></script>
     <script src="mapas.js"></script>
+    <script src="voz.js"></script>
   </body>
 </html>
