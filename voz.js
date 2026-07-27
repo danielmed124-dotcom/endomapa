@@ -31,6 +31,42 @@
   reconhecimento.interimResults = true;
   reconhecimento.maxAlternatives = 1;
 
+  // Dá mais peso ao vocabulário médico do MVP quando o navegador oferece
+  // a ajuda contextual. Isso não troca palavras depois do ditado e não altera
+  // o texto bruto: apenas aumenta a chance de o serviço ouvir o termo correto.
+  const termosMedicos = [
+    "endometriose",
+    "adenomiose",
+    "endometrioma",
+    "mioma",
+    "uterossacro",
+    "uterossacros",
+    "ligamento uterossacro",
+    "ligamentos uterossacros",
+    "retrocervical",
+    "região retrocervical",
+    "viscouterino",
+    "recesso viscouterino",
+    "recesso pélvico",
+    "ovário direito",
+    "ovário esquerdo",
+    "tuba uterina",
+    "parede uterina",
+    "reto e sigmoide",
+    "aderência",
+    "bexiga",
+  ];
+
+  if (window.SpeechRecognitionPhrase && "phrases" in reconhecimento) {
+    try {
+      reconhecimento.phrases = termosMedicos.map(function (termo) {
+        return new window.SpeechRecognitionPhrase(termo, 6);
+      });
+    } catch (erro) {
+      // O recurso ainda é experimental. Se o navegador recusar, o ditado comum continua.
+    }
+  }
+
   let estaOuvindo = false;
   let deveContinuar = false;
   let textoAntesDoDitado = "";
