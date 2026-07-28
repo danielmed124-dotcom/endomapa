@@ -432,10 +432,44 @@
     }
 
     topo.append(status, dataCriacao);
+    const botaoReabrir = criarBotaoReabrirMapa(mapa, lesoes);
     const controleStatus = criarControleStatus(mapa, lesoes.length);
 
-    artigo.append(topo, texto, vista, blocoLesoes, controleStatus);
+    artigo.append(topo, texto, vista, blocoLesoes, botaoReabrir, controleStatus);
     listaMapas.append(artigo);
+  }
+
+  function criarBotaoReabrirMapa(mapa, lesoes) {
+    const botao = document.createElement("button");
+    botao.className = "botao botao--secundario";
+    botao.type = "button";
+    botao.textContent = "Abrir mapa para revisão";
+    botao.disabled = lesoes.length === 0;
+
+    if (lesoes.length === 0) {
+      botao.title = "Este mapa ainda não possui lesões estruturadas.";
+      return botao;
+    }
+
+    botao.addEventListener("click", function () {
+      document.body.dataset.mapaAtualId = mapa.id;
+
+      const escolhaVista = document.querySelector(`input[name="vistas"][value="${mapa.vistas}"]`);
+      if (escolhaVista) escolhaVista.checked = true;
+
+      window.dispatchEvent(new CustomEvent("endomapa:lesoes-confirmadas", {
+        detail: {
+          mapaId: mapa.id,
+          lesoes,
+        },
+      }));
+
+      if (typeof window.endomapaAbrirTela === "function") {
+        window.endomapaAbrirTela("revisao");
+      }
+    });
+
+    return botao;
   }
 
   function criarControleStatus(mapa, quantidadeLesoes) {

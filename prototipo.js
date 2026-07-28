@@ -36,6 +36,9 @@ function abrirTela(nomeDaTela) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
+// Permite que mapas carregados do banco reabram a revisão após um novo login.
+window.endomapaAbrirTela = abrirTela;
+
 function aplicarPerfilMedico(perfil) {
   const nomeDoMedico = `${perfil.titulo} ${perfil.nome}`;
   const primeiroNome = perfil.assinatura || perfil.nome.trim().split(/\s+/)[0];
