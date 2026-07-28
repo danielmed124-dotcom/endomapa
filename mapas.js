@@ -444,14 +444,34 @@
     botao.className = "botao botao--secundario";
     botao.type = "button";
     botao.textContent = "Abrir mapa para revisão";
-    botao.disabled = lesoes.length === 0;
 
-    if (lesoes.length === 0) {
-      botao.title = "Este mapa ainda não possui lesões estruturadas.";
-      return botao;
-    }
+    botao.addEventListener("click", async function () {
+      botao.disabled = true;
+      botao.textContent = "Abrindo mapa...";
 
-    botao.addEventListener("click", function () {
+      let lesoesParaRevisao = lesoes;
+      if (lesoesParaRevisao.length === 0) {
+        const { data, error } = await clienteSupabase
+          .from("lesoes")
+          .select("id, categoria, localizacao, lado, medida_1, medida_2, medida_3, observacao, confianca, criado_em")
+          .eq("mapa_id", mapa.id)
+          .order("criado_em", { ascending: true });
+
+        if (error) {
+          botao.disabled = false;
+          botao.textContent = "Tentar abrir novamente";
+          botao.title = "O banco não conseguiu carregar as lesões deste mapa.";
+          return;
+        }
+        lesoesParaRevisao = data || [];
+      }
+
+      if (lesoesParaRevisao.length === 0) {
+        botao.disabled = false;
+        botao.textContent = "Mapa sem lesões para revisar";
+        return;
+      }
+
       document.body.dataset.mapaAtualId = mapa.id;
 
       const escolhaVista = document.querySelector(`input[name="vistas"][value="${mapa.vistas}"]`);
@@ -460,13 +480,16 @@
       window.dispatchEvent(new CustomEvent("endomapa:lesoes-confirmadas", {
         detail: {
           mapaId: mapa.id,
-          lesoes,
+          lesoes: lesoesParaRevisao,
         },
       }));
 
       if (typeof window.endomapaAbrirTela === "function") {
         window.endomapaAbrirTela("revisao");
       }
+
+      botao.disabled = false;
+      botao.textContent = "Abrir mapa para revisão";
     });
 
     return botao;
