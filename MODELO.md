@@ -46,7 +46,7 @@ Guarda o trabalho iniciado a partir de um ditado. O armazenamento e o histórico
 | clinica_id | texto | Identificador da clínica cuja identidade visual será usada. |
 | medico_id | texto | Identificador do médico responsável pela revisão. |
 | texto_bruto | texto | Transcrição integral do ditado antes da interpretação pela IA. |
-| confianca | número | Quanto a IA confia no conjunto de informações que entendeu. A escala ainda é uma decisão pendente. |
+| confianca | número de 0 a 100 | Quanto a IA confia no conjunto de informações que entendeu. |
 | vistas | lista fechada: coronal, sagital, ambas | Define quais vistas anatômicas serão representadas no mapa. |
 | status | lista fechada: em revisão, aguardando confirmação, confirmado, PDF gerado | Etapa atual do mapa. |
 | criado_em | data e hora | Momento em que o mapa foi iniciado. |
@@ -69,7 +69,7 @@ Um mapa pode ter várias lesões, e cada lesão pertence a um único mapa.
 | medida_2 | número | Segunda medida da lesão em centímetros. |
 | medida_3 | número | Terceira medida, quando tiver sido informada, em centímetros. |
 | observacao | texto | Complemento ditado pelo médico que não cabe nos campos fechados. |
-| confianca | número | Quanto a IA confia na interpretação desta lesão. A escala ainda é uma decisão pendente. |
+| confianca | número de 0 a 100 | Quanto a IA confia na interpretação desta lesão. |
 | criado_em | data e hora | Momento em que a lesão foi incluída no mapa. |
 
 ## Tabela: relações anatômicas
@@ -87,7 +87,7 @@ Guarda relações descritas no ditado, como um ovário e o reto aderidos à regi
 | estrutura_destino | lista fechada: útero, ovário, tuba uterina, ligamento uterossacro, região retrocervical, reto ou sigmoide, bexiga, recesso pélvico | Estrutura ou região de destino. |
 | lado_destino | lista fechada: direito, esquerdo, bilateral, central, não informado | Lado da estrutura de destino. |
 | lesao_id | texto | Identificador da lesão responsável pela relação, quando houver. |
-| confianca | número | Quanto a IA confia na interpretação desta relação. A escala ainda é uma decisão pendente. |
+| confianca | número de 0 a 100 | Quanto a IA confia na interpretação desta relação. |
 | criado_em | data e hora | Momento em que a relação foi incluída. |
 
 ## Tabela: dúvidas da interpretação
