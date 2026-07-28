@@ -36,6 +36,7 @@
   let sugestaoAtual = null;
   let salvamentoEmAndamento = false;
   const LIMITE_CONFIANCA_BAIXA = 70;
+  const LIMITE_TEXTO_IA = 4000;
 
   botaoInterpretar.addEventListener("click", interpretarDitado);
   botaoConfirmar.addEventListener("click", salvarLesoesConfirmadas);
@@ -51,6 +52,14 @@
 
     if (!textoBruto) {
       mostrarResultadoComErro("Dite ou escreva os achados antes de pedir a interpretação.");
+      campoTexto.focus();
+      return;
+    }
+
+    if (textoBruto.length > LIMITE_TEXTO_IA) {
+      mostrarResultadoComErro(
+        `O ditado ultrapassou o limite de ${LIMITE_TEXTO_IA.toLocaleString("pt-BR")} caracteres. Reduza o texto antes de interpretar.`,
+      );
       campoTexto.focus();
       return;
     }
