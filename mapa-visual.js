@@ -7,7 +7,7 @@
   if (!camadas.length || !lista) return;
 
   const modelos = {
-    endometriose: true,
+    endometriose: "assets/lesoes/endometriose-referencia-horizontal.png",
     adenomiose: "assets/lesoes/adenomiose.png",
   };
 
@@ -58,6 +58,9 @@
         const ponto = obterPonto(vista, lesao.localizacao, lesao.lado);
         if (!ponto) return;
         camada.append(criarLesaoVisual(lesao, indice, ponto));
+        if (formatarMedidas(lesao) !== "Medida não informada") {
+          camada.append(criarAnotacaoDaMedida(lesao, ponto));
+        }
       });
     });
   }
@@ -84,25 +87,21 @@
     elemento.style.setProperty("--rotacao-lesao", `${rotacao}deg`);
     elemento.style.setProperty("--rotacao-medida", `${-rotacao}deg`);
 
-    let visual;
-
-    if (lesao.categoria === "endometriose") {
-      visual = criarPadraoEndometriose(dimensoes.proporcao);
-    } else {
-      const imagem = document.createElement("img");
-      imagem.className = "lesao-no-mapa__imagem";
-      imagem.src = modelos[lesao.categoria];
-      imagem.alt = "";
-      visual = imagem;
-    }
-
-    const medida = document.createElement("span");
-    medida.className = "lesao-no-mapa__medida";
-    medida.textContent = formatarMedidas(lesao);
-
-    elemento.append(visual);
-    if (medida.textContent !== "Medida não informada") elemento.append(medida);
+    const imagem = document.createElement("img");
+    imagem.className = "lesao-no-mapa__imagem";
+    imagem.src = modelos[lesao.categoria];
+    imagem.alt = "";
+    elemento.append(imagem);
     return elemento;
+  }
+
+  function criarAnotacaoDaMedida(lesao, ponto) {
+    const medida = document.createElement("span");
+    medida.className = "medida-no-mapa";
+    medida.style.left = `${ponto.x}%`;
+    medida.style.top = `${Math.min(92, ponto.y + 4.5)}%`;
+    medida.textContent = formatarMedidas(lesao);
+    return medida;
   }
 
   function calcularDimensoes(lesao) {
@@ -117,36 +116,6 @@
       largura: Math.min(22, Math.max(7, 5 + comprimento * 5.5)),
       proporcao: Math.min(6, Math.max(0.45, comprimento / espessura)),
     };
-  }
-
-  function criarPadraoEndometriose(proporcao) {
-    const padrao = document.createElement("div");
-    const alongado = proporcao > 1.5;
-    padrao.className = `padrao-endometriose ${alongado ? "padrao-endometriose--alongado" : "padrao-endometriose--arredondado"}`;
-    const total = alongado ? 24 : 25;
-
-    for (let indice = 0; indice < total; indice += 1) {
-      const foco = document.createElement("span");
-      foco.className = "padrao-endometriose__foco";
-
-      if (alongado) {
-        const coluna = indice % 12;
-        const linha = Math.floor(indice / 12);
-        foco.style.left = `${7 + coluna * 7.7 + ((indice * 5) % 5)}%`;
-        foco.style.top = `${32 + linha * 31 + ((indice * 7) % 11) - 5}%`;
-      } else {
-        const coluna = indice % 5;
-        const linha = Math.floor(indice / 5);
-        foco.style.left = `${17 + coluna * 16 + ((indice * 3) % 7) - 3}%`;
-        foco.style.top = `${17 + linha * 16 + ((indice * 5) % 7) - 3}%`;
-      }
-
-      foco.style.height = `${alongado ? 20 + ((indice * 7) % 16) : 9 + ((indice * 7) % 8)}%`;
-      foco.style.transform = `translate(-50%, -50%) rotate(${(indice * 37) % 180}deg)`;
-      padrao.append(foco);
-    }
-
-    return padrao;
   }
 
   function numeroPositivo(valor) {

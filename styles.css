@@ -957,32 +957,14 @@ h1 span {
   filter: saturate(0.62) brightness(0.76) contrast(1.12);
 }
 
-.padrao-endometriose {
-  position: absolute;
+.lesao-no-mapa--endometriose {
   overflow: hidden;
-  inset: 0;
   border-radius: 46%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(131, 20, 16, 0.34),
-    rgba(174, 50, 35, 0.2) 62%,
-    rgba(174, 50, 35, 0) 82%
-  );
-  mix-blend-mode: multiply;
 }
 
-.padrao-endometriose__foco {
-  position: absolute;
-  aspect-ratio: 0.72;
-  border-radius: 42% 58% 48% 52%;
-  background: radial-gradient(
-    circle at 34% 28%,
-    rgba(119, 79, 61, 0.72) 0 9%,
-    #32140f 25%,
-    #100806 68%,
-    #050302 100%
-  );
-  box-shadow: 0 0 0 0.3px rgba(79, 17, 12, 0.65);
+.lesao-no-mapa--endometriose .lesao-no-mapa__imagem {
+  opacity: 0.76;
+  filter: saturate(0.55) brightness(0.72) contrast(1.08);
 }
 
 .lesao-no-mapa--adenomiose .lesao-no-mapa__imagem {
@@ -990,10 +972,9 @@ h1 span {
   filter: saturate(0.72) contrast(0.94);
 }
 
-.lesao-no-mapa__medida {
+.medida-no-mapa {
   position: absolute;
-  top: calc(100% + 10px);
-  left: 50%;
+  z-index: 3;
   padding: 2px 4px;
   color: #7c1919;
   border-radius: 4px;
@@ -1001,8 +982,7 @@ h1 span {
   font-size: clamp(0.38rem, 1.7vw, 0.58rem);
   font-weight: 800;
   line-height: 1.15;
-  z-index: 3;
-  transform: translateX(-50%) rotate(var(--rotacao-medida, 0deg));
+  transform: translateX(-50%);
   white-space: nowrap;
 }
 
