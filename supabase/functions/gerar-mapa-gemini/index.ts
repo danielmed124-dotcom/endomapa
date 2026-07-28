@@ -139,7 +139,9 @@ Deno.serve(async (req) => {
           { type: "image", mime_type: "image/png", data: referenciaBase64 },
           { type: "image", mime_type: "image/png", data: mascara_base64 },
         ],
-        response_format: { type: "image", mime_type: "image/png", aspect_ratio: "2:3", image_size: "1K" },
+        // Este modelo aceita a imagem final somente em JPEG.
+        // As três imagens de referência continuam em PNG, pois esse é o formato real delas.
+        response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "2:3", image_size: "1K" },
       }),
     });
 
