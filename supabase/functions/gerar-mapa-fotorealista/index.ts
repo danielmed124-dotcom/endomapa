@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ORIGEM_PERMITIDA = "https://endomapa.pages.dev";
 const MAPA_CORONAL = `${ORIGEM_PERMITIDA}/assets/mapa-base-coronal.png`;
-const REFERENCIA_ENDOMETRIOSE = `${ORIGEM_PERMITIDA}/assets/lesoes/endometriose-ligamento-original.png`;
+const REFERENCIA_ENDOMETRIOSE = `${ORIGEM_PERMITIDA}/assets/mapa-coronal-fornecido-sem-assinatura.png`;
 const TEMPO_MAXIMO_MS = 120_000;
 
 const cors = {
@@ -78,7 +78,7 @@ Deno.serve(async (requisicao) => {
     return responder({ erro: "Os dados da lesão não chegaram em formato válido." }, 400);
   }
 
-  const { mapa_id, categoria, localizacao, lado, medida_1, medida_2 } = corpo;
+  const { mapa_id, categoria, localizacao, lado, medida_1, medida_2, mascara_base64 } = corpo;
   if (typeof mapa_id !== "string" || !mapa_id) return responder({ erro: "O mapa não foi identificado." }, 400);
   if (categoria !== "endometriose" || localizacao !== "ligamento uterossacro") {
     return responder({ erro: "Nesta prova, somente endometriose no ligamento uterossacro está liberada." }, 400);
@@ -88,6 +88,9 @@ Deno.serve(async (requisicao) => {
   }
   if (!medidaValida(medida_1) || !medidaValida(medida_2)) {
     return responder({ erro: "Informe duas medidas válidas e maiores que zero." }, 400);
+  }
+  if (typeof mascara_base64 !== "string" || !mascara_base64 || mascara_base64.length > 2_000_000) {
+    return responder({ erro: "A área anatômica de edição não chegou em formato válido." }, 400);
   }
 
   // Confere no banco, sob RLS, se o mapa pertence realmente ao médico logado.
@@ -114,6 +117,12 @@ Deno.serve(async (requisicao) => {
     formulario.append("model", "gpt-image-2");
     formulario.append("image[]", new File([await respostaMapa.blob()], "mapa-coronal.png", { type: "image/png" }));
     formulario.append("image[]", new File([await respostaReferencia.blob()], "referencia-lesao.png", { type: "image/png" }));
+    try {
+      const bytesMascara = Uint8Array.from(atob(mascara_base64), (caractere) => caractere.charCodeAt(0));
+      formulario.append("mask", new File([bytesMascara], "mascara-ligamento.png", { type: "image/png" }));
+    } catch (_erro) {
+      return responder({ erro: "A área anatômica de edição ficou corrompida. Atualize a página e tente novamente." }, 400);
+    }
     formulario.append("quality", "medium");
     formulario.append("size", "1024x1536");
     formulario.append("output_format", "webp");
@@ -129,10 +138,10 @@ Deno.serve(async (requisicao) => {
     formulario.append("prompt", [
       "Edição de ilustração médica anatômica para uso profissional por radiologista adulto. Conteúdo estritamente clínico, educacional, não sexual e sem paciente real.",
       "A primeira imagem é um mapa anatômico coronal que deve ser preservado com máxima fidelidade.",
-      "A segunda imagem é a referência obrigatória da aparência do foco patológico: nódulos castanho-escuros irregulares, agrupados, integrados à superfície anatômica e com reação tecidual discreta ao redor.",
+      "A segunda imagem é o modelo visual obrigatório. Observe especificamente o foco alongado sobre o ligamento uterossacro no lado esquerdo visual, marcado como 1,6 por 0,5 cm: nódulos castanho-escuros brilhantes, irregulares, densamente agrupados, integrados à superfície e com reação tecidual avermelhada discreta.",
       `Acrescente exatamente uma lesão de endometriose no ligamento uterossacro ${lado}, que fica no ${ladoVisual}.`,
       `A lesão mede ${formatarMedida(medida_1)} por ${formatarMedida(medida_2)} centímetros e deve ter forma ${forma}, respeitando essa proporção visual.`,
-      "Não espalhe pontos separados. A lesão deve formar um único foco contínuo semelhante à segunda imagem.",
+      "Edite somente a abertura transparente da máscara. Não desenhe nada fora dela. Não espalhe pontos separados: forme um único foco contínuo semelhante ao modelo da segunda imagem.",
       "Não acrescente textos, setas, medidas, assinatura ou novas marcas. Não altere útero, ovários, tubas, intestino, logomarca, marca-d'água, enquadramento, iluminação ou qualquer outra estrutura.",
       "Isto é uma prévia para conferência obrigatória de um médico, não um diagnóstico.",
     ].join(" "));
