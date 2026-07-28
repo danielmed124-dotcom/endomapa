@@ -7,7 +7,7 @@
   if (!camadas.length || !lista) return;
 
   const modelos = {
-    endometriose: "assets/lesoes/endometriose-v3.png",
+    endometriose: true,
     adenomiose: "assets/lesoes/adenomiose.png",
   };
 
@@ -18,9 +18,9 @@
       "tuba uterina": { direito: [31, 34], esquerdo: [69, 34], central: [50, 34] },
       // A lateralidade é radiológica: o lado da paciente aparece invertido na imagem.
       "ligamento uterossacro": {
-        direito: [41, 56, -42],
-        esquerdo: [59, 56, 42],
-        central: [50, 56, 0],
+        esquerdo: [43, 54, -38],
+        direito: [57, 54, 38],
+        central: [50, 54, 0],
       },
       "região retrocervical": { x: 50, y: 62 },
       "reto ou sigmoide": { x: 50, y: 72 },
@@ -86,7 +86,7 @@
 
     const imagem = document.createElement("img");
     imagem.className = "lesao-no-mapa__imagem";
-    imagem.src = modelos[lesao.categoria];
+    imagem.src = obterModeloVisual(lesao);
     imagem.alt = "";
 
     const medida = document.createElement("span");
@@ -110,6 +110,18 @@
       largura: Math.min(22, Math.max(7, 5 + comprimento * 5.5)),
       proporcao: Math.min(6, Math.max(0.45, comprimento / espessura)),
     };
+  }
+
+  function obterModeloVisual(lesao) {
+    if (lesao.categoria === "endometriose") {
+      const comprimento = numeroPositivo(lesao.medida_1) || 0.8;
+      const espessura = numeroPositivo(lesao.medida_2) || comprimento;
+      return comprimento / espessura > 1.5
+        ? "assets/lesoes/endometriose-alongada.png"
+        : "assets/lesoes/endometriose-arredondada.png";
+    }
+
+    return modelos[lesao.categoria];
   }
 
   function numeroPositivo(valor) {
