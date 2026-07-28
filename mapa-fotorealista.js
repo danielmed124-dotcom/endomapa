@@ -7,8 +7,9 @@
   const estado = document.querySelector("[data-estado-mapa-fotorealista]");
   const resultado = document.querySelector("[data-resultado-mapa-fotorealista]");
   const imagem = document.querySelector("[data-imagem-mapa-fotorealista]");
+  const medida = document.querySelector("[data-medida-mapa-fotorealista]");
 
-  if (!clienteSupabase || !secao || !botao || !estado || !resultado || !imagem) return;
+  if (!clienteSupabase || !secao || !botao || !estado || !resultado || !imagem || !medida) return;
 
   let mapaIdAtual = null;
   let lesaoAtual = null;
@@ -28,6 +29,7 @@
     secao.hidden = false;
     resultado.hidden = true;
     imagem.removeAttribute("src");
+    medida.hidden = true;
 
     if (!lesaoAtual) {
       botao.disabled = true;
@@ -77,6 +79,7 @@
       }
 
       imagem.src = `data:${data.formato};base64,${data.imagem_base64}`;
+      posicionarMedida(lesaoAtual);
       resultado.hidden = false;
       mostrarEstado(data.aviso || "Confira cuidadosamente esta prévia antes de aprovar.", false);
       botao.textContent = "Gerar outra prévia";
@@ -87,6 +90,20 @@
       mostrarEstado("A comunicação falhou. O mapa original continua preservado e você pode tentar novamente.", true);
       liberarBotao();
     }
+  }
+
+  function posicionarMedida(lesao) {
+    const valores = [lesao.medida_1, lesao.medida_2, lesao.medida_3]
+      .filter((valor) => typeof valor === "number" && valor > 0)
+      .map((valor) => valor.toLocaleString("pt-BR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2,
+      }));
+
+    medida.textContent = `${valores.join(" × ")} cm`;
+    medida.style.left = lesao.lado === "esquerdo" ? "43%" : "57%";
+    medida.style.top = "59%";
+    medida.hidden = valores.length === 0;
   }
 
   async function criarMascaraDaLesao(lesao) {

@@ -928,6 +928,11 @@ h1 span {
   margin-top: 1rem;
 }
 
+.medida-no-mapa--fotorealista {
+  z-index: 4;
+  white-space: nowrap;
+}
+
 .mapa-visual {
   position: relative;
   overflow: hidden;
