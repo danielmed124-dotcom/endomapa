@@ -356,7 +356,10 @@
   function formatarMedidas(lesao) {
     const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3]
       .filter((medida) => typeof medida === "number")
-      .map((medida) => medida.toLocaleString("pt-BR"));
+      .map((medida) => medida.toLocaleString("pt-BR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2,
+      }));
     return medidas.length ? `${medidas.join(" × ")} cm` : "Não informadas";
   }
 

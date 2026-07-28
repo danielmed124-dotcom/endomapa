@@ -84,16 +84,23 @@
     elemento.style.setProperty("--rotacao-lesao", `${rotacao}deg`);
     elemento.style.setProperty("--rotacao-medida", `${-rotacao}deg`);
 
-    const imagem = document.createElement("img");
-    imagem.className = "lesao-no-mapa__imagem";
-    imagem.src = obterModeloVisual(lesao);
-    imagem.alt = "";
+    let visual;
+
+    if (lesao.categoria === "endometriose") {
+      visual = criarPadraoEndometriose(dimensoes.proporcao);
+    } else {
+      const imagem = document.createElement("img");
+      imagem.className = "lesao-no-mapa__imagem";
+      imagem.src = modelos[lesao.categoria];
+      imagem.alt = "";
+      visual = imagem;
+    }
 
     const medida = document.createElement("span");
     medida.className = "lesao-no-mapa__medida";
     medida.textContent = formatarMedidas(lesao);
 
-    elemento.append(imagem);
+    elemento.append(visual);
     if (medida.textContent !== "Medida não informada") elemento.append(medida);
     return elemento;
   }
@@ -112,16 +119,34 @@
     };
   }
 
-  function obterModeloVisual(lesao) {
-    if (lesao.categoria === "endometriose") {
-      const comprimento = numeroPositivo(lesao.medida_1) || 0.8;
-      const espessura = numeroPositivo(lesao.medida_2) || comprimento;
-      return comprimento / espessura > 1.5
-        ? "assets/lesoes/endometriose-alongada.png"
-        : "assets/lesoes/endometriose-arredondada.png";
+  function criarPadraoEndometriose(proporcao) {
+    const padrao = document.createElement("div");
+    const alongado = proporcao > 1.5;
+    padrao.className = `padrao-endometriose ${alongado ? "padrao-endometriose--alongado" : "padrao-endometriose--arredondado"}`;
+    const total = alongado ? 24 : 25;
+
+    for (let indice = 0; indice < total; indice += 1) {
+      const foco = document.createElement("span");
+      foco.className = "padrao-endometriose__foco";
+
+      if (alongado) {
+        const coluna = indice % 12;
+        const linha = Math.floor(indice / 12);
+        foco.style.left = `${7 + coluna * 7.7 + ((indice * 5) % 5)}%`;
+        foco.style.top = `${32 + linha * 31 + ((indice * 7) % 11) - 5}%`;
+      } else {
+        const coluna = indice % 5;
+        const linha = Math.floor(indice / 5);
+        foco.style.left = `${17 + coluna * 16 + ((indice * 3) % 7) - 3}%`;
+        foco.style.top = `${17 + linha * 16 + ((indice * 5) % 7) - 3}%`;
+      }
+
+      foco.style.height = `${alongado ? 20 + ((indice * 7) % 16) : 9 + ((indice * 7) % 8)}%`;
+      foco.style.transform = `translate(-50%, -50%) rotate(${(indice * 37) % 180}deg)`;
+      padrao.append(foco);
     }
 
-    return modelos[lesao.categoria];
+    return padrao;
   }
 
   function numeroPositivo(valor) {
@@ -153,7 +178,10 @@
   function formatarMedidas(lesao) {
     const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3]
       .filter((valor) => typeof valor === "number")
-      .map((valor) => valor.toLocaleString("pt-BR"));
+      .map((valor) => valor.toLocaleString("pt-BR", {
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 2,
+      }));
     return medidas.length ? `${medidas.join(" × ")} cm` : "Medida não informada";
   }
 

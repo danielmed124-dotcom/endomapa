@@ -636,7 +636,10 @@
         return medida !== null && medida !== undefined;
       })
       .map(function (medida) {
-        return Number(medida).toLocaleString("pt-BR");
+        return Number(medida).toLocaleString("pt-BR", {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 2,
+        });
       });
 
     return medidas.length > 0 ? `${medidas.join(" × ")} cm` : "Medidas não informadas";
