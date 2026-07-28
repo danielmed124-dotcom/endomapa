@@ -288,6 +288,7 @@
                 data-src-visitante="assets/mapa-base-coronal-visitante.png"
                 alt="Mapa-base anatômico coronal sem lesões"
               />
+              <div class="camada-lesoes" data-camada-lesoes="coronal" aria-label="Lesões representadas na vista coronal"></div>
               <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
                 <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
               </span>
@@ -302,6 +303,7 @@
                 data-src-visitante="assets/mapa-base-sagital-visitante.png"
                 alt="Mapa-base anatômico sagital sem lesões"
               />
+              <div class="camada-lesoes" data-camada-lesoes="sagital" aria-label="Lesões representadas na vista sagital"></div>
               <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
                 <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
               </span>
@@ -313,103 +315,9 @@
         <section class="secao-dados" aria-labelledby="titulo-lesoes">
           <h2 class="secao-dados__titulo" id="titulo-lesoes">Lesões interpretadas</h2>
           <p class="texto-apoio">
-            Os dados abaixo pertencem ao ditado demonstrativo. Hoje eles ainda não são desenhados sobre os mapas-base.
+            As lesões abaixo vieram do ditado confirmado. Confira os dados e a posição antes de confirmar o mapa.
           </p>
-          <div class="lista-achados">
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Endometriose</h3>
-                <span class="achado__lado">Direito</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Ligamento uterossacro</dd>
-                <dt>Medidas</dt>
-                <dd>0,8 × 0,3 cm</dd>
-              </dl>
-            </article>
-
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Endometriose</h3>
-                <span class="achado__lado">Esquerdo</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Ligamento uterossacro</dd>
-                <dt>Medidas</dt>
-                <dd>0,6 × 0,2 cm</dd>
-              </dl>
-            </article>
-
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Endometriose</h3>
-                <span class="achado__lado">Central</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Região retrocervical</dd>
-                <dt>Medidas</dt>
-                <dd>0,3 × 0,2 cm</dd>
-              </dl>
-            </article>
-
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Adenomiose</h3>
-                <span class="achado__lado">Central</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Útero</dd>
-                <dt>Observação</dt>
-                <dd>Parede uterina anterior</dd>
-              </dl>
-            </article>
-
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Mioma</h3>
-                <span class="achado__lado">Central</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Útero</dd>
-                <dt>Observação</dt>
-                <dd>Parede uterina corporal posterior</dd>
-              </dl>
-            </article>
-
-            <article class="achado">
-              <div class="achado__cabecalho">
-                <h3 class="achado__categoria">Lesão ovariana</h3>
-                <span class="achado__lado">Direito</span>
-              </div>
-              <dl>
-                <dt>Localização</dt>
-                <dd>Ovário</dd>
-                <dt>Medidas</dt>
-                <dd>2,7 × 3,3 cm</dd>
-                <dt>Observação</dt>
-                <dd>Endometrioma</dd>
-              </dl>
-            </article>
-          </div>
-        </section>
-
-        <section class="secao-dados" aria-labelledby="titulo-relacoes">
-          <h2 class="secao-dados__titulo" id="titulo-relacoes">Relação anatômica</h2>
-          <article class="achado">
-            <dl>
-              <dt>Origem</dt>
-              <dd>Reto ou sigmoide · central</dd>
-              <dt>Relação</dt>
-              <dd>Aderido a</dd>
-              <dt>Destino</dt>
-              <dd>Ovário · esquerdo</dd>
-            </dl>
-          </article>
+          <div class="lista-achados" data-lista-lesoes-mapa></div>
         </section>
 
         <div class="acoes">
@@ -637,5 +545,6 @@
     <script src="mapas.js"></script>
     <script src="voz.js"></script>
     <script src="ia.js"></script>
+    <script src="mapa-visual.js"></script>
   </body>
 </html>

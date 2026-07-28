@@ -267,6 +267,12 @@
       botaoConfirmar.textContent = "Lesões salvas";
       botaoConfirmar.disabled = true;
       mostrarEstado(`${data.length} ${data.length === 1 ? "lesão salva" : "lesões salvas"} após sua conferência.`, false);
+      window.dispatchEvent(new CustomEvent("endomapa:lesoes-confirmadas", {
+        detail: {
+          mapaId,
+          lesoes: sugestaoAtual.lesoes,
+        },
+      }));
     } catch (erro) {
       mostrarEstado("Não foi possível falar com o banco. Confira sua internet e tente novamente.", true);
       liberarConfirmacao();

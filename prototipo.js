@@ -105,3 +105,8 @@ window.addEventListener("endomapa:perfil-carregado", (evento) => {
 if (window.endomapaMedico) {
   aplicarPerfilMedico(window.endomapaMedico);
 }
+
+window.addEventListener("endomapa:lesoes-confirmadas", () => {
+  aplicarVistas();
+  abrirTela("revisao");
+});
