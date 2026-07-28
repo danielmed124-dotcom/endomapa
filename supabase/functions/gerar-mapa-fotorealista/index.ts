@@ -118,14 +118,18 @@ Deno.serve(async (requisicao) => {
     formulario.append("size", "1024x1536");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
+    // A própria API oferece "low" para aplicações legítimas que precisam de
+    // filtragem menos restritiva. As demais políticas de segurança continuam ativas.
+    formulario.append("moderation", "low");
 
     // A lateralidade aqui segue a imagem coronal já calibrada e aprovada pelo médico.
     const ladoVisual = lado === "esquerdo" ? "lado esquerdo visual da imagem" : "lado direito visual da imagem";
     const proporcao = medida_1 / medida_2;
     const forma = proporcao >= 1.6 ? "alongada" : proporcao <= 1.2 ? "arredondada" : "levemente ovalada";
     formulario.append("prompt", [
+      "Edição de ilustração médica anatômica para uso profissional por radiologista adulto. Conteúdo estritamente clínico, educacional, não sexual e sem paciente real.",
       "A primeira imagem é um mapa anatômico coronal que deve ser preservado com máxima fidelidade.",
-      "A segunda imagem é a referência obrigatória da aparência da endometriose: tecido negro-acastanhado, irregular, agrupado e integrado à superfície, com discreta reação avermelhada ao redor.",
+      "A segunda imagem é a referência obrigatória da aparência do foco patológico: nódulos castanho-escuros irregulares, agrupados, integrados à superfície anatômica e com reação tecidual discreta ao redor.",
       `Acrescente exatamente uma lesão de endometriose no ligamento uterossacro ${lado}, que fica no ${ladoVisual}.`,
       `A lesão mede ${formatarMedida(medida_1)} por ${formatarMedida(medida_2)} centímetros e deve ter forma ${forma}, respeitando essa proporção visual.`,
       "Não espalhe pontos separados. A lesão deve formar um único foco contínuo semelhante à segunda imagem.",
