@@ -7,7 +7,7 @@
   if (!camadas.length || !lista) return;
 
   const modelos = {
-    endometriose: "assets/lesoes/endometriose-referencia-horizontal.png",
+    endometriose: "assets/lesoes/endometriose-ligamento-original.png",
     adenomiose: "assets/lesoes/adenomiose.png",
   };
 

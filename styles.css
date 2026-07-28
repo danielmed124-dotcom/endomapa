@@ -963,8 +963,9 @@ h1 span {
 }
 
 .lesao-no-mapa--endometriose .lesao-no-mapa__imagem {
-  opacity: 0.76;
-  filter: saturate(0.55) brightness(0.72) contrast(1.08);
+  opacity: 0.96;
+  mix-blend-mode: normal;
+  filter: none;
 }
 
 .lesao-no-mapa--adenomiose .lesao-no-mapa__imagem {
