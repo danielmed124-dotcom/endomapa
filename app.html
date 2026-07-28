@@ -325,6 +325,20 @@
               <span class="medida-no-mapa medida-no-mapa--fotorealista" data-medida-mapa-fotorealista hidden></span>
               <figcaption>Prévia produzida por IA · ainda não aprovada</figcaption>
             </figure>
+
+            <div class="comparacao-gemini">
+              <h3 class="secao-dados__titulo">Comparação com Gemini</h3>
+              <p class="texto-apoio">Gere uma única alternativa com os mesmos dados para comparar qualidade, posição e tempo.</p>
+              <button class="botao botao--secundario" type="button" data-gerar-mapa-gemini>
+                Gerar com Gemini
+              </button>
+              <p class="mensagem-formulario" data-estado-mapa-gemini hidden></p>
+              <figure class="mapa-visual previa-fotorealista__resultado" data-resultado-mapa-gemini hidden>
+                <img data-imagem-mapa-gemini alt="Prévia criada pelo Gemini para comparação médica" />
+                <span class="medida-no-mapa medida-no-mapa--fotorealista" data-medida-mapa-gemini hidden></span>
+                <figcaption>Prévia Gemini · ainda não aprovada</figcaption>
+              </figure>
+            </div>
           </section>
         </section>
 
@@ -563,5 +577,6 @@
     <script src="ia.js"></script>
     <script src="mapa-visual.js"></script>
     <script src="mapa-fotorealista.js"></script>
+    <script src="mapa-gemini.js"></script>
   </body>
 </html>
