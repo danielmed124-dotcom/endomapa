@@ -804,6 +804,12 @@ h1 span {
   font-size: 0.76rem;
 }
 
+.resultado-ia__confianca--baixa {
+  color: #ffd0d0;
+  border-color: rgba(240, 168, 168, 0.72);
+  background: rgba(126, 37, 37, 0.28);
+}
+
 .resultado-ia__grupo {
   display: grid;
   gap: 12px;

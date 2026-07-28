@@ -35,6 +35,7 @@
 
   let sugestaoAtual = null;
   let salvamentoEmAndamento = false;
+  const LIMITE_CONFIANCA_BAIXA = 70;
 
   botaoInterpretar.addEventListener("click", interpretarDitado);
   botaoConfirmar.addEventListener("click", salvarLesoesConfirmadas);
@@ -92,7 +93,11 @@
   }
 
   function renderizarSugestao(sugestao, uso) {
-    confianca.textContent = `Confiança ${sugestao.confianca}%`;
+    const confiancaBaixa = sugestao.confianca < LIMITE_CONFIANCA_BAIXA;
+    confianca.classList.toggle("resultado-ia__confianca--baixa", confiancaBaixa);
+    confianca.textContent = confiancaBaixa
+      ? `Confiança baixa: ${sugestao.confianca}%`
+      : `Confiança ${sugestao.confianca}%`;
     limparListas();
 
     if (sugestao.lesoes.length === 0) {
@@ -207,6 +212,32 @@
     });
 
     try {
+      // Registra no mapa a confiança geral somente depois da conferência humana.
+      // A regra de dono do banco impede alterar um mapa de outro médico.
+      const { data: mapaAtualizado, error: erroMapa } = await clienteSupabase
+        .from("mapas")
+        .update({ confianca: sugestaoAtual.confianca })
+        .eq("id", mapaId)
+        .select("id, user_id, confianca")
+        .single();
+
+      if (erroMapa) {
+        mostrarEstado(`A confiança não foi salva: ${traduzirErroDoBanco(erroMapa)}`, true);
+        liberarConfirmacao();
+        return;
+      }
+
+      if (
+        !mapaAtualizado ||
+        mapaAtualizado.id !== mapaId ||
+        !mapaAtualizado.user_id ||
+        Number(mapaAtualizado.confianca) !== Number(sugestaoAtual.confianca)
+      ) {
+        mostrarEstado("O banco não confirmou a confiança da interpretação. Nada será anunciado como salvo.", true);
+        liberarConfirmacao();
+        return;
+      }
+
       const { data, error } = await clienteSupabase
         .from("lesoes")
         .insert(linhas)
@@ -253,6 +284,7 @@
     resultado.hidden = false;
     sugestaoAtual = null;
     confianca.textContent = "";
+    confianca.classList.remove("resultado-ia__confianca--baixa");
     limparListas();
     botaoConfirmar.disabled = true;
     mostrarEstado(mensagem, true);
@@ -279,6 +311,7 @@
   function fecharResultado() {
     resultado.hidden = true;
     sugestaoAtual = null;
+    confianca.classList.remove("resultado-ia__confianca--baixa");
     campoTexto.focus();
   }
 
