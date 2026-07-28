@@ -141,10 +141,29 @@ Deno.serve(async (requisicao) => {
     });
 
     if (!respostaOpenAI.ok) {
-      console.error(`OpenAI respondeu com status ${respostaOpenAI.status}.`);
-      if (respostaOpenAI.status === 401) return responder({ erro: "A chave da geração de imagens foi recusada pelo servidor." }, 502);
-      if (respostaOpenAI.status === 429) return responder({ erro: "O limite da geração de imagens foi atingido. Aguarde e tente novamente." }, 429);
-      return responder({ erro: "A geração fotorealista não conseguiu produzir a prévia. Tente novamente." }, 502);
+      // Lemos somente o código técnico seguro. Nunca devolvemos chave, prompt ou imagem.
+      let codigoExterno = "sem_codigo";
+      try {
+        const falhaExterna = await respostaOpenAI.json();
+        if (typeof falhaExterna?.error?.code === "string") codigoExterno = falhaExterna.error.code;
+      } catch (_erro) {
+        // Algumas falhas não trazem JSON; o status HTTP continua suficiente.
+      }
+      console.error(`OpenAI recusou a imagem: status ${respostaOpenAI.status}, código ${codigoExterno}.`);
+
+      if (respostaOpenAI.status === 400) {
+        return responder({ erro: `A OpenAI recusou a configuração da imagem (código IMAGEM-400-${codigoExterno}).` }, 502);
+      }
+      if (respostaOpenAI.status === 401) {
+        return responder({ erro: "A chave da geração de imagens foi recusada (código IMAGEM-401)." }, 502);
+      }
+      if (respostaOpenAI.status === 403) {
+        return responder({ erro: `A conta da OpenAI ainda não liberou a geração de imagens (código IMAGEM-403-${codigoExterno}).` }, 502);
+      }
+      if (respostaOpenAI.status === 429) {
+        return responder({ erro: `O limite ou saldo da geração foi atingido (código IMAGEM-429-${codigoExterno}).` }, 429);
+      }
+      return responder({ erro: `A OpenAI não concluiu a imagem (código IMAGEM-${respostaOpenAI.status}-${codigoExterno}).` }, 502);
     }
 
     const resposta = await respostaOpenAI.json();
