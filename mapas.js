@@ -117,6 +117,7 @@
       }
 
       mapaJaSalvo = true;
+      document.body.dataset.mapaAtualId = data.id;
       botaoSalvar.textContent = "Mapa salvo";
       botaoSalvar.disabled = true;
       mostrarMensagem(`Mapa salvo com segurança. Identificador: ${data.id}`, false);
@@ -135,6 +136,7 @@
     }
 
     mapaJaSalvo = false;
+    delete document.body.dataset.mapaAtualId;
     botaoSalvar.disabled = false;
     botaoSalvar.textContent = "Salvar mapa";
     limparMensagem();

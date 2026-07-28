@@ -121,7 +121,7 @@
           <button
             class="botao botao--secundario"
             type="button"
-            data-mensagem="A interpretação deste texto será conectada no dia 9."
+            data-interpretar-ditado
           >
             Interpretar e continuar
           </button>
@@ -133,6 +133,59 @@
             Ver demonstração com dados fixos
           </button>
         </div>
+
+        <section
+          class="resultado-ia"
+          aria-labelledby="titulo-resultado-ia"
+          data-resultado-ia
+          hidden
+        >
+          <header class="resultado-ia__cabecalho">
+            <div>
+              <span class="selo">Sugestão da IA</span>
+              <h2 class="resultado-ia__titulo" id="titulo-resultado-ia">
+                Confira antes de salvar
+              </h2>
+            </div>
+            <strong class="resultado-ia__confianca" data-confianca-ia></strong>
+          </header>
+
+          <p class="texto-apoio">
+            A inteligência artificial pode errar. Confira categoria, localização, lado e medidas.
+          </p>
+
+          <p
+            class="mensagem-formulario"
+            role="status"
+            aria-live="polite"
+            data-estado-ia
+            hidden
+          ></p>
+
+          <div class="resultado-ia__grupo">
+            <h3>Lesões sugeridas</h3>
+            <div class="lista-achados" data-lesoes-ia></div>
+          </div>
+
+          <div class="resultado-ia__grupo" data-grupo-relacoes-ia hidden>
+            <h3>Relações anatômicas sugeridas</h3>
+            <div class="lista-achados" data-relacoes-ia></div>
+          </div>
+
+          <div class="resultado-ia__grupo" data-grupo-duvidas-ia hidden>
+            <h3>Dúvidas que impedem o salvamento</h3>
+            <div class="lista-achados" data-duvidas-ia></div>
+          </div>
+
+          <div class="acoes resultado-ia__acoes">
+            <button class="botao" type="button" data-confirmar-ia>
+              Conferi e salvar lesões
+            </button>
+            <button class="botao botao--secundario" type="button" data-fechar-ia>
+              Corrigir o ditado
+            </button>
+          </div>
+        </section>
       </section>
 
       <section
@@ -583,5 +636,6 @@
     <script src="prototipo.js"></script>
     <script src="mapas.js"></script>
     <script src="voz.js"></script>
+    <script src="ia.js"></script>
   </body>
 </html>

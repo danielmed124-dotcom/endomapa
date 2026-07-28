@@ -771,6 +771,74 @@ h1 span {
   font-size: 1rem;
 }
 
+.resultado-ia {
+  display: grid;
+  margin-top: 28px;
+  padding: 20px;
+  gap: 20px;
+  border: 1px solid var(--dourado);
+  border-radius: 20px;
+  background: rgba(19, 25, 21, 0.96);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+}
+
+.resultado-ia__cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.resultado-ia__titulo {
+  margin: 10px 0 0;
+  font-size: clamp(1.25rem, 6vw, 1.7rem);
+}
+
+.resultado-ia__confianca {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  color: var(--dourado);
+  border: 1px solid var(--borda);
+  border-radius: 999px;
+  font-size: 0.76rem;
+}
+
+.resultado-ia__grupo {
+  display: grid;
+  gap: 12px;
+}
+
+.resultado-ia__grupo h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.resultado-ia__grupo .lista-achados {
+  margin: 0;
+}
+
+.resultado-ia__grupo .achado p,
+.resultado-ia__grupo .achado small {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.resultado-ia__grupo .achado small {
+  display: block;
+  margin-top: 8px;
+  color: var(--texto-suave);
+}
+
+.achado--duvida {
+  border-color: rgba(240, 168, 168, 0.48);
+}
+
+.resultado-ia__acoes {
+  width: 100%;
+  margin-top: 0;
+}
+
 .controle-ditado__ajuda,
 .estado-ditado {
   margin: 6px 0 0;
