@@ -7,7 +7,7 @@
   if (!camadas.length || !lista) return;
 
   const modelos = {
-    endometriose: "assets/lesoes/endometriose.png",
+    endometriose: "assets/lesoes/endometriose-v2.png",
     adenomiose: "assets/lesoes/adenomiose.png",
   };
 
@@ -16,7 +16,12 @@
       "útero": { x: 50, y: 42 },
       "ovário": { direito: [32, 50], esquerdo: [68, 50], central: [50, 50] },
       "tuba uterina": { direito: [31, 34], esquerdo: [69, 34], central: [50, 34] },
-      "ligamento uterossacro": { direito: [43, 57], esquerdo: [57, 57], central: [50, 57] },
+      // A lateralidade é radiológica: o lado da paciente aparece invertido na imagem.
+      "ligamento uterossacro": {
+        direito: [41, 56, -42],
+        esquerdo: [59, 56, 42],
+        central: [50, 56, 0],
+      },
       "região retrocervical": { x: 50, y: 62 },
       "reto ou sigmoide": { x: 50, y: 72 },
       "bexiga": { x: 50, y: 69 },
@@ -26,7 +31,7 @@
       "útero": { x: 54, y: 42 },
       "ovário": { x: 52, y: 31 },
       "tuba uterina": { x: 48, y: 28 },
-      "ligamento uterossacro": { x: 65, y: 45 },
+      "ligamento uterossacro": { x: 65, y: 45, rotacao: -12 },
       "região retrocervical": { x: 68, y: 49 },
       "reto ou sigmoide": { x: 77, y: 49 },
       "bexiga": { x: 35, y: 50 },
@@ -62,7 +67,9 @@
     if (!configuracao) return null;
     if (typeof configuracao.x === "number") return configuracao;
     const coordenadas = configuracao[lado] || configuracao.central;
-    return coordenadas ? { x: coordenadas[0], y: coordenadas[1] } : null;
+    return coordenadas
+      ? { x: coordenadas[0], y: coordenadas[1], rotacao: coordenadas[2] || 0 }
+      : null;
   }
 
   function criarLesaoVisual(lesao, indice, ponto) {
@@ -70,8 +77,12 @@
     elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria}`;
     elemento.style.left = `${ponto.x}%`;
     elemento.style.top = `${ponto.y}%`;
-    elemento.style.setProperty("--largura-lesao", `${calcularLargura(lesao)}%`);
-    elemento.style.setProperty("--rotacao-lesao", `${(indice % 5) * 7 - 14}deg`);
+    const dimensoes = calcularDimensoes(lesao);
+    const rotacao = ponto.rotacao ?? ((indice % 5) * 7 - 14);
+    elemento.style.setProperty("--largura-lesao", `${dimensoes.largura}%`);
+    elemento.style.setProperty("--proporcao-lesao", dimensoes.proporcao);
+    elemento.style.setProperty("--rotacao-lesao", `${rotacao}deg`);
+    elemento.style.setProperty("--rotacao-medida", `${-rotacao}deg`);
 
     const imagem = document.createElement("img");
     imagem.className = "lesao-no-mapa__imagem";
@@ -87,12 +98,22 @@
     return elemento;
   }
 
-  function calcularLargura(lesao) {
-    if (lesao.categoria === "adenomiose") return 22;
-    const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3]
-      .filter((valor) => typeof valor === "number" && valor > 0);
-    const maior = medidas.length ? Math.max(...medidas) : 0.8;
-    return Math.min(18, Math.max(7, 7 + maior * 2.5));
+  function calcularDimensoes(lesao) {
+    if (lesao.categoria === "adenomiose") {
+      return { largura: 22, proporcao: 1.2 };
+    }
+
+    const comprimento = numeroPositivo(lesao.medida_1) || 0.8;
+    const espessura = numeroPositivo(lesao.medida_2) || comprimento;
+
+    return {
+      largura: Math.min(22, Math.max(7, 5 + comprimento * 5.5)),
+      proporcao: Math.min(6, Math.max(0.45, comprimento / espessura)),
+    };
+  }
+
+  function numeroPositivo(valor) {
+    return typeof valor === "number" && valor > 0 ? valor : null;
   }
 
   function criarResumo(lesao, indice) {
