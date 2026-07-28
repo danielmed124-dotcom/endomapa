@@ -918,6 +918,16 @@ h1 span {
   gap: 16px;
 }
 
+.previa-fotorealista {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(196, 160, 74, 0.3);
+}
+
+.previa-fotorealista__resultado {
+  margin-top: 1rem;
+}
+
 .mapa-visual {
   position: relative;
   overflow: hidden;

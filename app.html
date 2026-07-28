@@ -310,6 +310,21 @@
               <figcaption>Mapa-base · vista sagital</figcaption>
             </figure>
           </div>
+
+          <section class="previa-fotorealista" data-previa-fotorealista hidden>
+            <h3 class="secao-dados__titulo">Prévia fotorealista experimental</h3>
+            <p class="texto-apoio">
+              A IA editará uma cópia do mapa. O mapa-base original permanece preservado e a imagem só será aceita depois da sua conferência.
+            </p>
+            <button class="botao" type="button" data-gerar-mapa-fotorealista>
+              Gerar prévia fotorealista
+            </button>
+            <p class="mensagem-formulario" data-estado-mapa-fotorealista hidden></p>
+            <figure class="mapa-visual previa-fotorealista__resultado" data-resultado-mapa-fotorealista hidden>
+              <img data-imagem-mapa-fotorealista alt="Prévia fotorealista produzida por inteligência artificial para conferência médica" />
+              <figcaption>Prévia produzida por IA · ainda não aprovada</figcaption>
+            </figure>
+          </section>
         </section>
 
         <section class="secao-dados" aria-labelledby="titulo-lesoes">
@@ -546,5 +561,6 @@
     <script src="voz.js"></script>
     <script src="ia.js"></script>
     <script src="mapa-visual.js"></script>
+    <script src="mapa-fotorealista.js"></script>
   </body>
 </html>
