@@ -119,7 +119,7 @@ Deno.serve(async (requisicao) => {
 
   // Nunca informa sucesso se o Supabase devolveu um erro.
   if (erroMapas) {
-    console.error("Falha ao consultar mapas:", erroMapas.message);
+    console.error("Falha ao consultar mapas, sem registrar detalhes do banco.");
     return responder({ erro: "Não foi possível montar o resumo agora. Tente novamente." }, 500);
   }
 
@@ -147,7 +147,7 @@ Deno.serve(async (requisicao) => {
       .in("mapa_id", idsDosMapas);
 
     if (erroLesoes) {
-      console.error("Falha ao consultar lesões:", erroLesoes.message);
+      console.error("Falha ao consultar lesões, sem registrar detalhes do banco.");
       return responder({ erro: "Não foi possível contar as lesões do resumo. Tente novamente." }, 500);
     }
 

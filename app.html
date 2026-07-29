@@ -52,10 +52,14 @@
 
         <div class="campo">
           <label class="campo__rotulo" for="texto_bruto">Texto bruto do ditado</label>
-          <p class="campo__ajuda">O conteúdo ditado pelo médico aparecerá aqui.</p>
+          <p class="campo__ajuda">
+            O conteúdo ditado aparecerá aqui. Não informe nome, CPF, telefone, e-mail ou outro identificador da paciente.
+          </p>
           <textarea
             id="texto_bruto"
             name="texto_bruto"
+            maxlength="4000"
+            autocomplete="off"
             placeholder="Nenhum ditado informado."
           ></textarea>
         </div>

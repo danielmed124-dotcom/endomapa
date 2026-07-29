@@ -161,20 +161,17 @@ Deno.serve(async (req) => {
 
     if (!respostaGemini.ok) {
       let codigo = "sem_codigo";
-      let detalheSeguro = "sem_detalhe";
       try {
         const falha = await respostaGemini.json();
         codigo = String(falha?.error?.status || falha?.error?.code || codigo);
-        if (typeof falha?.error?.message === "string") {
-          detalheSeguro = falha.error.message
-            .replace(/AIza[0-9A-Za-z_-]+/g, "[chave protegida]")
-            .slice(0, 240);
-        }
       } catch (_erro) {}
-      console.error(`Gemini recusou a imagem: status ${respostaGemini.status}, código ${codigo}, detalhe ${detalheSeguro}.`);
-      return responder({
-        erro: `O Gemini recusou a configuração: ${detalheSeguro} (código GEMINI-${respostaGemini.status}-${codigo}).`,
-      }, 502);
+      console.error(`Gemini recusou a imagem: status ${respostaGemini.status}, código ${codigo}.`);
+
+      if (respostaGemini.status === 429) {
+        return responder({ erro: `O limite ou saldo do Gemini foi atingido (código GEMINI-429-${codigo}).` }, 429);
+      }
+
+      return responder({ erro: `O Gemini não concluiu a imagem (código GEMINI-${respostaGemini.status}-${codigo}).` }, 502);
     }
 
     const resposta = await respostaGemini.json();
