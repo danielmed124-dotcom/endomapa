@@ -101,9 +101,9 @@
       }));
 
     medida.textContent = `${valores.join(" × ")} cm`;
-    // Na vista coronal, a lateralidade da paciente aparece invertida para quem olha.
-    medida.style.left = lesao.lado === "esquerdo" ? "57%" : "43%";
-    medida.style.top = "59%";
+    // A orientação aprovada pelo médico usa o lado escrito no mesmo lado visual do mapa.
+    medida.style.left = lesao.lado === "esquerdo" ? "43%" : "57%";
+    medida.style.top = "55%";
     medida.hidden = valores.length === 0;
   }
 
@@ -119,10 +119,11 @@
     contexto.fillStyle = "#ffffff";
     contexto.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Esquerda da paciente fica à direita visual; direita da paciente fica à esquerda visual.
-    const direitaVisual = lesao.lado === "esquerdo";
+    // A orientação validada usa esquerda no lado esquerdo visual e direita no direito.
+    const direitaVisual = lesao.lado === "direito";
     const centroX = canvas.width * (direitaVisual ? 0.57 : 0.43);
-    const centroY = canvas.height * 0.54;
+    // A inserção do ligamento junto ao colo fica acima da calibração anterior.
+    const centroY = canvas.height * 0.49;
     const proporcao = Math.max(1, Math.min(5, lesao.medida_1 / lesao.medida_2));
     const largura = Math.max(canvas.width * 0.075, Math.min(canvas.width * 0.15, canvas.width * (0.065 + lesao.medida_1 * 0.035)));
     const altura = Math.max(canvas.height * 0.025, Math.min(canvas.height * 0.06, largura / proporcao));

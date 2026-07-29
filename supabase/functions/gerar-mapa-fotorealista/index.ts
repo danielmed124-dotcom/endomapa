@@ -142,16 +142,18 @@ Deno.serve(async (requisicao) => {
       return responder({ erro: "A área anatômica de edição ficou corrompida. Atualize a página e tente novamente." }, 400);
     }
     formulario.append("quality", "medium");
-    formulario.append("size", "1024x1536");
+    // Mantém praticamente a mesma proporção 3:4 do mapa-base (1086 × 1448),
+    // evitando deslocamento anatômico provocado pela antiga saída 2:3.
+    formulario.append("size", "1024x1360");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     // A própria API oferece "low" para aplicações legítimas que precisam de
     // filtragem menos restritiva. As demais políticas de segurança continuam ativas.
     formulario.append("moderation", "low");
 
-    // Na vista coronal, a lateralidade da paciente aparece invertida para quem olha.
-    const ladoVisual = lado === "esquerdo" ? "lado direito visual da imagem" : "lado esquerdo visual da imagem";
-    const ladoVisualSemLesao = lado === "esquerdo" ? "lado esquerdo visual da imagem" : "lado direito visual da imagem";
+    // A orientação aprovada pelo médico usa o lado escrito no mesmo lado visual do mapa.
+    const ladoVisual = lado === "esquerdo" ? "lado esquerdo visual da imagem" : "lado direito visual da imagem";
+    const ladoVisualSemLesao = lado === "esquerdo" ? "lado direito visual da imagem" : "lado esquerdo visual da imagem";
     const proporcao = medida_1 / medida_2;
     const forma = proporcao >= 1.6 ? "alongada" : proporcao <= 1.2 ? "arredondada" : "levemente ovalada";
     formulario.append("prompt", [
