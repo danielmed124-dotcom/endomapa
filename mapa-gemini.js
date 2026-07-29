@@ -55,12 +55,13 @@
     canvas.width = base.naturalWidth; canvas.height = base.naturalHeight;
     const ctx = canvas.getContext("2d");
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const esquerda = item.lado === "esquerdo";
-    const x = canvas.width * (esquerda ? 0.43 : 0.57); const y = canvas.height * 0.54;
+    // Na vista coronal, esquerda da paciente fica à direita visual e vice-versa.
+    const direitaVisual = item.lado === "esquerdo";
+    const x = canvas.width * (direitaVisual ? 0.57 : 0.43); const y = canvas.height * 0.54;
     const proporcao = Math.max(1, Math.min(5, item.medida_1 / item.medida_2));
     const largura = Math.max(canvas.width * 0.075, Math.min(canvas.width * 0.15, canvas.width * (0.065 + item.medida_1 * 0.035)));
     const altura = Math.max(canvas.height * 0.025, Math.min(canvas.height * 0.06, largura / proporcao));
-    ctx.save(); ctx.translate(x, y); ctx.rotate((esquerda ? -38 : 38) * Math.PI / 180);
+    ctx.save(); ctx.translate(x, y); ctx.rotate((direitaVisual ? 38 : -38) * Math.PI / 180);
     ctx.clearRect(-largura / 2, -altura / 2, largura, altura); ctx.restore();
     return canvas.toDataURL("image/png").split(",")[1];
   }
@@ -69,7 +70,7 @@
   function posicionarMedida() {
     const valores = [lesao.medida_1, lesao.medida_2, lesao.medida_3].filter((v) => typeof v === "number" && v > 0)
       .map((v) => v.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 }));
-    medida.textContent = `${valores.join(" × ")} cm`; medida.style.left = lesao.lado === "esquerdo" ? "43%" : "57%";
+    medida.textContent = `${valores.join(" × ")} cm`; medida.style.left = lesao.lado === "esquerdo" ? "57%" : "43%";
     medida.style.top = "59%"; medida.hidden = false;
   }
   async function traduzir(error) { try { const corpo = await error.context?.json(); if (corpo?.erro) return corpo.erro; } catch (_erro) {} return "O Gemini não conseguiu gerar a imagem."; }

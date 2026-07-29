@@ -101,7 +101,8 @@
       }));
 
     medida.textContent = `${valores.join(" × ")} cm`;
-    medida.style.left = lesao.lado === "esquerdo" ? "43%" : "57%";
+    // Na vista coronal, a lateralidade da paciente aparece invertida para quem olha.
+    medida.style.left = lesao.lado === "esquerdo" ? "57%" : "43%";
     medida.style.top = "59%";
     medida.hidden = valores.length === 0;
   }
@@ -118,13 +119,14 @@
     contexto.fillStyle = "#ffffff";
     contexto.fillRect(0, 0, canvas.width, canvas.height);
 
-    const esquerdaVisual = lesao.lado === "esquerdo";
-    const centroX = canvas.width * (esquerdaVisual ? 0.43 : 0.57);
+    // Esquerda da paciente fica à direita visual; direita da paciente fica à esquerda visual.
+    const direitaVisual = lesao.lado === "esquerdo";
+    const centroX = canvas.width * (direitaVisual ? 0.57 : 0.43);
     const centroY = canvas.height * 0.54;
     const proporcao = Math.max(1, Math.min(5, lesao.medida_1 / lesao.medida_2));
     const largura = Math.max(canvas.width * 0.075, Math.min(canvas.width * 0.15, canvas.width * (0.065 + lesao.medida_1 * 0.035)));
     const altura = Math.max(canvas.height * 0.025, Math.min(canvas.height * 0.06, largura / proporcao));
-    const rotacao = (esquerdaVisual ? -38 : 38) * Math.PI / 180;
+    const rotacao = (direitaVisual ? 38 : -38) * Math.PI / 180;
 
     contexto.save();
     contexto.translate(centroX, centroY);

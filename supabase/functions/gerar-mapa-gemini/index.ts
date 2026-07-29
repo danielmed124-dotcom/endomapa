@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ORIGEM = "https://endomapa.pages.dev";
 const MAPA = `${ORIGEM}/assets/mapa-base-coronal.png`;
-const REFERENCIA = `${ORIGEM}/assets/mapa-coronal-fornecido-sem-assinatura.png`;
+const REFERENCIA = `${ORIGEM}/assets/referencia-lesao-uterossacro.jpg`;
 const LIMITE_MS = 120_000;
 const cors = {
   "Access-Control-Allow-Origin": ORIGEM,
@@ -129,14 +129,16 @@ Deno.serve(async (req) => {
 
     const mapaBase64 = await respostaEmBase64(respostaMapa);
     const referenciaBase64 = await respostaEmBase64(respostaReferencia);
-    const ladoVisual = lado === "esquerdo" ? "lado esquerdo visual" : "lado direito visual";
+    const ladoVisual = lado === "esquerdo" ? "lado direito visual" : "lado esquerdo visual";
+    const ladoVisualSemLesao = lado === "esquerdo" ? "lado esquerdo visual" : "lado direito visual";
     const forma = medida_1 / medida_2 >= 1.6 ? "alongada" : medida_1 / medida_2 <= 1.2 ? "arredondada" : "ovalada";
     const instrucao = [
       "Edição de ilustração médica anatômica profissional, clínica, não sexual e sem paciente real.",
       "A primeira imagem é o mapa coronal original e deve permanecer idêntico fora da área indicada.",
-      "A segunda imagem é a referência visual. Copie o padrão do foco alongado sobre o ligamento uterossacro no lado esquerdo visual, marcado como 1,6 por 0,5 cm.",
+      "A segunda imagem é somente a referência da aparência do foco e não define a lateralidade do resultado.",
       "A terceira imagem é uma máscara: branco significa preservar sem nenhuma alteração; a pequena abertura transparente indica o único lugar que pode ser editado.",
       `Acrescente exatamente um foco no ligamento uterossacro ${lado}, no ${ladoVisual}, medindo ${formatar(medida_1)} por ${formatar(medida_2)} cm e com forma ${forma}.`,
+      `O ligamento no ${ladoVisualSemLesao} deve permanecer completamente sem lesão, sem nódulos e sem pontos escuros novos. O resultado nunca pode ser bilateral.`,
       "O foco deve ter nódulos castanho-escuros irregulares, densamente agrupados e integrados ao tecido, nunca pontos dispersos.",
       "Não acrescente medidas, textos ou setas. Não altere anatomia, logomarca, marca-d'água, assinatura, iluminação ou enquadramento.",
     ].join(" ");
@@ -150,7 +152,7 @@ Deno.serve(async (req) => {
         input: [
           { type: "text", text: instrucao },
           { type: "image", mime_type: "image/png", data: mapaBase64 },
-          { type: "image", mime_type: "image/png", data: referenciaBase64 },
+          { type: "image", mime_type: "image/jpeg", data: referenciaBase64 },
           { type: "image", mime_type: "image/png", data: mascara_base64 },
         ],
         // Este modelo aceita a imagem final somente em JPEG.

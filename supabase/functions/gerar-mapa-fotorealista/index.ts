@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ORIGEM_PERMITIDA = "https://endomapa.pages.dev";
 const MAPA_CORONAL = `${ORIGEM_PERMITIDA}/assets/mapa-base-coronal.png`;
-const REFERENCIA_ENDOMETRIOSE = `${ORIGEM_PERMITIDA}/assets/mapa-coronal-fornecido-sem-assinatura.png`;
+const REFERENCIA_ENDOMETRIOSE = `${ORIGEM_PERMITIDA}/assets/referencia-lesao-uterossacro.jpg`;
 const TEMPO_MAXIMO_MS = 120_000;
 
 const cors = {
@@ -134,7 +134,7 @@ Deno.serve(async (requisicao) => {
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2");
     formulario.append("image[]", new File([await respostaMapa.blob()], "mapa-coronal.png", { type: "image/png" }));
-    formulario.append("image[]", new File([await respostaReferencia.blob()], "referencia-lesao.png", { type: "image/png" }));
+    formulario.append("image[]", new File([await respostaReferencia.blob()], "referencia-lesao.jpg", { type: "image/jpeg" }));
     try {
       const bytesMascara = Uint8Array.from(atob(mascara_base64), (caractere) => caractere.charCodeAt(0));
       formulario.append("mask", new File([bytesMascara], "mascara-ligamento.png", { type: "image/png" }));
@@ -149,15 +149,17 @@ Deno.serve(async (requisicao) => {
     // filtragem menos restritiva. As demais políticas de segurança continuam ativas.
     formulario.append("moderation", "low");
 
-    // A lateralidade aqui segue a imagem coronal já calibrada e aprovada pelo médico.
-    const ladoVisual = lado === "esquerdo" ? "lado esquerdo visual da imagem" : "lado direito visual da imagem";
+    // Na vista coronal, a lateralidade da paciente aparece invertida para quem olha.
+    const ladoVisual = lado === "esquerdo" ? "lado direito visual da imagem" : "lado esquerdo visual da imagem";
+    const ladoVisualSemLesao = lado === "esquerdo" ? "lado esquerdo visual da imagem" : "lado direito visual da imagem";
     const proporcao = medida_1 / medida_2;
     const forma = proporcao >= 1.6 ? "alongada" : proporcao <= 1.2 ? "arredondada" : "levemente ovalada";
     formulario.append("prompt", [
       "Edição de ilustração médica anatômica para uso profissional por radiologista adulto. Conteúdo estritamente clínico, educacional, não sexual e sem paciente real.",
       "A primeira imagem é um mapa anatômico coronal que deve ser preservado com máxima fidelidade.",
-      "A segunda imagem é o modelo visual obrigatório. Observe especificamente o foco alongado sobre o ligamento uterossacro no lado esquerdo visual, marcado como 1,6 por 0,5 cm: nódulos castanho-escuros brilhantes, irregulares, densamente agrupados, integrados à superfície e com reação tecidual avermelhada discreta.",
+      "A segunda imagem é somente a referência de aparência da lesão: nódulos castanho-escuros brilhantes, irregulares, densamente agrupados, integrados à superfície e com reação tecidual avermelhada discreta. Ela não define a lateralidade do resultado.",
       `Acrescente exatamente uma lesão de endometriose no ligamento uterossacro ${lado}, que fica no ${ladoVisual}.`,
+      `O ligamento no ${ladoVisualSemLesao} deve permanecer completamente sem lesão, sem nódulos e sem pontos escuros novos. O resultado nunca pode ser bilateral.`,
       `A lesão mede ${formatarMedida(medida_1)} por ${formatarMedida(medida_2)} centímetros e deve ter forma ${forma}, respeitando essa proporção visual.`,
       "Edite somente a abertura transparente da máscara. Não desenhe nada fora dela. Não espalhe pontos separados: forme um único foco contínuo semelhante ao modelo da segunda imagem.",
       "Não acrescente textos, setas, medidas, assinatura ou novas marcas. Não altere útero, ovários, tubas, intestino, logomarca, marca-d'água, enquadramento, iluminação ou qualquer outra estrutura.",
