@@ -186,6 +186,23 @@ Deno.serve(async (requisicao) => {
     return responder({ erro: "Sua sessão terminou. Entre novamente no Endomapa." }, 401);
   }
 
+  // Antes de qualquer chamada paga, confirma que o proprietário liberou esta conta.
+  // Reutilizamos a lista administrativa das imagens como autorização geral de IA.
+  const { data: autorizacaoIA, error: erroAutorizacaoIA } = await supabase
+    .from("usuarios_imagem_autorizados")
+    .select("ativo")
+    .eq("user_id", dadosUsuario.user.id)
+    .maybeSingle();
+
+  if (erroAutorizacaoIA) {
+    console.error("Falha ao conferir a autorização de uso da IA.");
+    return responder({ erro: "Não foi possível conferir a autorização da inteligência artificial." }, 500);
+  }
+
+  if (!autorizacaoIA?.ativo) {
+    return responder({ erro: "A inteligência artificial ainda não foi liberada para esta conta." }, 403);
+  }
+
   // Lê e valida a entrada antes de reservar cota ou chamar um serviço pago.
   let corpo: { texto_bruto?: unknown };
 
