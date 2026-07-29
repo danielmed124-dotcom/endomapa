@@ -179,10 +179,17 @@ Deno.serve(async (req) => {
       let codigo = "sem_codigo";
       let detalhe = "O Google não informou o motivo detalhado.";
       try {
-        const falha = await respostaGemini.json();
-        codigo = String(falha?.error?.status || falha?.error?.code || codigo);
-        detalhe = mensagemTecnicaSegura(falha?.error?.message);
-      } catch (_erro) {}
+        // Alguns erros do endpoint chegam como texto simples, e não como JSON.
+        // Lemos uma única vez e tentamos os dois formatos sem registrar o corpo bruto.
+        const textoFalha = await respostaGemini.text();
+        try {
+          const falha = JSON.parse(textoFalha);
+          codigo = String(falha?.error?.status || falha?.error?.code || codigo);
+          detalhe = mensagemTecnicaSegura(falha?.error?.message || textoFalha);
+        } catch (_erroJson) {
+          detalhe = mensagemTecnicaSegura(textoFalha);
+        }
+      } catch (_erroLeitura) {}
       console.error(`Gemini recusou a imagem: status ${respostaGemini.status}, código ${codigo}.`);
 
       if (respostaGemini.status === 429) {
