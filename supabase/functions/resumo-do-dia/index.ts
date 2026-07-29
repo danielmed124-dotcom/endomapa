@@ -2,13 +2,20 @@
 // Assim, o arquivo é completo e pode ser colado sozinho no editor do painel.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-// Define os cabeçalhos usados quando o navegador conversar com a função.
-// Eles permitem a chamada, mas não substituem a exigência de estar logado.
+// Somente o endereço público oficial do Endomapa pode chamar a função pelo navegador.
+const ORIGEM_PERMITIDA = "https://endomapa.pages.dev";
+
+// Estes cabeçalhos não substituem a exigência de estar logado.
 const cabecalhosCors = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": ORIGEM_PERMITIDA,
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Vary": "Origin",
 };
+
+function origemEstaPermitida(requisicao: Request) {
+  return requisicao.headers.get("Origin") === ORIGEM_PERMITIDA;
+}
 
 // Monta uma resposta JSON padronizada, sempre em português.
 function responder(corpo: Record<string, unknown>, status = 200) {
@@ -39,12 +46,18 @@ Deno.serve(async (requisicao) => {
   // O navegador envia OPTIONS antes da chamada real para conferir a permissão.
   // Essa resposta técnica não consulta nem revela nenhum dado.
   if (requisicao.method === "OPTIONS") {
-    return new Response("ok", { headers: cabecalhosCors });
+    return origemEstaPermitida(requisicao)
+      ? new Response("ok", { headers: cabecalhosCors })
+      : responder({ erro: "Origem não autorizada." }, 403);
   }
 
   // Esta função é somente de leitura e aceita apenas chamadas POST.
   if (requisicao.method !== "POST") {
     return responder({ erro: "Método não permitido." }, 405);
+  }
+
+  if (!origemEstaPermitida(requisicao)) {
+    return responder({ erro: "Esta chamada não veio do Endomapa." }, 403);
   }
 
   // O cabeçalho Authorization contém o crachá digital da sessão do médico.
