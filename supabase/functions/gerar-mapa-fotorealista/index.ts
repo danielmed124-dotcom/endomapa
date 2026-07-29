@@ -101,6 +101,24 @@ Deno.serve(async (requisicao) => {
     .single();
   if (erroMapa || !mapa) return responder({ erro: "O mapa não foi encontrado entre os seus dados." }, 403);
 
+  // Reserva uma das cinco tentativas diárias antes de chamar o serviço pago.
+  // A função do banco também recusa contas que não foram autorizadas pelo proprietário.
+  const { data: reserva, error: erroReserva } = await supabase
+    .rpc("reservar_geracao_imagem")
+    .single();
+
+  if (erroReserva || !reserva) {
+    console.error("Falha ao conferir a autorização da geração de imagem.");
+    return responder({ erro: "Não foi possível conferir o limite de imagens. Tente novamente." }, 500);
+  }
+
+  if (!reserva.permitido) {
+    const mensagem = reserva.motivo === "limite_atingido"
+      ? "O limite de cinco tentativas de imagem de hoje foi atingido. Tente novamente amanhã."
+      : "A geração paga de imagens ainda não foi liberada para esta conta.";
+    return responder({ erro: mensagem }, 429);
+  }
+
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), TEMPO_MAXIMO_MS);
 

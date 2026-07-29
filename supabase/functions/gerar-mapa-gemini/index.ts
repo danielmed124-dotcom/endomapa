@@ -107,6 +107,20 @@ Deno.serve(async (req) => {
   const { data: mapa, error: erroMapa } = await supabase.from("mapas").select("id").eq("id", mapa_id).single();
   if (erroMapa || !mapa) return responder({ erro: "O mapa não foi encontrado entre os seus dados." }, 403);
 
+  // OpenAI e Gemini compartilham o mesmo limite de cinco tentativas por dia.
+  // A reserva também confirma que o proprietário liberou esta conta para gerar custo.
+  const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem").single();
+  if (erroReserva || !reserva) {
+    console.error("Falha ao conferir a autorização da geração de imagem.");
+    return responder({ erro: "Não foi possível conferir o limite de imagens. Tente novamente." }, 500);
+  }
+  if (!reserva.permitido) {
+    const mensagem = reserva.motivo === "limite_atingido"
+      ? "O limite de cinco tentativas de imagem de hoje foi atingido. Tente novamente amanhã."
+      : "A geração paga de imagens ainda não foi liberada para esta conta.";
+    return responder({ erro: mensagem }, 429);
+  }
+
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
   try {
