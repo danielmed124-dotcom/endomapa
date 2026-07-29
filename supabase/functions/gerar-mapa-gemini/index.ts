@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
   }
   if (!reserva.permitido) {
     const mensagem = reserva.motivo === "limite_atingido"
-      ? "O limite de cinco tentativas de imagem de hoje foi atingido. Tente novamente amanhã."
+      ? `O limite de ${reserva.limite_diario} tentativas de imagem de hoje foi atingido. Tente novamente amanhã.`
       : "A geração paga de imagens ainda não foi liberada para esta conta.";
     return responder({ erro: mensagem }, 429);
   }
