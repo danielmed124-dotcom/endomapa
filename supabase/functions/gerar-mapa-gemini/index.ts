@@ -31,6 +31,20 @@ function formatar(valor: number) {
   return valor.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
 }
 
+// Conserva somente uma explicação curta do provedor. Remove sequências que
+// possam se parecer com chave ou conteúdo codificado antes de mostrar ao médico.
+function mensagemTecnicaSegura(valor: unknown) {
+  if (typeof valor !== "string") return "O Google não informou o motivo detalhado.";
+
+  return valor
+    .replace(/AIza[\w-]+/g, "[chave ocultada]")
+    .replace(/Bearer\s+\S+/gi, "Bearer [ocultado]")
+    .replace(/[A-Za-z0-9+/=]{80,}/g, "[conteúdo ocultado]")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 300) || "O Google não informou o motivo detalhado.";
+}
+
 function bytesParaBase64(bytes: Uint8Array) {
   let binario = "";
   const tamanhoBloco = 32_768;
@@ -156,16 +170,18 @@ Deno.serve(async (req) => {
           { type: "image", mime_type: "image/png", data: mascara_base64 },
         ],
         // Este modelo aceita a imagem final somente em JPEG.
-        // As três imagens de referência continuam em PNG, pois esse é o formato real delas.
+        // O mapa e a máscara são PNG; a referência isolada da lesão é JPEG.
         response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "2:3", image_size: "1K" },
       }),
     });
 
     if (!respostaGemini.ok) {
       let codigo = "sem_codigo";
+      let detalhe = "O Google não informou o motivo detalhado.";
       try {
         const falha = await respostaGemini.json();
         codigo = String(falha?.error?.status || falha?.error?.code || codigo);
+        detalhe = mensagemTecnicaSegura(falha?.error?.message);
       } catch (_erro) {}
       console.error(`Gemini recusou a imagem: status ${respostaGemini.status}, código ${codigo}.`);
 
@@ -173,7 +189,9 @@ Deno.serve(async (req) => {
         return responder({ erro: `O limite ou saldo do Gemini foi atingido (código GEMINI-429-${codigo}).` }, 429);
       }
 
-      return responder({ erro: `O Gemini não concluiu a imagem (código GEMINI-${respostaGemini.status}-${codigo}).` }, 502);
+      return responder({
+        erro: `O Gemini recusou a configuração: ${detalhe} (código GEMINI-${respostaGemini.status}-${codigo}).`,
+      }, 502);
     }
 
     const resposta = await respostaGemini.json();
