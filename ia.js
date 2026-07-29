@@ -208,7 +208,6 @@
 
     const linhas = sugestaoAtual.lesoes.map(function (lesao) {
       return {
-        mapa_id: mapaId,
         categoria: lesao.categoria,
         localizacao: lesao.localizacao,
         lado: lesao.lado,
@@ -221,36 +220,15 @@
     });
 
     try {
-      // Registra no mapa a confiança geral somente depois da conferência humana.
-      // A regra de dono do banco impede alterar um mapa de outro médico.
-      const { data: mapaAtualizado, error: erroMapa } = await clienteSupabase
-        .from("mapas")
-        .update({ confianca: sugestaoAtual.confianca })
-        .eq("id", mapaId)
-        .select("id, user_id, confianca")
-        .single();
-
-      if (erroMapa) {
-        mostrarEstado(`A confiança não foi salva: ${traduzirErroDoBanco(erroMapa)}`, true);
-        liberarConfirmacao();
-        return;
-      }
-
-      if (
-        !mapaAtualizado ||
-        mapaAtualizado.id !== mapaId ||
-        !mapaAtualizado.user_id ||
-        Number(mapaAtualizado.confianca) !== Number(sugestaoAtual.confianca)
-      ) {
-        mostrarEstado("O banco não confirmou a confiança da interpretação. Nada será anunciado como salvo.", true);
-        liberarConfirmacao();
-        return;
-      }
-
+      // O banco salva confiança e lesões em uma operação indivisível.
+      // Se qualquer campo falhar, nada fica gravado pela metade.
       const { data, error } = await clienteSupabase
-        .from("lesoes")
-        .insert(linhas)
-        .select("id, mapa_id, user_id");
+        .rpc("salvar_interpretacao_mapa", {
+          p_mapa_id: mapaId,
+          p_confianca: sugestaoAtual.confianca,
+          p_lesoes: linhas,
+        })
+        .single();
 
       if (error) {
         mostrarEstado(`As lesões não foram salvas: ${traduzirErroDoBanco(error)}`, true);
@@ -258,7 +236,11 @@
         return;
       }
 
-      if (!data || data.length !== linhas.length || data.some((linha) => linha.mapa_id !== mapaId || !linha.user_id)) {
+      if (
+        !data ||
+        data.mapa_id !== mapaId ||
+        Number(data.quantidade_lesoes) !== linhas.length
+      ) {
         mostrarEstado("O banco não confirmou todas as lesões. A tela não registrará sucesso.", true);
         liberarConfirmacao();
         return;
@@ -266,7 +248,7 @@
 
       botaoConfirmar.textContent = "Lesões salvas";
       botaoConfirmar.disabled = true;
-      mostrarEstado(`${data.length} ${data.length === 1 ? "lesão salva" : "lesões salvas"} após sua conferência.`, false);
+      mostrarEstado(`${data.quantidade_lesoes} ${data.quantidade_lesoes === 1 ? "lesão salva" : "lesões salvas"} após sua conferência.`, false);
       window.dispatchEvent(new CustomEvent("endomapa:lesoes-confirmadas", {
         detail: {
           mapaId,
