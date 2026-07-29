@@ -82,7 +82,7 @@ Não inclua nome, CPF, telefone, e-mail ou qualquer identificador de paciente na
 | Caso | Data | Avaliador | Tempo em segundos | Categoria | Localização | Lado | Medidas | Aparência | Estruturas preservadas | Resultado | Motivo |
 |---|---|---|---:|---|---|---|---|---|---|---|---|
 | 01 | 29/07/2026 | Daniel de Souza Carneiro | 60 | Sim | Sim | Sim | Sim | Sim | Sim | APROVADO | Todos os critérios confirmados pelo médico avaliador. |
-| 02 | 29/07/2026 | Daniel de Souza Carneiro | 90 | Sim | Sim | Não | Sim | Não | Sim | REPROVADO | A imagem criou lesões nos dois ligamentos, apesar de o achado ser somente direito; o tempo também ultrapassou 60 segundos. |
+| 02 | 29/07/2026 | Daniel de Souza Carneiro | 180 | Sim | Não | Não confirmado | Não | Não | Sim | REPROVADO | Na repetição com Gemini, a lesão ficou muito inferior e praticamente fora do ligamento; a medida apareceu do outro lado; o tempo foi de 3 minutos. |
 | 03 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
 | 04 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
 | 05 |  |  |  |  |  |  |  |  |  | BLOQUEADO |  |
