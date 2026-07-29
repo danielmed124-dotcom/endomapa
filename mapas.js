@@ -22,7 +22,6 @@
   const textoFiltroAtual = document.querySelector("[data-texto-filtro-atual]");
   const botaoLimparFiltro = document.querySelector("[data-limpar-filtro]");
 
-  const CLINICA_CENTRUS_ID = "20000000-0000-4000-8000-000000000001";
   let mapaJaSalvo = false;
   let mapasDoPainel = [];
   let statusFiltradoNoPainel = "";
@@ -62,6 +61,7 @@
     const textoBruto = campoTexto.value.trim();
     const vistaSelecionada = document.querySelector('input[name="vistas"]:checked')?.value;
     const medicoId = document.body.dataset.medicoId;
+    const perfilMedico = window.endomapaMedico;
 
     limparMensagem();
 
@@ -77,7 +77,12 @@
     }
 
     if (!medicoId) {
-      mostrarMensagem("Selecione o médico responsável antes de salvar.", true);
+      mostrarMensagem("O perfil do médico responsável ainda não foi carregado.", true);
+      return;
+    }
+
+    if (!perfilMedico || perfilMedico.id !== medicoId) {
+      mostrarMensagem("O médico responsável não corresponde à conta que está conectada.", true);
       return;
     }
 
@@ -92,7 +97,7 @@
       const { data, error } = await clienteSupabase
         .from("mapas")
         .insert({
-          clinica_id: CLINICA_CENTRUS_ID,
+          clinica_id: perfilMedico.clinica_id || null,
           medico_id: medicoId,
           texto_bruto: textoBruto,
           vistas: vistaSelecionada,
