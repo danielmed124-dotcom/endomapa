@@ -60,8 +60,8 @@
       return;
     }
 
-    if (senha.length < 6) {
-      mostrarMensagem("A senha precisa ter pelo menos 6 caracteres.", true);
+    if (modo === "cadastrar" && senha.length < 8) {
+      mostrarMensagem("Para criar uma conta, use uma senha com pelo menos 8 caracteres.", true);
       return;
     }
 
@@ -169,13 +169,13 @@
       texto.textContent = "Cadastre seu e-mail e escolha uma senha para acessar o Endomapa.";
       botaoEnviar.textContent = "Criar conta";
       campoSenha.autocomplete = "new-password";
-      ajudaSenha.textContent = "Crie uma senha com pelo menos 6 caracteres.";
+      ajudaSenha.textContent = "Crie uma senha com pelo menos 8 caracteres.";
     } else {
       titulo.textContent = "Entre no Endomapa";
       texto.textContent = "Use seu e-mail e sua senha para acessar seus próprios mapas.";
       botaoEnviar.textContent = "Entrar";
       campoSenha.autocomplete = "current-password";
-      ajudaSenha.textContent = "A senha precisa ter pelo menos 6 caracteres.";
+      ajudaSenha.textContent = "Digite a senha cadastrada para entrar.";
     }
 
     if (limpar) {
@@ -239,7 +239,7 @@
     }
 
     if (textoErro.includes("password")) {
-      return "A senha não foi aceita. Use pelo menos 6 caracteres e tente novamente.";
+      return "A senha não foi aceita. Em novos cadastros, use pelo menos 8 caracteres.";
     }
 
     if (textoErro.includes("email")) {
