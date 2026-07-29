@@ -81,7 +81,7 @@ Não inclua nome, CPF, telefone, e-mail ou qualquer identificador de paciente na
 
 | Caso | Data | Avaliador | Tempo em segundos | Categoria | Localização | Lado | Medidas | Aparência | Estruturas preservadas | Resultado | Motivo |
 |---|---|---|---:|---|---|---|---|---|---|---|---|
-| 01 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
+| 01 | 29/07/2026 | Daniel de Souza Carneiro | 60 | Sim | Sim | Sim | Sim | Sim | Sim | APROVADO | Todos os critérios confirmados pelo médico avaliador. |
 | 02 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
 | 03 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
 | 04 |  |  |  |  |  |  |  |  |  | NÃO TESTADO |  |
