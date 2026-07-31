@@ -20,9 +20,9 @@
       "tuba uterina": { direito: [31, 34], esquerdo: [69, 34], central: [50, 34] },
       // Orientação validada pelo médico: o lado informado usa o mesmo lado visual.
       "ligamento uterossacro": {
-        esquerdo: [43, 49, -38],
-        direito: [57, 49, 38],
-        central: [50, 49, 0],
+        esquerdo: [38, 56, -38],
+        direito: [62, 56, 38],
+        central: [50, 56, 0],
       },
       "região retrocervical": { x: 50, y: 62 },
       "reto ou sigmoide": { x: 50, y: 72 },
