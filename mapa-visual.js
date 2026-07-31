@@ -3,8 +3,16 @@
 
   const camadas = document.querySelectorAll("[data-camada-lesoes]");
   const lista = document.querySelector("[data-lista-lesoes-mapa]");
+  const mapaCoronal = document.querySelector('[data-vista="coronal"]');
 
   if (!camadas.length || !lista) return;
+
+  const CHAVE_AJUSTES = "endomapa:ajustes-anatomicos:v1";
+  let calibracaoAtiva = false;
+  let lesoesAtuais = [];
+  let ajustesSalvos = lerAjustesSalvos();
+  let ajustesTemporarios = structuredClone(ajustesSalvos);
+  const controles = criarControlesDeCalibracao();
 
   // Cada modelo visual é liberado somente para a combinação anatômica aprovada.
   // Isso impede reutilizar silenciosamente uma lesão uterossacra em outro órgão.
@@ -43,6 +51,7 @@
 
   window.addEventListener("endomapa:lesoes-confirmadas", function (evento) {
     const lesoes = Array.isArray(evento.detail?.lesoes) ? evento.detail.lesoes : [];
+    lesoesAtuais = lesoes;
     renderizar(lesoes);
   });
 
@@ -58,14 +67,27 @@
 
       camadas.forEach(function (camada) {
         const vista = camada.dataset.camadaLesoes;
-        const ponto = obterPonto(vista, lesao.localizacao, lesao.lado);
+        const chave = criarChaveDeAjuste(vista, lesao);
+        const pontoPadrao = obterPonto(vista, lesao.localizacao, lesao.lado);
+        const ponto = aplicarAjusteAoPonto(pontoPadrao, ajustesTemporarios[chave]?.lesao);
         if (!ponto) return;
-        camada.append(criarLesaoVisual(lesao, indice, ponto, modelo));
+        const elementoLesao = criarLesaoVisual(lesao, indice, ponto, modelo);
+        prepararElementoAjustavel(elementoLesao, chave, "lesao", camada);
+        camada.append(elementoLesao);
         if (formatarMedidas(lesao) !== "Medida não informada") {
-          camada.append(criarAnotacaoDaMedida(lesao, ponto));
+          const pontoMedidaPadrao = { x: ponto.x, y: Math.min(92, ponto.y + 4.5) };
+          const pontoMedida = aplicarAjusteAoPonto(
+            pontoMedidaPadrao,
+            ajustesTemporarios[chave]?.medida,
+          );
+          const medida = criarAnotacaoDaMedida(lesao, pontoMedida);
+          prepararElementoAjustavel(medida, chave, "medida", camada);
+          camada.append(medida);
         }
       });
     });
+
+    atualizarEstadoDaCalibracao();
   }
 
   function obterModelo(lesao) {
@@ -106,9 +128,147 @@
     const medida = document.createElement("span");
     medida.className = "medida-no-mapa";
     medida.style.left = `${ponto.x}%`;
-    medida.style.top = `${Math.min(92, ponto.y + 4.5)}%`;
+    medida.style.top = `${ponto.y}%`;
     medida.textContent = formatarMedidas(lesao);
     return medida;
+  }
+
+  function criarChaveDeAjuste(vista, lesao) {
+    return [vista, lesao.categoria, lesao.localizacao, lesao.lado].join("|");
+  }
+
+  function aplicarAjusteAoPonto(pontoPadrao, ajuste) {
+    if (!pontoPadrao) return null;
+    if (!ajuste) return { ...pontoPadrao };
+    return {
+      ...pontoPadrao,
+      x: numeroEntre(ajuste.x, 0, 100, pontoPadrao.x),
+      y: numeroEntre(ajuste.y, 0, 100, pontoPadrao.y),
+    };
+  }
+
+  function prepararElementoAjustavel(elemento, chave, tipo, camada) {
+    if (camada.dataset.camadaLesoes !== "coronal") return;
+    elemento.dataset.ajusteChave = chave;
+    elemento.dataset.ajusteTipo = tipo;
+    elemento.addEventListener("pointerdown", iniciarArraste);
+  }
+
+  function iniciarArraste(evento) {
+    if (!calibracaoAtiva) return;
+    evento.preventDefault();
+    const elemento = evento.currentTarget;
+    const camada = elemento.parentElement;
+    elemento.setPointerCapture(evento.pointerId);
+    elemento.classList.add("elemento-em-arraste");
+
+    const mover = function (movimento) {
+      const retangulo = camada.getBoundingClientRect();
+      const x = Math.min(98, Math.max(2, ((movimento.clientX - retangulo.left) / retangulo.width) * 100));
+      const y = Math.min(96, Math.max(4, ((movimento.clientY - retangulo.top) / retangulo.height) * 100));
+      elemento.style.left = `${x}%`;
+      elemento.style.top = `${y}%`;
+
+      const chave = elemento.dataset.ajusteChave;
+      const tipo = elemento.dataset.ajusteTipo;
+      ajustesTemporarios[chave] ??= {};
+      ajustesTemporarios[chave][tipo] = {
+        x: arredondarCoordenada(x),
+        y: arredondarCoordenada(y),
+      };
+      mostrarCoordenadas(chave);
+    };
+
+    const terminar = function () {
+      elemento.classList.remove("elemento-em-arraste");
+      elemento.removeEventListener("pointermove", mover);
+      elemento.removeEventListener("pointerup", terminar);
+      elemento.removeEventListener("pointercancel", terminar);
+    };
+
+    elemento.addEventListener("pointermove", mover);
+    elemento.addEventListener("pointerup", terminar);
+    elemento.addEventListener("pointercancel", terminar);
+  }
+
+  function criarControlesDeCalibracao() {
+    if (!mapaCoronal) return null;
+    const painel = document.createElement("section");
+    painel.className = "calibracao-mapa";
+    painel.setAttribute("aria-label", "Ajuste médico da posição no mapa coronal");
+    painel.innerHTML = `
+      <button class="botao botao--secundario" type="button" data-ativar-calibracao>Ajustar posição</button>
+      <div class="calibracao-mapa__acoes" data-acoes-calibracao hidden>
+        <p class="calibracao-mapa__instrucao">Arraste a lesão e a medida separadamente com o dedo.</p>
+        <output class="calibracao-mapa__coordenadas" data-coordenadas-calibracao>Toque na lesão para começar.</output>
+        <button class="botao" type="button" data-salvar-calibracao>Salvar posição</button>
+        <button class="botao botao--secundario" type="button" data-restaurar-calibracao>Restaurar padrão</button>
+        <button class="link-voltar" type="button" data-cancelar-calibracao>Cancelar ajuste</button>
+      </div>`;
+    mapaCoronal.insertAdjacentElement("afterend", painel);
+
+    painel.querySelector("[data-ativar-calibracao]").addEventListener("click", function () {
+      calibracaoAtiva = true;
+      ajustesTemporarios = structuredClone(ajustesSalvos);
+      atualizarEstadoDaCalibracao();
+    });
+    painel.querySelector("[data-salvar-calibracao]").addEventListener("click", salvarCalibracao);
+    painel.querySelector("[data-restaurar-calibracao]").addEventListener("click", restaurarPadrao);
+    painel.querySelector("[data-cancelar-calibracao]").addEventListener("click", function () {
+      calibracaoAtiva = false;
+      ajustesTemporarios = structuredClone(ajustesSalvos);
+      renderizar(lesoesAtuais);
+    });
+    return painel;
+  }
+
+  function atualizarEstadoDaCalibracao() {
+    if (!controles || !mapaCoronal) return;
+    mapaCoronal.classList.toggle("mapa-visual--calibrando", calibracaoAtiva);
+    controles.querySelector("[data-acoes-calibracao]").hidden = !calibracaoAtiva;
+    controles.querySelector("[data-ativar-calibracao]").hidden = calibracaoAtiva;
+  }
+
+  function salvarCalibracao() {
+    ajustesSalvos = structuredClone(ajustesTemporarios);
+    localStorage.setItem(CHAVE_AJUSTES, JSON.stringify(ajustesSalvos));
+    calibracaoAtiva = false;
+    renderizar(lesoesAtuais);
+    controles.querySelector("[data-ativar-calibracao]").textContent = "Posição salva · ajustar novamente";
+  }
+
+  function restaurarPadrao() {
+    document.querySelectorAll('[data-camada-lesoes="coronal"] [data-ajuste-chave]').forEach(function (elemento) {
+      delete ajustesTemporarios[elemento.dataset.ajusteChave];
+      delete ajustesSalvos[elemento.dataset.ajusteChave];
+    });
+    localStorage.setItem(CHAVE_AJUSTES, JSON.stringify(ajustesSalvos));
+    renderizar(lesoesAtuais);
+    controles.querySelector("[data-coordenadas-calibracao]").textContent = "Posição padrão restaurada.";
+    controles.querySelector("[data-ativar-calibracao]").textContent = "Ajustar posição";
+  }
+
+  function mostrarCoordenadas(chave) {
+    const ajuste = ajustesTemporarios[chave] || {};
+    const lesao = ajuste.lesao ? `Lesão: ${ajuste.lesao.x}%, ${ajuste.lesao.y}%` : "Lesão: posição padrão";
+    const medida = ajuste.medida ? `Medida: ${ajuste.medida.x}%, ${ajuste.medida.y}%` : "Medida: posição padrão";
+    controles.querySelector("[data-coordenadas-calibracao]").textContent = `${lesao} · ${medida}`;
+  }
+
+  function lerAjustesSalvos() {
+    try {
+      return JSON.parse(localStorage.getItem(CHAVE_AJUSTES) || "{}") || {};
+    } catch (_erro) {
+      return {};
+    }
+  }
+
+  function numeroEntre(valor, minimo, maximo, padrao) {
+    return typeof valor === "number" && valor >= minimo && valor <= maximo ? valor : padrao;
+  }
+
+  function arredondarCoordenada(valor) {
+    return Math.round(valor * 10) / 10;
   }
 
   function calcularDimensoes(lesao) {
