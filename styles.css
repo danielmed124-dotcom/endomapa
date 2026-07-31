@@ -1077,6 +1077,36 @@ h1 span {
   font-weight: 700;
 }
 
+.calibracao-mapa__controle {
+  display: grid;
+  min-height: 62px;
+  padding: 10px 12px;
+  color: var(--texto);
+  border: 1px solid rgba(184, 192, 185, 0.18);
+  border-radius: 12px;
+  gap: 8px;
+}
+
+.calibracao-mapa__controle span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.calibracao-mapa__controle strong {
+  color: var(--dourado);
+}
+
+.calibracao-mapa__controle input[type="range"] {
+  width: 100%;
+  min-height: 28px;
+  margin: 0;
+  accent-color: var(--dourado);
+  cursor: pointer;
+}
+
 .assinatura-mapa {
   position: absolute;
   z-index: 2;
