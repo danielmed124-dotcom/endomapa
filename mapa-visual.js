@@ -21,7 +21,7 @@
       // Orientação validada pelo médico: o lado informado usa o mesmo lado visual.
       "ligamento uterossacro": {
         esquerdo: [38, 56, -38],
-        direito: [63, 57, 44],
+        direito: [64.5, 58, 48],
         central: [50, 56, 0],
       },
       "região retrocervical": { x: 50, y: 62 },
