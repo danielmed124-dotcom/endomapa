@@ -6,9 +6,11 @@
 
   if (!camadas.length || !lista) return;
 
+  // Cada modelo visual é liberado somente para a combinação anatômica aprovada.
+  // Isso impede reutilizar silenciosamente uma lesão uterossacra em outro órgão.
   const modelos = {
-    endometriose: "assets/lesoes/endometriose-ligamento-original.png",
-    adenomiose: "assets/lesoes/adenomiose.png",
+    "endometriose|ligamento uterossacro": "assets/lesoes/endometriose-ligamento-original.png",
+    "adenomiose|útero": "assets/lesoes/adenomiose.png",
   };
 
   const posicoes = {
@@ -16,11 +18,11 @@
       "útero": { x: 50, y: 42 },
       "ovário": { direito: [32, 50], esquerdo: [68, 50], central: [50, 50] },
       "tuba uterina": { direito: [31, 34], esquerdo: [69, 34], central: [50, 34] },
-      // A lateralidade é radiológica: o lado da paciente aparece invertido na imagem.
+      // Orientação validada pelo médico: o lado informado usa o mesmo lado visual.
       "ligamento uterossacro": {
-        esquerdo: [43, 54, -38],
-        direito: [57, 54, 38],
-        central: [50, 54, 0],
+        esquerdo: [43, 49, -38],
+        direito: [57, 49, 38],
+        central: [50, 49, 0],
       },
       "região retrocervical": { x: 50, y: 62 },
       "reto ou sigmoide": { x: 50, y: 72 },
@@ -51,18 +53,23 @@
     lesoes.forEach(function (lesao, indice) {
       lista.append(criarResumo(lesao, indice));
 
-      if (!modelos[lesao.categoria]) return;
+      const modelo = obterModelo(lesao);
+      if (!modelo) return;
 
       camadas.forEach(function (camada) {
         const vista = camada.dataset.camadaLesoes;
         const ponto = obterPonto(vista, lesao.localizacao, lesao.lado);
         if (!ponto) return;
-        camada.append(criarLesaoVisual(lesao, indice, ponto));
+        camada.append(criarLesaoVisual(lesao, indice, ponto, modelo));
         if (formatarMedidas(lesao) !== "Medida não informada") {
           camada.append(criarAnotacaoDaMedida(lesao, ponto));
         }
       });
     });
+  }
+
+  function obterModelo(lesao) {
+    return modelos[`${lesao.categoria}|${lesao.localizacao}`] || null;
   }
 
   function obterPonto(vista, localizacao, lado) {
@@ -75,7 +82,7 @@
       : null;
   }
 
-  function criarLesaoVisual(lesao, indice, ponto) {
+  function criarLesaoVisual(lesao, indice, ponto, modelo) {
     const elemento = document.createElement("div");
     elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria}`;
     elemento.style.left = `${ponto.x}%`;
@@ -89,7 +96,7 @@
 
     const imagem = document.createElement("img");
     imagem.className = "lesao-no-mapa__imagem";
-    imagem.src = modelos[lesao.categoria];
+    imagem.src = modelo;
     imagem.alt = "";
     elemento.append(imagem);
     return elemento;
@@ -134,7 +141,7 @@
     descricao.textContent = `${capitalizar(lesao.localizacao)} · ${lesao.lado} · ${formatarMedidas(lesao)}`;
     artigo.append(titulo, descricao);
 
-    if (!modelos[lesao.categoria]) {
+    if (!obterModelo(lesao)) {
       const aviso = document.createElement("p");
       aviso.className = "texto-apoio";
       aviso.textContent = "Sem modelo visual aprovado: esta lesão não foi desenhada no mapa.";
