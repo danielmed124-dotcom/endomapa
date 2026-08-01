@@ -984,7 +984,7 @@ h1 span {
 }
 
 .mapa-visual--calibrando .lesao-no-mapa__imagem {
-  border-radius: 46%;
+  border-radius: 50%;
 }
 
 .mapa-visual--calibrando .elemento-em-arraste {
@@ -1000,10 +1000,10 @@ h1 span {
   transform-origin: center;
 }
 
-.lesao-no-mapa__imagem {
+.mapa-visual .lesao-no-mapa__imagem {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: fill;
   opacity: 0.82;
   mix-blend-mode: multiply;
   filter: saturate(0.62) brightness(0.76) contrast(1.12);
@@ -1011,13 +1011,14 @@ h1 span {
 
 .lesao-no-mapa--endometriose {
   overflow: hidden;
-  border-radius: 46%;
+  border-radius: 50%;
 }
 
 .lesao-no-mapa--endometriose .lesao-no-mapa__imagem {
   opacity: 0.96;
   mix-blend-mode: normal;
   filter: none;
+  clip-path: ellipse(50% 50% at 50% 50%);
 }
 
 .lesao-no-mapa--adenomiose .lesao-no-mapa__imagem {
