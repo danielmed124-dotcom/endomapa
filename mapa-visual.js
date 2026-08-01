@@ -18,7 +18,10 @@
   // Cada modelo visual é liberado somente para a combinação anatômica aprovada.
   // Isso impede reutilizar silenciosamente uma lesão uterossacra em outro órgão.
   const modelos = {
-    "endometriose|ligamento uterossacro": "assets/lesoes/endometriose-ligamento-original.png",
+    "endometriose|ligamento uterossacro": {
+      alongada: "assets/lesoes/endometriose-ligamento-original.png",
+      arredondada: "assets/lesoes/endometriose-ligamento-arredondada-referencia.png",
+    },
     "adenomiose|útero": "assets/lesoes/adenomiose.png",
   };
 
@@ -94,10 +97,10 @@
 
   function obterModelo(lesao) {
     const chave = `${lesao.categoria}|${lesao.localizacao}`;
-    if (chave === "endometriose|ligamento uterossacro" && medidasSaoAproximadamenteIguais(lesao)) {
-      return null;
-    }
-    return modelos[chave] || null;
+    const modelo = modelos[chave];
+    if (!modelo) return null;
+    if (typeof modelo === "string") return modelo;
+    return medidasSaoAproximadamenteIguais(lesao) ? modelo.arredondada : modelo.alongada;
   }
 
   function obterPonto(vista, localizacao, lado) {
