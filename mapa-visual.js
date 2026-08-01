@@ -22,6 +22,7 @@
       alongada: "assets/lesoes/endometriose-ligamento-original.png",
       arredondada: "assets/lesoes/endometriose-ligamento-arredondada-referencia.png",
     },
+    "endometriose|região retrocervical": "assets/lesoes/endometriose-retrocervical-referencia.png",
     "adenomiose|útero": "assets/lesoes/adenomiose.png",
   };
 
