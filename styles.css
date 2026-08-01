@@ -1021,6 +1021,10 @@ h1 span {
   clip-path: ellipse(50% 50% at 50% 50%);
 }
 
+.mapa-visual .lesao-no-mapa--arredondada .lesao-no-mapa__imagem {
+  object-fit: cover;
+}
+
 .lesao-no-mapa--adenomiose .lesao-no-mapa__imagem {
   opacity: 0.48;
   filter: saturate(0.72) contrast(0.94);

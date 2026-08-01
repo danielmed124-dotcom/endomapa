@@ -18,10 +18,7 @@
   // Cada modelo visual é liberado somente para a combinação anatômica aprovada.
   // Isso impede reutilizar silenciosamente uma lesão uterossacra em outro órgão.
   const modelos = {
-    "endometriose|ligamento uterossacro": {
-      alongada: "assets/lesoes/endometriose-ligamento-original.png",
-      arredondada: "assets/lesoes/endometriose-ligamento-arredondada-v2.png",
-    },
+    "endometriose|ligamento uterossacro": "assets/lesoes/endometriose-ligamento-original.png",
     "adenomiose|útero": "assets/lesoes/adenomiose.png",
   };
 
@@ -96,16 +93,7 @@
   }
 
   function obterModelo(lesao) {
-    const modelo = modelos[`${lesao.categoria}|${lesao.localizacao}`];
-    if (!modelo) return null;
-    if (typeof modelo === "string") return modelo;
-
-    const medida1 = numeroPositivo(lesao.medida_1);
-    const medida2 = numeroPositivo(lesao.medida_2);
-    if (!medida1 || !medida2) return modelo.alongada;
-
-    const proporcao = Math.max(medida1, medida2) / Math.min(medida1, medida2);
-    return proporcao <= 1.4 ? modelo.arredondada : modelo.alongada;
+    return modelos[`${lesao.categoria}|${lesao.localizacao}`] || null;
   }
 
   function obterPonto(vista, localizacao, lado) {
@@ -120,7 +108,7 @@
 
   function criarLesaoVisual(lesao, indice, ponto, modelo, escalaSalva) {
     const elemento = document.createElement("div");
-    elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria}`;
+    elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria} lesao-no-mapa--${obterFormato(lesao)}`;
     elemento.style.left = `${ponto.x}%`;
     elemento.style.top = `${ponto.y}%`;
     const dimensoes = calcularDimensoes(lesao);
@@ -364,6 +352,14 @@
       largura: Math.min(22, Math.max(7, 5 + comprimento * 5.5)),
       proporcao: Math.min(6, Math.max(0.45, comprimento / espessura)),
     };
+  }
+
+  function obterFormato(lesao) {
+    const medida1 = numeroPositivo(lesao.medida_1);
+    const medida2 = numeroPositivo(lesao.medida_2);
+    if (!medida1 || !medida2) return "alongada";
+    const proporcao = Math.max(medida1, medida2) / Math.min(medida1, medida2);
+    return proporcao <= 1.4 ? "arredondada" : "alongada";
   }
 
   function numeroPositivo(valor) {
