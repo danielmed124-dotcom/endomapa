@@ -93,7 +93,11 @@
   }
 
   function obterModelo(lesao) {
-    return modelos[`${lesao.categoria}|${lesao.localizacao}`] || null;
+    const chave = `${lesao.categoria}|${lesao.localizacao}`;
+    if (chave === "endometriose|ligamento uterossacro" && medidasSaoAproximadamenteIguais(lesao)) {
+      return null;
+    }
+    return modelos[chave] || null;
   }
 
   function obterPonto(vista, localizacao, lado) {
@@ -108,7 +112,7 @@
 
   function criarLesaoVisual(lesao, indice, ponto, modelo, escalaSalva) {
     const elemento = document.createElement("div");
-    elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria} lesao-no-mapa--${obterFormato(lesao)}`;
+    elemento.className = `lesao-no-mapa lesao-no-mapa--${lesao.categoria}`;
     elemento.style.left = `${ponto.x}%`;
     elemento.style.top = `${ponto.y}%`;
     const dimensoes = calcularDimensoes(lesao);
@@ -354,12 +358,12 @@
     };
   }
 
-  function obterFormato(lesao) {
+  function medidasSaoAproximadamenteIguais(lesao) {
     const medida1 = numeroPositivo(lesao.medida_1);
     const medida2 = numeroPositivo(lesao.medida_2);
-    if (!medida1 || !medida2) return "alongada";
+    if (!medida1 || !medida2) return false;
     const proporcao = Math.max(medida1, medida2) / Math.min(medida1, medida2);
-    return proporcao <= 1.4 ? "arredondada" : "alongada";
+    return proporcao <= 1.4;
   }
 
   function numeroPositivo(valor) {
@@ -381,7 +385,11 @@
     if (!obterModelo(lesao)) {
       const aviso = document.createElement("p");
       aviso.className = "texto-apoio";
-      aviso.textContent = "Sem modelo visual aprovado: esta lesão não foi desenhada no mapa.";
+      aviso.textContent = lesao.categoria === "endometriose"
+        && lesao.localizacao === "ligamento uterossacro"
+        && medidasSaoAproximadamenteIguais(lesao)
+        ? "Modelo arredondado ainda não aprovado: esta lesão não foi desenhada no mapa."
+        : "Sem modelo visual aprovado: esta lesão não foi desenhada no mapa.";
       artigo.append(aviso);
     }
 
