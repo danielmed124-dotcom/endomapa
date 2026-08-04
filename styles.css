@@ -1025,6 +1025,11 @@ h1 span {
   filter: saturate(0.78) contrast(0.98);
 }
 
+.lesao-no-mapa--adenomiose {
+  overflow: hidden;
+  border-radius: 44%;
+}
+
 .medida-no-mapa {
   position: absolute;
   z-index: 3;

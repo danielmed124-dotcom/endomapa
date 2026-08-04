@@ -23,7 +23,7 @@
       arredondada: "assets/lesoes/endometriose-ligamento-arredondada-referencia.png",
     },
     "endometriose|região retrocervical": "assets/lesoes/endometriose-retrocervical-referencia.png",
-    "adenomiose|útero": "assets/lesoes/adenomiose-parede-anterior-referencia.png",
+    "adenomiose|útero": "assets/lesoes/adenomiose-parede-anterior-referencia-v3.png",
   };
 
   const posicoes = {
@@ -57,7 +57,7 @@
   // Posições da parede anterior na vista coronal. A lateralidade segue o lado
   // visual direto já validado pelo médico: esquerda na tela e direita na tela.
   const posicoesAdenomioseAnterior = {
-    esquerdo: [43, 38, 0],
+    esquerdo: [43, 37.5, 0],
     central: [50, 38, 0],
     direito: [57, 38, 0],
   };
@@ -404,7 +404,7 @@
 
   function calcularDimensoes(lesao) {
     if (normalizarTermo(lesao.categoria) === "adenomiose") {
-      return { largura: 16, proporcao: 0.68 };
+      return { largura: 12, proporcao: 0.68 };
     }
 
     const comprimento = numeroPositivo(lesao.medida_1) || 0.8;
