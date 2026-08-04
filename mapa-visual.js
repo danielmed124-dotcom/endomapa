@@ -97,21 +97,54 @@
   }
 
   function obterModelo(lesao) {
-    const chave = `${lesao.categoria}|${lesao.localizacao}`;
-    const modelo = modelos[chave];
+    const categoriaRecebida = normalizarTermo(lesao.categoria);
+    const localizacaoRecebida = normalizarLocalizacao(lesao.localizacao);
+    const chave = Object.keys(modelos).find(function (chaveModelo) {
+      const [categoriaModelo, localizacaoModelo] = chaveModelo.split("|");
+      return (
+        normalizarTermo(categoriaModelo) === categoriaRecebida &&
+        normalizarLocalizacao(localizacaoModelo) === localizacaoRecebida
+      );
+    });
+    const modelo = chave ? modelos[chave] : null;
     if (!modelo) return null;
     if (typeof modelo === "string") return modelo;
     return medidasSaoAproximadamenteIguais(lesao) ? modelo.arredondada : modelo.alongada;
   }
 
   function obterPonto(vista, localizacao, lado) {
-    const configuracao = posicoes[vista]?.[localizacao];
+    const localizacaoRecebida = normalizarLocalizacao(localizacao);
+    const chaveLocalizacao = Object.keys(posicoes[vista] || {}).find(function (localizacaoModelo) {
+      return normalizarLocalizacao(localizacaoModelo) === localizacaoRecebida;
+    });
+    const configuracao = chaveLocalizacao ? posicoes[vista][chaveLocalizacao] : null;
     if (!configuracao) return null;
     if (typeof configuracao.x === "number") return configuracao;
-    const coordenadas = configuracao[lado] || configuracao.central;
+    const ladoRecebido = normalizarTermo(lado);
+    const chaveLado = Object.keys(configuracao).find(function (ladoModelo) {
+      return normalizarTermo(ladoModelo) === ladoRecebido;
+    });
+    const coordenadas = configuracao[chaveLado] || configuracao.central;
     return coordenadas
       ? { x: coordenadas[0], y: coordenadas[1], rotacao: coordenadas[2] || 0 }
       : null;
+  }
+
+  // A IA e o banco podem devolver o mesmo termo com diferenÃ§as de maiÃºsculas,
+  // acentos ou espaÃ§os invisÃ­veis. A comparaÃ§Ã£o visual nÃ£o pode falhar por isso.
+  function normalizarTermo(valor) {
+    return String(valor || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  function normalizarLocalizacao(valor) {
+    const localizacao = normalizarTermo(valor);
+    if (localizacao === "retrocervical") return "regiao retrocervical";
+    return localizacao;
   }
 
   function criarLesaoVisual(lesao, indice, ponto, modelo, escalaSalva) {
