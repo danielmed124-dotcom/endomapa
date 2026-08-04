@@ -23,7 +23,7 @@
       arredondada: "assets/lesoes/endometriose-ligamento-arredondada-referencia.png",
     },
     "endometriose|região retrocervical": "assets/lesoes/endometriose-retrocervical-referencia.png",
-    "adenomiose|útero": "assets/lesoes/adenomiose.png",
+    "adenomiose|útero": "assets/lesoes/adenomiose-parede-anterior-referencia.png",
   };
 
   const posicoes = {
@@ -54,6 +54,14 @@
     },
   };
 
+  // Posições da parede anterior na vista coronal. A lateralidade segue o lado
+  // visual direto já validado pelo médico: esquerda na tela e direita na tela.
+  const posicoesAdenomioseAnterior = {
+    esquerdo: [43, 38, 0],
+    central: [50, 38, 0],
+    direito: [57, 38, 0],
+  };
+
   window.addEventListener("endomapa:lesoes-confirmadas", function (evento) {
     const lesoes = Array.isArray(evento.detail?.lesoes) ? evento.detail.lesoes : [];
     lesoesAtuais = lesoes;
@@ -73,7 +81,7 @@
       camadas.forEach(function (camada) {
         const vista = camada.dataset.camadaLesoes;
         const chave = criarChaveDeAjuste(vista, lesao);
-        const pontoPadrao = obterPonto(vista, lesao.localizacao, lesao.lado);
+        const pontoPadrao = obterPonto(vista, lesao.localizacao, lesao.lado, lesao.categoria);
         const ajusteLesao = ajustesTemporarios[chave]?.lesao;
         const ponto = aplicarAjusteAoPonto(pontoPadrao, ajusteLesao);
         if (!ponto) return;
@@ -112,15 +120,28 @@
     return medidasSaoAproximadamenteIguais(lesao) ? modelo.arredondada : modelo.alongada;
   }
 
-  function obterPonto(vista, localizacao, lado) {
+  function obterPonto(vista, localizacao, lado, categoria) {
     const localizacaoRecebida = normalizarLocalizacao(localizacao);
+    const ladoRecebido = normalizarTermo(lado);
+    if (
+      vista === "coronal" &&
+      normalizarTermo(categoria) === "adenomiose" &&
+      localizacaoRecebida === "utero"
+    ) {
+      const coordenadasAdenomiose = posicoesAdenomioseAnterior[ladoRecebido]
+        || posicoesAdenomioseAnterior.central;
+      return {
+        x: coordenadasAdenomiose[0],
+        y: coordenadasAdenomiose[1],
+        rotacao: coordenadasAdenomiose[2],
+      };
+    }
     const chaveLocalizacao = Object.keys(posicoes[vista] || {}).find(function (localizacaoModelo) {
       return normalizarLocalizacao(localizacaoModelo) === localizacaoRecebida;
     });
     const configuracao = chaveLocalizacao ? posicoes[vista][chaveLocalizacao] : null;
     if (!configuracao) return null;
     if (typeof configuracao.x === "number") return configuracao;
-    const ladoRecebido = normalizarTermo(lado);
     const chaveLado = Object.keys(configuracao).find(function (ladoModelo) {
       return normalizarTermo(ladoModelo) === ladoRecebido;
     });
@@ -382,8 +403,8 @@
   }
 
   function calcularDimensoes(lesao) {
-    if (lesao.categoria === "adenomiose") {
-      return { largura: 22, proporcao: 1.2 };
+    if (normalizarTermo(lesao.categoria) === "adenomiose") {
+      return { largura: 16, proporcao: 0.68 };
     }
 
     const comprimento = numeroPositivo(lesao.medida_1) || 0.8;

@@ -1021,8 +1021,8 @@ h1 span {
 }
 
 .lesao-no-mapa--adenomiose .lesao-no-mapa__imagem {
-  opacity: 0.48;
-  filter: saturate(0.72) contrast(0.94);
+  opacity: 0.78;
+  filter: saturate(0.78) contrast(0.98);
 }
 
 .medida-no-mapa {
