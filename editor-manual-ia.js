@@ -1,58 +1,66 @@
 (function () {
   "use strict";
-  const botao = document.querySelector("[data-gerar-realista]");
-  const estado = document.querySelector("[data-estado-realista]");
+  const botoes = document.querySelectorAll("[data-gerar-realista]");
   const resultado = document.querySelector("[data-resultado-realista]");
   const original = document.querySelector("[data-imagem-original]");
+  const resultadoGemini = document.querySelector("[data-resultado-gemini]");
   const realista = document.querySelector("[data-imagem-realista]");
-  if (!botao || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
+  const resultadoGpt = document.querySelector("[data-resultado-gpt]");
+  const imagemGpt = document.querySelector("[data-imagem-gpt]");
+  if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
   const cliente = window.supabase.createClient(
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
-  let gerando = false;
-  botao.addEventListener("click", gerar);
+  const gerando = { gemini: false, gpt: false };
+  botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
 
-  async function gerar() {
-    if (gerando) return;
+  async function gerar(provedor, botao) {
+    if (!['gemini', 'gpt'].includes(provedor) || gerando[provedor]) return;
+    const estado = document.querySelector(`[data-estado-realista="${provedor}"]`);
     if (!document.querySelector(".lesao-editavel")) {
-      mostrar("Adicione pelo menos uma lesão antes de gerar a versão realista.", true);
+      mostrar(estado, "Adicione pelo menos uma lesão antes de gerar a versão realista.", true);
       return;
     }
     if (window.location.protocol === "file:") {
-      mostrar("A geração com IA funciona somente na página publicada e com sua conta conectada. O editor local continua disponível para montagem.", true);
+      mostrar(estado, "A geração com IA funciona somente na página publicada e com sua conta conectada. O editor local continua disponível para montagem.", true);
       return;
     }
     const { data: sessao } = await cliente.auth.getSession();
     if (!sessao.session) {
-      mostrar("Entre na sua conta do Endomapa antes de usar a geração com IA.", true);
+      mostrar(estado, "Entre na sua conta do Endomapa antes de usar a geração com IA.", true);
       return;
     }
-    gerando = true;
+    gerando[provedor] = true;
     botao.disabled = true;
-    botao.textContent = "Gerando versão realista...";
-    resultado.hidden = true;
-    mostrar("O Gemini está trabalhando sobre uma cópia. Isso pode levar até dois minutos.", false);
+    botao.textContent = `Gerando com ${provedor === "gpt" ? "GPT" : "Gemini"}...`;
+    mostrar(estado, `O ${provedor === "gpt" ? "GPT" : "Gemini"} está trabalhando sobre uma cópia. Isso pode levar até dois minutos.`, false);
     try {
       const composicao = await window.endomapaCapturarMapaManual();
       original.src = composicao;
-      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gemini", {
+      const funcao = provedor === "gpt" ? "finalizar-mapa-manual-gpt" : "finalizar-mapa-manual-gemini";
+      const { data, error } = await cliente.functions.invoke(funcao, {
         body: { composicao_base64: composicao.split(",")[1] },
       });
       if (error) throw new Error(await traduzirErro(error));
-      if (!data?.imagem_base64) throw new Error("O Gemini terminou sem devolver uma imagem.");
-      realista.src = `data:${data.formato || "image/jpeg"};base64,${data.imagem_base64}`;
+      if (!data?.imagem_base64) throw new Error(`O ${provedor === "gpt" ? "GPT" : "Gemini"} terminou sem devolver uma imagem.`);
+      if (provedor === "gpt") {
+        imagemGpt.src = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+        resultadoGpt.hidden = false;
+      } else {
+        realista.src = `data:${data.formato || "image/jpeg"};base64,${data.imagem_base64}`;
+        resultadoGemini.hidden = false;
+      }
       resultado.hidden = false;
-      mostrar(data.aviso || "Compare cuidadosamente as duas imagens.", false);
-      document.querySelector("[data-controles-lesao]").hidden = true;
+      mostrar(estado, data.aviso || "Compare cuidadosamente as imagens.", false);
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (erro) {
-      mostrar(erro.message || "Não foi possível gerar a versão realista.", true);
+      mostrar(estado, erro.message || "Não foi possível gerar a versão realista.", true);
     } finally {
-      gerando = false;
+      gerando[provedor] = false;
       botao.disabled = false;
-      botao.textContent = "Gerar outra versão realista com Gemini";
+      botao.textContent = `Gerar outra versão realista com ${provedor === "gpt" ? "GPT" : "Gemini"}`;
     }
   }
 
@@ -64,7 +72,7 @@
     return "Não foi possível gerar a versão realista.";
   }
 
-  function mostrar(texto, erro) {
+  function mostrar(estado, texto, erro) {
     estado.textContent = texto;
     estado.hidden = false;
     estado.classList.toggle("mensagem-formulario--erro", erro);
