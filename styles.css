@@ -1683,6 +1683,67 @@ h1 span {
   line-height: 1.1;
 }
 
+.medidas-editor {
+  display: grid;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(184, 192, 185, 0.18);
+  border-radius: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.medidas-editor legend {
+  padding-inline: 4px;
+  color: var(--texto);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.medidas-editor label {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.medidas-editor label span {
+  color: var(--texto-suave);
+  font-size: 0.67rem;
+  line-height: 1.2;
+}
+
+.medidas-editor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 8px;
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: 9px;
+  background: var(--fundo);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.medida-lesao-editavel {
+  position: absolute;
+  z-index: 7;
+  padding: 2px 4px;
+  color: #7c1919;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.88);
+  font-size: clamp(0.48rem, 2vw, 0.68rem);
+  font-weight: 800;
+  line-height: 1.15;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.medida-lesao-editavel[hidden] {
+  display: none;
+}
+
 .controles-lesao__topo {
   display: flex;
   align-items: baseline;

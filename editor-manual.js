@@ -18,6 +18,9 @@
   tamanho.addEventListener("input", aplicarControles);
   eixoX.addEventListener("input", aplicarControles);
   eixoY.addEventListener("input", aplicarControles);
+  document.querySelectorAll("[data-medida]").forEach(function (campo) {
+    campo.addEventListener("input", aplicarMedidas);
+  });
   document.querySelectorAll("[data-girar]").forEach(function (botao) {
     botao.addEventListener("click", function () {
       alterarGiro(Number(botao.dataset.girar));
@@ -44,12 +47,16 @@
     lesao.dataset.tamanho = "100";
     lesao.dataset.eixoX = "100";
     lesao.dataset.eixoY = "100";
+    lesao.dataset.medida1 = "";
+    lesao.dataset.medida2 = "";
+    lesao.dataset.medida3 = "";
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
     lesao.addEventListener("pointerdown", iniciarMovimento);
     lesao.addEventListener("click", function () { selecionar(lesao); });
     atualizarVisual(lesao);
     camada.append(lesao);
+    criarRotuloDeMedidas(lesao);
     selecionar(lesao);
     mostrar(`${nome} adicionada. Arraste a imagem para posicioná-la.`);
   }
@@ -64,6 +71,9 @@
     tamanho.value = lesao.dataset.tamanho;
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
+    document.querySelectorAll("[data-medida]").forEach(function (campo) {
+      campo.value = lesao.dataset[`medida${campo.dataset.medida}`] || "";
+    });
     document.querySelector("[data-nome-lesao]").textContent = lesao.dataset.nome;
     atualizarValoresControles();
   }
@@ -78,6 +88,7 @@
       lesao.dataset.x = limitar(((movimento.clientX - area.left) / area.width) * 100, 3, 97).toFixed(1);
       lesao.dataset.y = limitar(((movimento.clientY - area.top) / area.height) * 100, 3, 97).toFixed(1);
       atualizarVisual(lesao);
+      atualizarRotuloDeMedidas(lesao);
     };
     const terminar = function () {
       lesao.removeEventListener("pointermove", mover);
@@ -111,6 +122,46 @@
     aplicarControles();
   }
 
+  function aplicarMedidas(evento) {
+    if (!selecionada) return;
+    const campo = evento.currentTarget;
+    campo.value = limparMedida(campo.value);
+    selecionada.dataset[`medida${campo.dataset.medida}`] = campo.value;
+    atualizarRotuloDeMedidas(selecionada);
+  }
+
+  function criarRotuloDeMedidas(lesao) {
+    const rotulo = document.createElement("span");
+    rotulo.className = "medida-lesao-editavel";
+    rotulo.dataset.medidaId = lesao.dataset.id;
+    rotulo.hidden = true;
+    camada.append(rotulo);
+    atualizarRotuloDeMedidas(lesao);
+  }
+
+  function atualizarRotuloDeMedidas(lesao) {
+    const rotulo = camada.querySelector(`[data-medida-id="${lesao.dataset.id}"]`);
+    if (!rotulo) return;
+    const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
+      .filter(Boolean)
+      .map(formatarMedida);
+    rotulo.textContent = valores.length ? `${valores.join(" × ")} cm` : "";
+    rotulo.hidden = !valores.length;
+    rotulo.style.left = `${lesao.dataset.x}%`;
+    rotulo.style.top = `${limitar(Number(lesao.dataset.y) + 7, 5, 95)}%`;
+  }
+
+  function limparMedida(valor) {
+    const partes = String(valor).replace(".", ",").replace(/[^0-9,]/g, "").split(",");
+    return partes.length > 1 ? `${partes.shift()},${partes.join("").slice(0, 2)}` : partes[0];
+  }
+
+  function formatarMedida(valor) {
+    const numero = Number(String(valor).replace(",", "."));
+    if (!Number.isFinite(numero)) return valor;
+    return numero.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
+  }
+
   function atualizarVisual(lesao) {
     lesao.style.left = `${lesao.dataset.x}%`;
     lesao.style.top = `${lesao.dataset.y}%`;
@@ -130,6 +181,7 @@
   function removerSelecionada() {
     if (!selecionada) return;
     const nome = selecionada.dataset.nome;
+    camada.querySelector(`[data-medida-id="${selecionada.dataset.id}"]`)?.remove();
     selecionada.remove();
     selecionada = null;
     controles.hidden = true;
