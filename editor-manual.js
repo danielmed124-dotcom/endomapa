@@ -33,6 +33,7 @@
   });
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
+  window.addEventListener("resize", atualizarTodasAsLinhas);
 
   function adicionarLesao(src, nome) {
     const lesao = document.createElement("button");
@@ -50,6 +51,8 @@
     lesao.dataset.medida1 = "";
     lesao.dataset.medida2 = "";
     lesao.dataset.medida3 = "";
+    lesao.dataset.medidaX = String(56 + deslocamento);
+    lesao.dataset.medidaY = String(52 + deslocamento);
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
     lesao.addEventListener("pointerdown", iniciarMovimento);
@@ -131,11 +134,17 @@
   }
 
   function criarRotuloDeMedidas(lesao) {
+    const linha = document.createElement("span");
+    linha.className = "linha-medida-editavel";
+    linha.dataset.linhaId = lesao.dataset.id;
+    linha.hidden = true;
     const rotulo = document.createElement("span");
     rotulo.className = "medida-lesao-editavel";
     rotulo.dataset.medidaId = lesao.dataset.id;
     rotulo.hidden = true;
-    camada.append(rotulo);
+    rotulo.setAttribute("aria-label", "Arraste para mover as medidas");
+    rotulo.addEventListener("pointerdown", iniciarMovimentoDaMedida);
+    camada.append(linha, rotulo);
     atualizarRotuloDeMedidas(lesao);
   }
 
@@ -147,8 +156,56 @@
       .map(formatarMedida);
     rotulo.textContent = valores.length ? `${valores.join(" × ")} cm` : "";
     rotulo.hidden = !valores.length;
-    rotulo.style.left = `${lesao.dataset.x}%`;
-    rotulo.style.top = `${limitar(Number(lesao.dataset.y) + 7, 5, 95)}%`;
+    rotulo.style.left = `${lesao.dataset.medidaX}%`;
+    rotulo.style.top = `${lesao.dataset.medidaY}%`;
+    atualizarLinhaDeMedida(lesao, Boolean(valores.length));
+  }
+
+  function iniciarMovimentoDaMedida(evento) {
+    const rotulo = evento.currentTarget;
+    const lesao = camada.querySelector(`[data-id="${rotulo.dataset.medidaId}"]`);
+    if (!lesao) return;
+    selecionar(lesao);
+    evento.preventDefault();
+    rotulo.setPointerCapture(evento.pointerId);
+    const mover = function (movimento) {
+      const area = camada.getBoundingClientRect();
+      lesao.dataset.medidaX = limitar(((movimento.clientX - area.left) / area.width) * 100, 4, 96).toFixed(1);
+      lesao.dataset.medidaY = limitar(((movimento.clientY - area.top) / area.height) * 100, 4, 96).toFixed(1);
+      atualizarRotuloDeMedidas(lesao);
+    };
+    const terminar = function () {
+      rotulo.removeEventListener("pointermove", mover);
+      rotulo.removeEventListener("pointerup", terminar);
+      rotulo.removeEventListener("pointercancel", terminar);
+    };
+    rotulo.addEventListener("pointermove", mover);
+    rotulo.addEventListener("pointerup", terminar);
+    rotulo.addEventListener("pointercancel", terminar);
+  }
+
+  function atualizarLinhaDeMedida(lesao, visivel) {
+    const linha = camada.querySelector(`[data-linha-id="${lesao.dataset.id}"]`);
+    if (!linha) return;
+    linha.hidden = !visivel;
+    if (!visivel) return;
+    const area = camada.getBoundingClientRect();
+    const inicioX = area.width * Number(lesao.dataset.x) / 100;
+    const inicioY = area.height * Number(lesao.dataset.y) / 100;
+    const fimX = area.width * Number(lesao.dataset.medidaX) / 100;
+    const fimY = area.height * Number(lesao.dataset.medidaY) / 100;
+    const distancia = Math.hypot(fimX - inicioX, fimY - inicioY);
+    const angulo = Math.atan2(fimY - inicioY, fimX - inicioX) * 180 / Math.PI;
+    linha.style.left = `${inicioX}px`;
+    linha.style.top = `${inicioY}px`;
+    linha.style.width = `${distancia}px`;
+    linha.style.transform = `rotate(${angulo}deg)`;
+  }
+
+  function atualizarTodasAsLinhas() {
+    camada.querySelectorAll(".lesao-editavel").forEach(function (lesao) {
+      atualizarRotuloDeMedidas(lesao);
+    });
   }
 
   function limparMedida(valor) {
@@ -182,6 +239,7 @@
     if (!selecionada) return;
     const nome = selecionada.dataset.nome;
     camada.querySelector(`[data-medida-id="${selecionada.dataset.id}"]`)?.remove();
+    camada.querySelector(`[data-linha-id="${selecionada.dataset.id}"]`)?.remove();
     selecionada.remove();
     selecionada = null;
     controles.hidden = true;

@@ -1737,10 +1737,38 @@ h1 span {
   line-height: 1.15;
   transform: translateX(-50%);
   white-space: nowrap;
-  pointer-events: none;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .medida-lesao-editavel[hidden] {
+  display: none;
+}
+
+.linha-medida-editavel {
+  position: absolute;
+  z-index: 6;
+  height: 1.5px;
+  background: #7c1919;
+  box-shadow: 0 0 0 0.5px rgba(255, 255, 255, 0.7);
+  transform-origin: left center;
+  pointer-events: none;
+}
+
+.linha-medida-editavel::before {
+  position: absolute;
+  content: "";
+  top: 50%;
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #7c1919;
+  transform: translateY(-50%);
+}
+
+.linha-medida-editavel[hidden] {
   display: none;
 }
 
