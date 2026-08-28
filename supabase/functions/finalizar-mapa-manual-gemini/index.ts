@@ -1,16 +1,22 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const ORIGEM = "https://endomapa.pages.dev";
+const ORIGENS = new Set([
+  "https://endomapa.pages.dev",
+  "https://experimento-editor-manual.endomapa.pages.dev",
+]);
 const LIMITE_MS = 120_000;
-const cors = {
-  "Access-Control-Allow-Origin": ORIGEM,
+const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Vary": "Origin",
 };
 
-function responder(corpo: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(corpo), { status, headers: { ...cors, "Content-Type": "application/json; charset=utf-8" } });
+function cabecalhos(origem: string | null) {
+  return { ...corsBase, "Access-Control-Allow-Origin": origem && ORIGENS.has(origem) ? origem : "https://endomapa.pages.dev" };
+}
+
+function responderComOrigem(corpo: Record<string, unknown>, status = 200, origem: string | null = null) {
+  return new Response(JSON.stringify(corpo), { status, headers: { ...cabecalhos(origem), "Content-Type": "application/json; charset=utf-8" } });
 }
 
 function encontrarImagem(valor: unknown): { data: string; mime_type: string } | null {
@@ -30,9 +36,11 @@ function encontrarImagem(valor: unknown): { data: string; mime_type: string } | 
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return req.headers.get("Origin") === ORIGEM ? new Response("ok", { headers: cors }) : responder({ erro: "Origem não autorizada." }, 403);
-  if (req.method !== "POST") return responder({ erro: "Método não permitido." }, 405);
-  if (req.headers.get("Origin") !== ORIGEM) return responder({ erro: "Esta chamada não veio do Endomapa." }, 403);
+  const origem = req.headers.get("Origin");
+  const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem(corpo, status, origem);
+  if (req.method === "OPTIONS") return origem && ORIGENS.has(origem) ? new Response("ok", { headers: cabecalhos(origem) }) : responder({ erro: "Origem não autorizada." }, 403);
+  if (req.method !== "POST") return responder({ erro: "Método não permitido." }, 405, origem);
+  if (!origem || !ORIGENS.has(origem)) return responder({ erro: "Esta chamada não veio do Endomapa." }, 403, origem);
   const autorizacao = req.headers.get("Authorization");
   if (!autorizacao?.startsWith("Bearer ")) return responder({ erro: "Entre no Endomapa antes de gerar a imagem." }, 401);
   const url = Deno.env.get("SUPABASE_URL");
