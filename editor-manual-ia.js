@@ -7,18 +7,21 @@
   const realista = document.querySelector("[data-imagem-realista]");
   const resultadoGpt = document.querySelector("[data-resultado-gpt]");
   const imagemGpt = document.querySelector("[data-imagem-gpt]");
+  const resultadoGptReferencias = document.querySelector("[data-resultado-gpt-referencias]");
+  const imagemGptReferencias = document.querySelector("[data-imagem-gpt-referencias]");
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
   const cliente = window.supabase.createClient(
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
-  const gerando = { gemini: false, gpt: false };
+  const gerando = { gemini: false, gpt: false, "gpt-referencias": false };
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
 
   async function gerar(provedor, botao) {
-    if (!['gemini', 'gpt'].includes(provedor) || gerando[provedor]) return;
+    if (!["gemini", "gpt", "gpt-referencias"].includes(provedor) || gerando[provedor]) return;
     const estado = document.querySelector(`[data-estado-realista="${provedor}"]`);
+    const nomeProvedor = provedor === "gemini" ? "Gemini" : provedor === "gpt" ? "GPT" : "GPT com referências";
     if (!document.querySelector(".lesao-editavel")) {
       mostrar(estado, "Adicione pelo menos uma lesão antes de gerar a versão realista.", true);
       return;
@@ -34,18 +37,27 @@
     }
     gerando[provedor] = true;
     botao.disabled = true;
-    botao.textContent = `Gerando com ${provedor === "gpt" ? "GPT" : "Gemini"}...`;
-    mostrar(estado, `O ${provedor === "gpt" ? "GPT" : "Gemini"} está trabalhando sobre uma cópia. Isso pode levar até dois minutos.`, false);
+    botao.textContent = `Gerando com ${nomeProvedor}...`;
+    mostrar(estado, `O ${nomeProvedor} está trabalhando sobre uma cópia. Isso pode levar até dois minutos.`, false);
     try {
       const composicao = await window.endomapaCapturarMapaManual();
       original.src = composicao;
-      const funcao = provedor === "gpt" ? "finalizar-mapa-manual-gpt" : "finalizar-mapa-manual-gemini";
+      const funcoes = {
+        gemini: "finalizar-mapa-manual-gemini",
+        gpt: "finalizar-mapa-manual-gpt",
+        "gpt-referencias": "finalizar-mapa-manual-gpt-referencias",
+      };
+      const tiposLesao = [...new Set([...document.querySelectorAll(".lesao-editavel")].map((item) => item.dataset.nome))];
+      const funcao = funcoes[provedor];
       const { data, error } = await cliente.functions.invoke(funcao, {
-        body: { composicao_base64: composicao.split(",")[1] },
+        body: { composicao_base64: composicao.split(",")[1], tipos_lesao: tiposLesao },
       });
       if (error) throw new Error(await traduzirErro(error));
-      if (!data?.imagem_base64) throw new Error(`O ${provedor === "gpt" ? "GPT" : "Gemini"} terminou sem devolver uma imagem.`);
-      if (provedor === "gpt") {
+      if (!data?.imagem_base64) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
+      if (provedor === "gpt-referencias") {
+        imagemGptReferencias.src = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+        resultadoGptReferencias.hidden = false;
+      } else if (provedor === "gpt") {
         imagemGpt.src = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
         resultadoGpt.hidden = false;
       } else {
@@ -60,7 +72,7 @@
     } finally {
       gerando[provedor] = false;
       botao.disabled = false;
-      botao.textContent = `Gerar outra versão realista com ${provedor === "gpt" ? "GPT" : "Gemini"}`;
+      botao.textContent = `Gerar outra versão com ${nomeProvedor}`;
     }
   }
 

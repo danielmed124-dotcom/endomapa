@@ -56,8 +56,10 @@
         </div>
         <button class="botao" type="button" data-gerar-realista="gemini">Gerar versão realista com Gemini</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt">Gerar versão realista com GPT</button>
+        <button class="botao botao--secundario" type="button" data-gerar-realista="gpt-referencias">Testar GPT com referências</button>
         <p class="mensagem-formulario" data-estado-realista="gemini" hidden></p>
         <p class="mensagem-formulario" data-estado-realista="gpt" hidden></p>
+        <p class="mensagem-formulario" data-estado-realista="gpt-referencias" hidden></p>
         <label class="calibracao-mapa__controle">
           <span>Girar <strong data-valor-giro>0°</strong></span>
           <input type="range" min="-180" max="180" step="1" value="0" data-controle-giro />
@@ -111,6 +113,10 @@
           <figure class="mapa-visual" data-resultado-gpt hidden>
             <img data-imagem-gpt alt="Versão realista experimental criada pelo GPT" />
             <figcaption>Versão GPT · ainda não aprovada</figcaption>
+          </figure>
+          <figure class="mapa-visual" data-resultado-gpt-referencias hidden>
+            <img data-imagem-gpt-referencias alt="Versão experimental criada pelo GPT com referências visuais" />
+            <figcaption>GPT com referências · ainda não aprovado</figcaption>
           </figure>
         </div>
       </section>
