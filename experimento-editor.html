@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#17201a" />
+    <title>Editor manual experimental | Endomapa</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="editor-manual">
+      <header class="editor-manual__cabecalho">
+        <div class="selo">Experimento separado</div>
+        <h1 class="titulo-tela">Monte o mapa manualmente</h1>
+        <p class="texto-apoio">Escolha uma lesão-padrão, adicione ao mapa e ajuste com o dedo.</p>
+      </header>
+
+      <section class="biblioteca-lesoes" aria-labelledby="titulo-biblioteca">
+        <h2 class="secao-dados__titulo" id="titulo-biblioteca">Lesões disponíveis</h2>
+        <div class="biblioteca-lesoes__lista">
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometriose-ligamento-original.png" data-nome="Endometriose alongada">
+            <img src="assets/lesoes/endometriose-ligamento-original.png" alt="" />
+            <span>Endometriose alongada</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometriose-ligamento-arredondada-referencia.png" data-nome="Endometriose arredondada">
+            <img src="assets/lesoes/endometriose-ligamento-arredondada-referencia.png" alt="" />
+            <span>Endometriose arredondada</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/adenomiose-parede-anterior-referencia-v3.png" data-nome="Adenomiose">
+            <img src="assets/lesoes/adenomiose-parede-anterior-referencia-v3.png" alt="" />
+            <span>Adenomiose</span>
+          </button>
+        </div>
+        <p class="mensagem-formulario" data-mensagem-editor>Toque em um modelo para acrescentá-lo ao mapa.</p>
+      </section>
+
+      <section class="editor-manual__area" aria-labelledby="titulo-mapa-manual">
+        <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
+        <figure class="mapa-visual mapa-editor" data-mapa-editor>
+          <img src="assets/mapa-base-coronal.png" alt="Mapa anatômico coronal sem lesões" draggable="false" />
+          <div class="mapa-editor__camada" data-camada-editor aria-label="Lesões adicionadas ao mapa"></div>
+          <figcaption>Toque em uma lesão para selecioná-la e arraste para mover</figcaption>
+        </figure>
+      </section>
+
+      <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
+        <div class="controles-lesao__topo">
+          <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
+          <strong data-nome-lesao>Lesão selecionada</strong>
+        </div>
+        <label class="calibracao-mapa__controle">
+          <span>Girar <strong data-valor-giro>0°</strong></span>
+          <input type="range" min="-180" max="180" step="1" value="0" data-controle-giro />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Tamanho <strong data-valor-tamanho>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-tamanho />
+        </label>
+        <button class="botao botao--perigo" type="button" data-remover-lesao>Excluir esta lesão</button>
+      </section>
+
+      <div class="acoes editor-manual__acoes">
+        <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
+        <a class="link-voltar" href="app.html">Voltar ao Endomapa atual</a>
+      </div>
+    </main>
+    <script src="editor-manual.js"></script>
+  </body>
+</html>
