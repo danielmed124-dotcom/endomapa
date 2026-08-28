@@ -1793,3 +1793,23 @@ h1 span {
 .editor-manual__acoes {
   margin-top: 0;
 }
+
+.resultado-editor-ia {
+  display: grid;
+  gap: 12px;
+}
+
+.resultado-editor-ia[hidden] {
+  display: none;
+}
+
+.resultado-editor-ia__grade {
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .resultado-editor-ia__grade {
+    grid-template-columns: 1fr 1fr;
+  }
+}

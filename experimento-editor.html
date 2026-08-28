@@ -89,10 +89,33 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
+        <button class="botao" type="button" data-gerar-realista>Gerar versão realista com Gemini</button>
+        <p class="mensagem-formulario" data-estado-realista hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao Endomapa atual</a>
       </div>
+      <section class="resultado-editor-ia" data-resultado-realista hidden aria-labelledby="titulo-resultado-realista">
+        <h2 class="secao-dados__titulo" id="titulo-resultado-realista">Comparação</h2>
+        <p class="texto-apoio">A montagem manual permanece preservada. Confira se a IA mudou posição, forma, anatomia ou medidas.</p>
+        <div class="resultado-editor-ia__grade">
+          <figure class="mapa-visual">
+            <img data-imagem-original alt="Montagem manual exata enviada à inteligência artificial" />
+            <figcaption>Montagem manual exata</figcaption>
+          </figure>
+          <figure class="mapa-visual">
+            <img data-imagem-realista alt="Versão realista experimental criada pelo Gemini" />
+            <figcaption>Versão Gemini · ainda não aprovada</figcaption>
+          </figure>
+        </div>
+      </section>
     </main>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"
+      integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti"
+      crossorigin="anonymous"
+    ></script>
+    <script src="supabase-config.js"></script>
     <script src="editor-manual.js"></script>
+    <script src="editor-manual-ia.js"></script>
   </body>
 </html>

@@ -34,6 +34,7 @@
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   window.addEventListener("resize", atualizarTodasAsLinhas);
+  window.endomapaCapturarMapaManual = capturarMapa;
 
   function adicionarLesao(src, nome) {
     const lesao = document.createElement("button");
@@ -255,4 +256,69 @@
 
   function mostrar(texto) { mensagem.textContent = texto; }
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
+
+  async function capturarMapa() {
+    const base = await carregarImagem("assets/mapa-base-coronal.png");
+    const canvas = document.createElement("canvas");
+    canvas.width = base.naturalWidth;
+    canvas.height = base.naturalHeight;
+    const contexto = canvas.getContext("2d");
+    contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
+
+    for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
+      const imagem = await carregarImagem(lesao.querySelector("img").src);
+      const x = canvas.width * Number(lesao.dataset.x) / 100;
+      const y = canvas.height * Number(lesao.dataset.y) / 100;
+      const tamanhoGeral = Number(lesao.dataset.tamanho) / 100;
+      const largura = canvas.width * 0.13 * tamanhoGeral * Number(lesao.dataset.eixoX) / 100;
+      const altura = canvas.width * 0.13 / 1.8 * tamanhoGeral * Number(lesao.dataset.eixoY) / 100;
+      contexto.save();
+      contexto.translate(x, y);
+      contexto.rotate(Number(lesao.dataset.giro) * Math.PI / 180);
+      contexto.beginPath();
+      contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
+      contexto.clip();
+      contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
+      contexto.restore();
+    }
+
+    contexto.strokeStyle = "#000";
+    contexto.fillStyle = "#000";
+    contexto.lineWidth = Math.max(1.5, canvas.width / 700);
+    contexto.font = `700 ${Math.max(15, canvas.width / 58)}px Arial`;
+    contexto.textAlign = "center";
+    contexto.textBaseline = "middle";
+    for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
+      const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3].filter(Boolean).map(formatarMedida);
+      if (!valores.length) continue;
+      const inicioX = canvas.width * Number(lesao.dataset.x) / 100;
+      const inicioY = canvas.height * Number(lesao.dataset.y) / 100;
+      const fimX = canvas.width * Number(lesao.dataset.medidaX) / 100;
+      const fimY = canvas.height * Number(lesao.dataset.medidaY) / 100;
+      contexto.beginPath();
+      contexto.moveTo(inicioX, inicioY);
+      contexto.lineTo(fimX, fimY);
+      contexto.stroke();
+      contexto.beginPath();
+      contexto.arc(inicioX, inicioY, 3, 0, Math.PI * 2);
+      contexto.fill();
+      const texto = `${valores.join(" × ")} cm`;
+      const larguraTexto = contexto.measureText(texto).width + 12;
+      contexto.fillStyle = "rgba(255,255,255,0.9)";
+      contexto.fillRect(fimX - larguraTexto / 2, fimY - 13, larguraTexto, 26);
+      contexto.fillStyle = "#7c1919";
+      contexto.fillText(texto, fimX, fimY);
+      contexto.fillStyle = "#000";
+    }
+    return canvas.toDataURL("image/jpeg", 0.9);
+  }
+
+  function carregarImagem(src) {
+    return new Promise(function (resolver, rejeitar) {
+      const imagem = new Image();
+      imagem.onload = function () { resolver(imagem); };
+      imagem.onerror = function () { rejeitar(new Error("Uma imagem do mapa não pôde ser carregada.")); };
+      imagem.src = src;
+    });
+  }
 })();
