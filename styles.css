@@ -1813,3 +1813,22 @@ h1 span {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+@media (min-width: 1000px) {
+  .editor-manual {
+    width: min(760px, calc(100% - 390px));
+    margin-right: 390px;
+    margin-left: max(20px, calc((100% - 1150px) / 2));
+  }
+
+  .controles-lesao {
+    top: 50%;
+    right: max(16px, calc((100vw - 1150px) / 2));
+    bottom: auto;
+    left: auto;
+    width: 350px;
+    max-height: calc(100svh - 32px);
+    margin: 0;
+    transform: translateY(-50%);
+  }
+}
