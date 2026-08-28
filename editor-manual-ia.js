@@ -45,6 +45,7 @@
       realista.src = `data:${data.formato || "image/jpeg"};base64,${data.imagem_base64}`;
       resultado.hidden = false;
       mostrar(data.aviso || "Compare cuidadosamente as duas imagens.", false);
+      document.querySelector("[data-controles-lesao]").hidden = true;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (erro) {
       mostrar(erro.message || "Não foi possível gerar a versão realista.", true);
