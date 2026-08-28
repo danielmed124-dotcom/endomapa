@@ -1611,7 +1611,7 @@ h1 span {
   padding: 0;
   border: 0;
   background: transparent;
-  transform: translate(-50%, -50%) rotate(var(--giro-editor, 0deg)) scale(var(--tamanho-editor, 1));
+  transform: translate(-50%, -50%) rotate(var(--giro-editor, 0deg)) scale(var(--tamanho-editor, 1)) scaleX(var(--escala-x-editor, 1)) scaleY(var(--escala-y-editor, 1));
   transform-origin: center;
   touch-action: none;
 }

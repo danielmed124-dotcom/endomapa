@@ -5,6 +5,8 @@
   const mensagem = document.querySelector("[data-mensagem-editor]");
   const giro = document.querySelector("[data-controle-giro]");
   const tamanho = document.querySelector("[data-controle-tamanho]");
+  const eixoX = document.querySelector("[data-controle-eixo-x]");
+  const eixoY = document.querySelector("[data-controle-eixo-y]");
   let selecionada = null;
   let proximoId = 1;
   if (!camada || !controles) return;
@@ -14,6 +16,8 @@
   });
   giro.addEventListener("input", aplicarControles);
   tamanho.addEventListener("input", aplicarControles);
+  eixoX.addEventListener("input", aplicarControles);
+  eixoY.addEventListener("input", aplicarControles);
   document.querySelectorAll("[data-girar]").forEach(function (botao) {
     botao.addEventListener("click", function () {
       alterarGiro(Number(botao.dataset.girar));
@@ -38,6 +42,8 @@
     lesao.dataset.y = String(45 + deslocamento);
     lesao.dataset.giro = "0";
     lesao.dataset.tamanho = "100";
+    lesao.dataset.eixoX = "100";
+    lesao.dataset.eixoY = "100";
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
     lesao.addEventListener("pointerdown", iniciarMovimento);
@@ -56,6 +62,8 @@
     controles.hidden = false;
     giro.value = lesao.dataset.giro;
     tamanho.value = lesao.dataset.tamanho;
+    eixoX.value = lesao.dataset.eixoX;
+    eixoY.value = lesao.dataset.eixoY;
     document.querySelector("[data-nome-lesao]").textContent = lesao.dataset.nome;
     atualizarValoresControles();
   }
@@ -85,6 +93,8 @@
     if (!selecionada) return;
     selecionada.dataset.giro = giro.value;
     selecionada.dataset.tamanho = tamanho.value;
+    selecionada.dataset.eixoX = eixoX.value;
+    selecionada.dataset.eixoY = eixoY.value;
     atualizarVisual(selecionada);
     atualizarValoresControles();
   }
@@ -106,11 +116,15 @@
     lesao.style.top = `${lesao.dataset.y}%`;
     lesao.style.setProperty("--giro-editor", `${lesao.dataset.giro}deg`);
     lesao.style.setProperty("--tamanho-editor", Number(lesao.dataset.tamanho) / 100);
+    lesao.style.setProperty("--escala-x-editor", Number(lesao.dataset.eixoX) / 100);
+    lesao.style.setProperty("--escala-y-editor", Number(lesao.dataset.eixoY) / 100);
   }
 
   function atualizarValoresControles() {
     document.querySelector("[data-valor-giro]").textContent = `${giro.value}°`;
     document.querySelector("[data-valor-tamanho]").textContent = `${tamanho.value}%`;
+    document.querySelector("[data-valor-eixo-x]").textContent = `${eixoX.value}%`;
+    document.querySelector("[data-valor-eixo-y]").textContent = `${eixoY.value}%`;
   }
 
   function removerSelecionada() {
