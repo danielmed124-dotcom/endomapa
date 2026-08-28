@@ -14,6 +14,16 @@
   });
   giro.addEventListener("input", aplicarControles);
   tamanho.addEventListener("input", aplicarControles);
+  document.querySelectorAll("[data-girar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      alterarGiro(Number(botao.dataset.girar));
+    });
+  });
+  document.querySelectorAll("[data-redimensionar]").forEach(function (botao) {
+    botao.addEventListener("click", function () {
+      alterarTamanho(Number(botao.dataset.redimensionar));
+    });
+  });
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
 
@@ -77,6 +87,18 @@
     selecionada.dataset.tamanho = tamanho.value;
     atualizarVisual(selecionada);
     atualizarValoresControles();
+  }
+
+  function alterarGiro(passo) {
+    if (!selecionada) return;
+    giro.value = String(limitar(Number(giro.value) + passo, -180, 180));
+    aplicarControles();
+  }
+
+  function alterarTamanho(passo) {
+    if (!selecionada) return;
+    tamanho.value = String(limitar(Number(tamanho.value) + passo, 40, 250));
+    aplicarControles();
   }
 
   function atualizarVisual(lesao) {

@@ -48,6 +48,12 @@
           <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
           <strong data-nome-lesao>Lesão selecionada</strong>
         </div>
+        <div class="controles-lesao__atalhos" aria-label="Ajustes rápidos">
+          <button type="button" data-girar="-10" aria-label="Girar para a esquerda">↶<span>Esquerda</span></button>
+          <button type="button" data-girar="10" aria-label="Girar para a direita">↷<span>Direita</span></button>
+          <button type="button" data-redimensionar="-10" aria-label="Diminuir lesão">−<span>Diminuir</span></button>
+          <button type="button" data-redimensionar="10" aria-label="Aumentar lesão">+<span>Aumentar</span></button>
+        </div>
         <label class="calibracao-mapa__controle">
           <span>Girar <strong data-valor-giro>0°</strong></span>
           <input type="range" min="-180" max="180" step="1" value="0" data-controle-giro />

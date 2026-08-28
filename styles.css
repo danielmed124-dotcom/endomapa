@@ -1637,10 +1637,50 @@ h1 span {
 }
 
 .controles-lesao {
+  position: fixed;
+  z-index: 12;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  width: min(calc(100% - 20px), 728px);
+  max-height: min(52svh, 430px);
+  margin-inline: auto;
   padding: 16px;
   border: 1px solid var(--borda);
   border-radius: 16px;
   background: var(--superficie-alta);
+  box-shadow: var(--sombra);
+  overflow-y: auto;
+}
+
+.controles-lesao[hidden] {
+  display: none;
+}
+
+.controles-lesao__atalhos {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.controles-lesao__atalhos button {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  padding: 6px 3px;
+  color: var(--texto);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  background: rgba(111, 127, 82, 0.18);
+  place-items: center;
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.controles-lesao__atalhos span {
+  font-size: 0.62rem;
+  line-height: 1.1;
 }
 
 .controles-lesao__topo {
