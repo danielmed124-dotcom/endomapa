@@ -12,7 +12,9 @@
   if (!camada || !controles) return;
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
-    botao.addEventListener("click", function () { adicionarLesao(botao.dataset.modelo, botao.dataset.nome); });
+    botao.addEventListener("click", function () {
+      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte);
+    });
   });
   giro.addEventListener("input", aplicarControles);
   tamanho.addEventListener("input", aplicarControles);
@@ -36,13 +38,15 @@
   window.addEventListener("resize", atualizarTodasAsLinhas);
   window.endomapaCapturarMapaManual = capturarMapa;
 
-  function adicionarLesao(src, nome) {
+  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false") {
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
     lesao.className = "lesao-editavel";
     lesao.dataset.id = String(proximoId++);
     lesao.dataset.nome = nome;
+    lesao.dataset.proporcao = proporcao;
+    lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
     lesao.dataset.y = String(45 + deslocamento);
     lesao.dataset.giro = "0";
@@ -55,6 +59,8 @@
     lesao.dataset.medidaX = String(56 + deslocamento);
     lesao.dataset.medidaY = String(52 + deslocamento);
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
+    lesao.style.setProperty("--proporcao-lesao", proporcao);
+    lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
     lesao.addEventListener("pointerdown", iniciarMovimento);
     lesao.addEventListener("click", function () { selecionar(lesao); });
@@ -271,13 +277,15 @@
       const y = canvas.height * Number(lesao.dataset.y) / 100;
       const tamanhoGeral = Number(lesao.dataset.tamanho) / 100;
       const largura = canvas.width * 0.13 * tamanhoGeral * Number(lesao.dataset.eixoX) / 100;
-      const altura = canvas.width * 0.13 / 1.8 * tamanhoGeral * Number(lesao.dataset.eixoY) / 100;
+      const altura = canvas.width * 0.13 / Number(lesao.dataset.proporcao || 1.8) * tamanhoGeral * Number(lesao.dataset.eixoY) / 100;
       contexto.save();
       contexto.translate(x, y);
       contexto.rotate(Number(lesao.dataset.giro) * Math.PI / 180);
-      contexto.beginPath();
-      contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
-      contexto.clip();
+      if (lesao.dataset.semRecorte !== "true") {
+        contexto.beginPath();
+        contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
+        contexto.clip();
+      }
       contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
       contexto.restore();
     }

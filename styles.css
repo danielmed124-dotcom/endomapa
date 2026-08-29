@@ -1630,10 +1630,15 @@ h1 span {
 
 .lesao-editavel img {
   width: 100%;
-  aspect-ratio: 1.8;
+  aspect-ratio: var(--proporcao-lesao, 1.8);
   border-radius: 42%;
   object-fit: cover;
   pointer-events: none;
+}
+
+.lesao-editavel--sem-recorte img {
+  border-radius: 0;
+  object-fit: contain;
 }
 
 .controles-lesao {
