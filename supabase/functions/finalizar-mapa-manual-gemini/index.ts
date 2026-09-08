@@ -54,8 +54,17 @@ Deno.serve(async (req) => {
   const supabase = createClient(url, anon, { global: { headers: { Authorization: autorizacao } }, auth: { persistSession: false } });
   const { data: usuario } = await supabase.auth.getUser();
   if (!usuario.user) return responder({ erro: "Sua sessão terminou. Entre novamente." }, 401);
+  const administrador = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
+  if (corpo.consultar_diagnostico === true) {
+    const { data: diagnostico } = await administrador
+      .from("diagnostico_geracao_gemini")
+      .select("etapa, atualizado_em")
+      .eq("user_id", usuario.user.id)
+      .maybeSingle();
+    return responder({ diagnostico: diagnostico || null });
+  }
   const composicao = corpo.composicao_base64;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
@@ -66,6 +75,9 @@ Deno.serve(async (req) => {
 
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
+  const registrarEtapa = (etapa: string) => administrador
+    .from("diagnostico_geracao_gemini")
+    .upsert({ user_id: usuario.user.id, etapa, atualizado_em: new Date().toISOString() });
   try {
     const instrucao = [
       "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
@@ -77,6 +89,7 @@ Deno.serve(async (req) => {
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
     ].join(" ");
+    await registrarEtapa("pedido_enviado_ao_gemini");
     const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent", {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
@@ -92,6 +105,7 @@ Deno.serve(async (req) => {
         },
       }),
     });
+    await registrarEtapa("resposta_recebida_do_gemini");
     if (!resposta.ok) {
       const detalhes = await resposta.json().catch(() => null);
       const mensagem = typeof detalhes?.error?.message === "string" ? detalhes.error.message : "";
@@ -100,18 +114,20 @@ Deno.serve(async (req) => {
     }
     const imagem = encontrarImagem(await resposta.json());
     if (!imagem) return responder({ erro: "O Gemini terminou sem devolver uma imagem válida." }, 502);
+    await registrarEtapa("imagem_encontrada_na_resposta");
     const extensao = imagem.mime_type === "image/png" ? "png" : imagem.mime_type === "image/webp" ? "webp" : "jpg";
     const caminho = `${usuario.user.id}/ultima-imagem-gemini.${extensao}`;
     const bytesImagem = Uint8Array.from(atob(imagem.data), (caractere) => caractere.charCodeAt(0));
-    const administrador = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
     const { error: erroUpload } = await administrador.storage
       .from("imagens-experimentais")
       .upload(caminho, bytesImagem, { contentType: imagem.mime_type, upsert: true });
     if (erroUpload) return responder({ erro: "O Gemini gerou a imagem, mas o servidor não conseguiu armazená-la." }, 502);
+    await registrarEtapa("imagem_armazenada");
     const { data: endereco, error: erroEndereco } = await administrador.storage
       .from("imagens-experimentais")
       .createSignedUrl(caminho, 600);
     if (erroEndereco || !endereco?.signedUrl) return responder({ erro: "A imagem foi gerada, mas o endereço temporário não pôde ser criado." }, 502);
+    await registrarEtapa("concluida");
     return responder({ imagem_url: endereco.signedUrl, aviso: "Prévia experimental: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
     if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O Gemini demorou mais de dois minutos." }, 504);

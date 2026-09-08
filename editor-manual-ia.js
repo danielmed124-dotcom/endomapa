@@ -39,16 +39,16 @@
     botao.disabled = true;
     botao.textContent = `Gerando com ${nomeProvedor}...`;
     mostrar(estado, `O ${nomeProvedor} está trabalhando sobre uma cópia. Isso pode levar até dois minutos.`, false);
+    const funcoes = {
+      gemini: "finalizar-mapa-manual-gemini",
+      gpt: "finalizar-mapa-manual-gpt",
+      "gpt-referencias": "finalizar-mapa-manual-gpt-referencias",
+    };
+    const funcao = funcoes[provedor];
     try {
       const composicao = await window.endomapaCapturarMapaManual();
       original.src = composicao;
-      const funcoes = {
-        gemini: "finalizar-mapa-manual-gemini",
-        gpt: "finalizar-mapa-manual-gpt",
-        "gpt-referencias": "finalizar-mapa-manual-gpt-referencias",
-      };
       const tiposLesao = [...new Set([...document.querySelectorAll(".lesao-editavel")].map((item) => item.dataset.nome))];
-      const funcao = funcoes[provedor];
       const { data, error } = await cliente.functions.invoke(funcao, {
         body: { composicao_base64: composicao.split(",")[1], tipos_lesao: tiposLesao },
       });
@@ -75,7 +75,10 @@
       mostrar(estado, `${verificacao} ${data.aviso || "Compare cuidadosamente as imagens."}`, comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5);
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (erro) {
-      mostrar(estado, erro.message || "Não foi possível gerar a versão realista.", true);
+      const diagnostico = provedor === "gemini" && erro.message === "Failed to fetch"
+        ? await consultarDiagnosticoGemini(funcao)
+        : "";
+      mostrar(estado, diagnostico || erro.message || "Não foi possível gerar a versão realista.", true);
     } finally {
       gerando[provedor] = false;
       botao.disabled = false;
@@ -89,6 +92,22 @@
       if (corpo?.erro) return corpo.erro;
     } catch (_erro) {}
     return "Não foi possível gerar a versão realista.";
+  }
+
+  async function consultarDiagnosticoGemini(funcao) {
+    try {
+      const { data } = await cliente.functions.invoke(funcao, { body: { consultar_diagnostico: true } });
+      const mensagens = {
+        pedido_enviado_ao_gemini: "A conexão caiu enquanto o Gemini processava a imagem.",
+        resposta_recebida_do_gemini: "O Gemini respondeu, mas a conexão caiu antes de o servidor ler a imagem.",
+        imagem_encontrada_na_resposta: "O Gemini gerou a imagem, mas a conexão caiu antes do armazenamento.",
+        imagem_armazenada: "A imagem foi armazenada, mas a conexão caiu antes de criar o endereço temporário.",
+        concluida: "A geração foi concluída no servidor, mas a conexão caiu antes de chegar ao navegador.",
+      };
+      return mensagens[data?.diagnostico?.etapa] || "A conexão com a função Gemini foi interrompida sem concluir o diagnóstico.";
+    } catch (_erro) {
+      return "A conexão com o Supabase foi interrompida e o diagnóstico também não pôde ser consultado.";
+    }
   }
 
   async function compararImagens(originalDataUrl, recebidaDataUrl) {
