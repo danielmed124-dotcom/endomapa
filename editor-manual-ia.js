@@ -129,10 +129,17 @@
 
   function exibirResultadoGeminiRecuperado(imagemUrl, mensagem) {
     const estado = document.querySelector('[data-estado-realista="gemini"]');
+    resultadoGemini.hidden = true;
+    realista.onload = () => {
+      resultadoGemini.hidden = false;
+      resultado.hidden = false;
+      mostrar(estado, mensagem, false);
+    };
+    realista.onerror = () => {
+      resultadoGemini.hidden = true;
+      mostrar(estado, "A imagem foi gerada e armazenada, mas não pôde ser carregada no navegador.", true);
+    };
     realista.src = imagemUrl;
-    resultadoGemini.hidden = false;
-    resultado.hidden = false;
-    mostrar(estado, mensagem, false);
   }
 
   async function compararImagens(originalDataUrl, recebidaDataUrl) {
