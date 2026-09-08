@@ -25,6 +25,9 @@ function encontrarImagem(valor: unknown): { data: string; mime_type: string } | 
   if (objeto.type === "image" && typeof objeto.data === "string") {
     return { data: objeto.data, mime_type: typeof objeto.mime_type === "string" ? objeto.mime_type : "image/jpeg" };
   }
+  if (typeof objeto.data === "string" && typeof objeto.mimeType === "string" && objeto.mimeType.startsWith("image/")) {
+    return { data: objeto.data, mime_type: objeto.mimeType };
+  }
   for (const filho of Object.values(objeto)) {
     if (Array.isArray(filho)) {
       for (const item of filho) { const imagem = encontrarImagem(item); if (imagem) return imagem; }
@@ -73,14 +76,19 @@ Deno.serve(async (req) => {
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
     ].join(" ");
-    const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/interactions", {
+    const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent", {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gemini-3.1-flash-lite-image",
-        input: [{ type: "image", mime_type: "image/jpeg", data: composicao }, { type: "text", text: instrucao }],
-        response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "3:4", image_size: "1K" },
-        generation_config: { thinking_level: "minimal" },
+        contents: [{ parts: [
+          { inlineData: { mimeType: "image/jpeg", data: composicao } },
+          { text: instrucao },
+        ] }],
+        generationConfig: {
+          responseModalities: ["IMAGE"],
+          imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
+          thinkingConfig: { thinkingLevel: "minimal" },
+        },
       }),
     });
     if (!resposta.ok) {
