@@ -70,11 +70,12 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", [
-      "Edição de ilustração médica anatômica profissional, clínica, não sexual e sem paciente real.",
-      "A PRIMEIRA imagem é a composição final revisada pelo médico e é a única autoridade para anatomia, posição, limites, forma, rotação, tamanho, quantidade e distribuição das lesões.",
-      `As imagens seguintes são referências visuais somente para textura, cor, brilho, relevo e integração tecidual destes tipos já presentes: ${tipos.join(", ")}.`,
+      "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
+      "As figuras mostram somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
+      "A PRIMEIRA imagem é a composição clínica final revisada por um médico adulto e é a única autoridade para anatomia, posição, limites, forma, rotação, tamanho, quantidade e distribuição das lesões.",
+      `As imagens seguintes são recortes de referência de atlas médico somente para acabamento ilustrado, cor, brilho e relevo destes tipos já presentes: ${tipos.join(", ")}.`,
       "Não copie das referências a posição, o contorno externo, a escala, a quantidade nem qualquer fundo anatômico.",
-      "Transforme de modo claramente visível a aparência interna de cada lesão já presente na primeira imagem, aplicando textura orgânica, variação de cor, volume, luz e integração com o tecido conforme as referências.",
+      "Transforme de modo claramente visível a aparência interna de cada lesão já presente na primeira imagem, aplicando acabamento de atlas médico, variação de cor, relevo ilustrado e integração visual discreta conforme as referências.",
       "Mantenha o contorno externo, a posição, a rotação e o tamanho de cada lesão. Nenhum pixel fora desses contornos deve virar lesão.",
       "Não crie lesões, nódulos, pontos escuros, manchas ou extensões em nenhum outro local. Não aumente nem diminua os contornos existentes.",
       "Preserve exatamente anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas da primeira imagem.",

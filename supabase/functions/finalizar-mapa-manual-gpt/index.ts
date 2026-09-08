@@ -61,9 +61,10 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", [
-      "Edição de ilustração médica anatômica profissional, clínica, não sexual e sem paciente real.",
-      "A imagem recebida é uma composição final feita e revisada manualmente por um médico.",
-      "Transforme de modo claramente visível somente a aparência interna das lesões inseridas: aplique textura orgânica, variação natural de cor, volume, luz e integração com os tecidos imediatamente ao redor.",
+      "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
+      "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
+      "A imagem recebida é uma composição final feita e revisada manualmente por um médico adulto para documentação clínica.",
+      "Transforme de modo claramente visível somente a aparência interna das lesões inseridas: aplique acabamento de atlas médico, variação natural de cor, relevo ilustrado e integração visual discreta.",
       "A mudança visual das lesões deve ser perceptível na comparação, sem alterar seus limites externos.",
       "Preserve com máxima fidelidade a posição, rotação, comprimento, largura, quantidade e distribuição de todas as lesões.",
       "Preserve exatamente toda a anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas.",
