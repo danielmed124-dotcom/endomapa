@@ -3,6 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const ORIGENS = new Set(["https://endomapa.pages.dev", "https://experimento-editor-manual.endomapa.pages.dev"]);
 const BASE_PUBLICA = "https://endomapa.pages.dev";
 const REFERENCIAS: Record<string, { caminho: string; arquivo: string }> = {
+  "Ligamento uterossacro": { caminho: "assets/lesoes/endometriose-isolada-referencia-transparente.png", arquivo: "referencia-ligamento-uterossacro.png" },
+  "Cisto": { caminho: "assets/lesoes/cisto-referencia.png", arquivo: "referencia-cisto.png" },
   "Endometriose alongada": { caminho: "assets/lesoes/endometriose-ligamento-original.png", arquivo: "referencia-endometriose-alongada.png" },
   "Endometriose arredondada": { caminho: "assets/lesoes/endometriose-ligamento-arredondada-referencia.png", arquivo: "referencia-endometriose-arredondada.png" },
   "Adenomiose": { caminho: "assets/lesoes/adenomiose-parede-anterior-referencia-v3.png", arquivo: "referencia-adenomiose.png" },
@@ -70,7 +72,8 @@ Deno.serve(async (req) => {
       "A PRIMEIRA imagem é a composição final revisada pelo médico e é a única autoridade para anatomia, posição, limites, forma, rotação, tamanho, quantidade e distribuição das lesões.",
       `As imagens seguintes são referências visuais somente para textura, cor, brilho, relevo e integração tecidual destes tipos já presentes: ${tipos.join(", ")}.`,
       "Não copie das referências a posição, o contorno externo, a escala, a quantidade nem qualquer fundo anatômico.",
-      "Melhore apenas a aparência dentro do contorno exato de cada lesão já visível na primeira imagem. Nenhum pixel fora desses contornos deve virar lesão.",
+      "Transforme de modo claramente visível a aparência interna de cada lesão já presente na primeira imagem, aplicando textura orgânica, variação de cor, volume, luz e integração com o tecido conforme as referências.",
+      "Mantenha o contorno externo, a posição, a rotação e o tamanho de cada lesão. Nenhum pixel fora desses contornos deve virar lesão.",
       "Não crie lesões, nódulos, pontos escuros, manchas ou extensões em nenhum outro local. Não aumente nem diminua os contornos existentes.",
       "Preserve exatamente anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas da primeira imagem.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",

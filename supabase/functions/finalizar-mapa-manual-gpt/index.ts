@@ -63,7 +63,8 @@ Deno.serve(async (req) => {
     formulario.append("prompt", [
       "Edição de ilustração médica anatômica profissional, clínica, não sexual e sem paciente real.",
       "A imagem recebida é uma composição final feita e revisada manualmente por um médico.",
-      "Torne somente as lesões inseridas mais realistas e integradas aos tecidos imediatamente ao redor.",
+      "Transforme de modo claramente visível somente a aparência interna das lesões inseridas: aplique textura orgânica, variação natural de cor, volume, luz e integração com os tecidos imediatamente ao redor.",
+      "A mudança visual das lesões deve ser perceptível na comparação, sem alterar seus limites externos.",
       "Preserve com máxima fidelidade a posição, rotação, comprimento, largura, quantidade e distribuição de todas as lesões.",
       "Preserve exatamente toda a anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas.",
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",

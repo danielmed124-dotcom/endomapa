@@ -54,18 +54,25 @@
       });
       if (error) throw new Error(await traduzirErro(error));
       if (!data?.imagem_base64) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
+      const imagemRecebida = `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
+      const comparacao = await compararImagens(composicao, imagemRecebida);
       if (provedor === "gpt-referencias") {
-        imagemGptReferencias.src = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+        imagemGptReferencias.src = imagemRecebida;
         resultadoGptReferencias.hidden = false;
       } else if (provedor === "gpt") {
-        imagemGpt.src = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+        imagemGpt.src = imagemRecebida;
         resultadoGpt.hidden = false;
       } else {
-        realista.src = `data:${data.formato || "image/jpeg"};base64,${data.imagem_base64}`;
+        realista.src = imagemRecebida;
         resultadoGemini.hidden = false;
       }
       resultado.hidden = false;
-      mostrar(estado, data.aviso || "Compare cuidadosamente as imagens.", false);
+      const verificacao = comparacao.arquivosIdenticos
+        ? "Alerta: a imagem recebida é exatamente igual à imagem enviada."
+        : comparacao.diferencaVisual < 0.5
+          ? `Alerta: o arquivo mudou, mas a diferença visual média foi de apenas ${formatarPercentual(comparacao.diferencaVisual)}%. As imagens são praticamente iguais.`
+          : `Verificação concluída: a diferença visual média foi de ${formatarPercentual(comparacao.diferencaVisual)}%.`;
+      mostrar(estado, `${verificacao} ${data.aviso || "Compare cuidadosamente as imagens."}`, comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5);
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (erro) {
       mostrar(estado, erro.message || "Não foi possível gerar a versão realista.", true);
@@ -82,6 +89,57 @@
       if (corpo?.erro) return corpo.erro;
     } catch (_erro) {}
     return "Não foi possível gerar a versão realista.";
+  }
+
+  async function compararImagens(originalDataUrl, recebidaDataUrl) {
+    const [originalHash, recebidaHash, imagemOriginal, imagemRecebida] = await Promise.all([
+      calcularHash(originalDataUrl),
+      calcularHash(recebidaDataUrl),
+      carregarImagem(originalDataUrl),
+      carregarImagem(recebidaDataUrl),
+    ]);
+    const largura = 256;
+    const altura = 340;
+    const pixelsOriginal = obterPixels(imagemOriginal, largura, altura);
+    const pixelsRecebidos = obterPixels(imagemRecebida, largura, altura);
+    let diferencaTotal = 0;
+    for (let indice = 0; indice < pixelsOriginal.length; indice += 4) {
+      diferencaTotal += Math.abs(pixelsOriginal[indice] - pixelsRecebidos[indice]);
+      diferencaTotal += Math.abs(pixelsOriginal[indice + 1] - pixelsRecebidos[indice + 1]);
+      diferencaTotal += Math.abs(pixelsOriginal[indice + 2] - pixelsRecebidos[indice + 2]);
+    }
+    return {
+      arquivosIdenticos: originalHash === recebidaHash,
+      diferencaVisual: diferencaTotal / (largura * altura * 3 * 255) * 100,
+    };
+  }
+
+  async function calcularHash(dataUrl) {
+    const bytes = await (await fetch(dataUrl)).arrayBuffer();
+    const hash = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  function carregarImagem(src) {
+    return new Promise((resolver, rejeitar) => {
+      const imagem = new Image();
+      imagem.onload = () => resolver(imagem);
+      imagem.onerror = () => rejeitar(new Error("Não foi possível comparar as imagens."));
+      imagem.src = src;
+    });
+  }
+
+  function obterPixels(imagem, largura, altura) {
+    const canvas = document.createElement("canvas");
+    canvas.width = largura;
+    canvas.height = altura;
+    const contexto = canvas.getContext("2d");
+    contexto.drawImage(imagem, 0, 0, largura, altura);
+    return contexto.getImageData(0, 0, largura, altura).data;
+  }
+
+  function formatarPercentual(valor) {
+    return valor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function mostrar(estado, texto, erro) {
