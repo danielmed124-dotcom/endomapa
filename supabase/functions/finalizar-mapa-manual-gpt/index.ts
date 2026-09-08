@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
     formulario.append("model", "gpt-image-2");
     formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     formulario.append("quality", "medium");
-    formulario.append("size", "1024x1360");
+    formulario.append("size", "1024x1536");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
@@ -74,7 +74,11 @@ Deno.serve(async (req) => {
     const resposta = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
     });
-    if (!resposta.ok) return responder({ erro: `O GPT recusou a geração (código GPT-${resposta.status}).` }, resposta.status === 429 ? 429 : 502);
+    if (!resposta.ok) {
+      const detalhes = await resposta.json().catch(() => null);
+      const motivo = typeof detalhes?.error?.message === "string" ? ` Motivo: ${detalhes.error.message}` : "";
+      return responder({ erro: `O GPT recusou a geração (código GPT-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
+    }
     const dados = await resposta.json();
     const imagem = dados?.data?.[0]?.b64_json;
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);

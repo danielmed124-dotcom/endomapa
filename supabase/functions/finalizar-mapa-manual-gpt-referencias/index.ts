@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       formulario.append("image[]", new File([await respostasReferencias[indice].blob()], referencia.arquivo, { type: "image/png" }));
     }
     formulario.append("quality", "medium");
-    formulario.append("size", "1024x1360");
+    formulario.append("size", "1024x1536");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
@@ -80,7 +80,11 @@ Deno.serve(async (req) => {
     ].join(" "));
 
     const resposta = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario });
-    if (!resposta.ok) return responder({ erro: `O GPT recusou o teste com referências (código GPT-REF-${resposta.status}).` }, resposta.status === 429 ? 429 : 502);
+    if (!resposta.ok) {
+      const detalhes = await resposta.json().catch(() => null);
+      const motivo = typeof detalhes?.error?.message === "string" ? ` Motivo: ${detalhes.error.message}` : "";
+      return responder({ erro: `O GPT recusou o teste com referências (código GPT-REF-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
+    }
     const dados = await resposta.json();
     const imagem = dados?.data?.[0]?.b64_json;
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
