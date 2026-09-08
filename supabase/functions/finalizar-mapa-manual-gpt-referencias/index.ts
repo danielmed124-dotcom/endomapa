@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const ORIGENS = new Set(["https://endomapa.pages.dev", "https://experimento-editor-manual.endomapa.pages.dev"]);
-const BASE_PUBLICA = "https://endomapa.pages.dev";
+const BASE_PUBLICA = "https://experimento-editor-manual.endomapa.pages.dev";
 const REFERENCIAS: Record<string, { caminho: string; arquivo: string }> = {
   "Ligamento uterossacro": { caminho: "assets/lesoes/endometriose-isolada-referencia-transparente.png", arquivo: "referencia-ligamento-uterossacro.png" },
   "Cisto": { caminho: "assets/lesoes/cisto-referencia.png", arquivo: "referencia-cisto.png" },
@@ -53,7 +53,9 @@ Deno.serve(async (req) => {
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
   try {
     const respostasReferencias = await Promise.all(tipos.map((tipo) => fetch(`${BASE_PUBLICA}/${REFERENCIAS[tipo].caminho}`, { signal: controlador.signal })));
-    if (respostasReferencias.some((resposta) => !resposta.ok)) return responder({ erro: "Não foi possível carregar as referências visuais." }, 502);
+    if (respostasReferencias.some((resposta) => !resposta.ok || !resposta.headers.get("content-type")?.startsWith("image/"))) {
+      return responder({ erro: "O servidor não devolveu uma imagem válida para uma das referências visuais." }, 502);
+    }
     const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2");
