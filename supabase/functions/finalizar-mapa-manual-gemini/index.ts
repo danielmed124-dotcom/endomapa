@@ -77,9 +77,10 @@ Deno.serve(async (req) => {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "gemini-3.1-flash-image",
+        model: "gemini-3.1-flash-lite-image",
         input: [{ type: "image", mime_type: "image/jpeg", data: composicao }, { type: "text", text: instrucao }],
         response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "3:4", image_size: "1K" },
+        generation_config: { thinking_level: "minimal" },
       }),
     });
     if (!resposta.ok) {
