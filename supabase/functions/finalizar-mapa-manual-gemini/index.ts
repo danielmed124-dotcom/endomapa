@@ -64,9 +64,10 @@ Deno.serve(async (req) => {
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
   try {
     const instrucao = [
-      "Edição de ilustração médica anatômica profissional, clínica, não sexual e sem paciente real.",
-      "A imagem recebida é uma composição final feita e revisada manualmente por um médico.",
-      "Torne somente as lesões inseridas mais realistas e integradas aos tecidos imediatamente ao redor.",
+      "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
+      "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
+      "A imagem recebida é uma composição clínica final feita e revisada manualmente por um médico adulto.",
+      "Transforme de modo claramente visível somente a aparência interna das lesões inseridas, aplicando acabamento de atlas médico, variação natural de cor e relevo ilustrado.",
       "Preserve com máxima fidelidade a posição, rotação, comprimento, largura, quantidade e distribuição de todas as lesões.",
       "Preserve exatamente toda a anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas.",
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
@@ -77,11 +78,16 @@ Deno.serve(async (req) => {
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "gemini-3.1-flash-image",
-        input: [{ type: "text", text: instrucao }, { type: "image", mime_type: "image/jpeg", data: composicao }],
+        input: [{ type: "image", mime_type: "image/jpeg", data: composicao }, { type: "text", text: instrucao }],
         response_format: { type: "image", mime_type: "image/jpeg", aspect_ratio: "3:4", image_size: "1K" },
       }),
     });
-    if (!resposta.ok) return responder({ erro: `O Gemini recusou a geração (código GEMINI-${resposta.status}).` }, resposta.status === 429 ? 429 : 502);
+    if (!resposta.ok) {
+      const detalhes = await resposta.json().catch(() => null);
+      const mensagem = typeof detalhes?.error?.message === "string" ? detalhes.error.message : "";
+      const motivo = mensagem ? ` Motivo: ${mensagem}` : "";
+      return responder({ erro: `O Gemini recusou a geração (código GEMINI-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
+    }
     const imagem = encontrarImagem(await resposta.json());
     if (!imagem) return responder({ erro: "O Gemini terminou sem devolver uma imagem válida." }, 502);
     return responder({ imagem_base64: imagem.data, formato: imagem.mime_type, aviso: "Prévia experimental: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
