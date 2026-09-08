@@ -48,8 +48,9 @@ Deno.serve(async (req) => {
   if (!autorizacao?.startsWith("Bearer ")) return responder({ erro: "Entre no Endomapa antes de gerar a imagem." }, 401);
   const url = Deno.env.get("SUPABASE_URL");
   const anon = Deno.env.get("SUPABASE_ANON_KEY");
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const chave = Deno.env.get("GEMINI_API_KEY");
-  if (!url || !anon || !chave) return responder({ erro: "A geração com Gemini não está configurada no servidor." }, 503);
+  if (!url || !anon || !serviceRole || !chave) return responder({ erro: "A geração com Gemini não está configurada no servidor." }, 503);
   const supabase = createClient(url, anon, { global: { headers: { Authorization: autorizacao } }, auth: { persistSession: false } });
   const { data: usuario } = await supabase.auth.getUser();
   if (!usuario.user) return responder({ erro: "Sua sessão terminou. Entre novamente." }, 401);
@@ -99,7 +100,19 @@ Deno.serve(async (req) => {
     }
     const imagem = encontrarImagem(await resposta.json());
     if (!imagem) return responder({ erro: "O Gemini terminou sem devolver uma imagem válida." }, 502);
-    return responder({ imagem_base64: imagem.data, formato: imagem.mime_type, aviso: "Prévia experimental: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
+    const extensao = imagem.mime_type === "image/png" ? "png" : imagem.mime_type === "image/webp" ? "webp" : "jpg";
+    const caminho = `${usuario.user.id}/ultima-imagem-gemini.${extensao}`;
+    const bytesImagem = Uint8Array.from(atob(imagem.data), (caractere) => caractere.charCodeAt(0));
+    const administrador = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
+    const { error: erroUpload } = await administrador.storage
+      .from("imagens-experimentais")
+      .upload(caminho, bytesImagem, { contentType: imagem.mime_type, upsert: true });
+    if (erroUpload) return responder({ erro: "O Gemini gerou a imagem, mas o servidor não conseguiu armazená-la." }, 502);
+    const { data: endereco, error: erroEndereco } = await administrador.storage
+      .from("imagens-experimentais")
+      .createSignedUrl(caminho, 600);
+    if (erroEndereco || !endereco?.signedUrl) return responder({ erro: "A imagem foi gerada, mas o endereço temporário não pôde ser criado." }, 502);
+    return responder({ imagem_url: endereco.signedUrl, aviso: "Prévia experimental: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
     if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O Gemini demorou mais de dois minutos." }, 504);
     return responder({ erro: "Não foi possível gerar a versão realista." }, 502);

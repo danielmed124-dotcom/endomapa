@@ -53,8 +53,8 @@
         body: { composicao_base64: composicao.split(",")[1], tipos_lesao: tiposLesao },
       });
       if (error) throw new Error(await traduzirErro(error));
-      if (!data?.imagem_base64) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
-      const imagemRecebida = `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
+      if (!data?.imagem_base64 && !data?.imagem_url) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
+      const imagemRecebida = data.imagem_url || `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
       const comparacao = await compararImagens(composicao, imagemRecebida);
       if (provedor === "gpt-referencias") {
         imagemGptReferencias.src = imagemRecebida;
@@ -123,6 +123,7 @@
   function carregarImagem(src) {
     return new Promise((resolver, rejeitar) => {
       const imagem = new Image();
+      if (src.startsWith("http")) imagem.crossOrigin = "anonymous";
       imagem.onload = () => resolver(imagem);
       imagem.onerror = () => rejeitar(new Error("Não foi possível comparar as imagens."));
       imagem.src = src;
