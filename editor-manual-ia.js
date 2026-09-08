@@ -17,6 +17,7 @@
   );
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false };
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
+  restaurarUltimoResultadoGemini();
 
   async function gerar(provedor, botao) {
     if (!["gemini", "gpt", "gpt-referencias"].includes(provedor) || gerando[provedor]) return;
@@ -77,8 +78,12 @@
     } catch (erro) {
       const diagnostico = provedor === "gemini" && erro.message === "Failed to fetch"
         ? await consultarDiagnosticoGemini(funcao)
-        : "";
-      mostrar(estado, diagnostico || erro.message || "Não foi possível gerar a versão realista.", true);
+        : null;
+      if (diagnostico?.imagemUrl) {
+        exibirResultadoGeminiRecuperado(diagnostico.imagemUrl, diagnostico.mensagem);
+      } else {
+        mostrar(estado, diagnostico?.mensagem || erro.message || "Não foi possível gerar a versão realista.", true);
+      }
     } finally {
       gerando[provedor] = false;
       botao.disabled = false;
@@ -104,10 +109,30 @@
         imagem_armazenada: "A imagem foi armazenada, mas a conexão caiu antes de criar o endereço temporário.",
         concluida: "A geração foi concluída no servidor, mas a conexão caiu antes de chegar ao navegador.",
       };
-      return mensagens[data?.diagnostico?.etapa] || "A conexão com a função Gemini foi interrompida sem concluir o diagnóstico.";
+      return {
+        mensagem: mensagens[data?.diagnostico?.etapa] || "A conexão com a função Gemini foi interrompida sem concluir o diagnóstico.",
+        imagemUrl: data?.imagem_url || null,
+      };
     } catch (_erro) {
-      return "A conexão com o Supabase foi interrompida e o diagnóstico também não pôde ser consultado.";
+      return { mensagem: "A conexão com o Supabase foi interrompida e o diagnóstico também não pôde ser consultado.", imagemUrl: null };
     }
+  }
+
+  async function restaurarUltimoResultadoGemini() {
+    const { data: sessao } = await cliente.auth.getSession();
+    if (!sessao.session) return;
+    const diagnostico = await consultarDiagnosticoGemini("finalizar-mapa-manual-gemini");
+    if (diagnostico.imagemUrl) {
+      exibirResultadoGeminiRecuperado(diagnostico.imagemUrl, "Última imagem Gemini recuperada do servidor.");
+    }
+  }
+
+  function exibirResultadoGeminiRecuperado(imagemUrl, mensagem) {
+    const estado = document.querySelector('[data-estado-realista="gemini"]');
+    realista.src = imagemUrl;
+    resultadoGemini.hidden = false;
+    resultado.hidden = false;
+    mostrar(estado, mensagem, false);
   }
 
   async function compararImagens(originalDataUrl, recebidaDataUrl) {

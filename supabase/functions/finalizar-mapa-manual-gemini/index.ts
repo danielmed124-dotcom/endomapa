@@ -63,7 +63,20 @@ Deno.serve(async (req) => {
       .select("etapa, atualizado_em")
       .eq("user_id", usuario.user.id)
       .maybeSingle();
-    return responder({ diagnostico: diagnostico || null });
+    let imagemUrl: string | null = null;
+    if (diagnostico?.etapa === "concluida") {
+      const { data: arquivos } = await administrador.storage
+        .from("imagens-experimentais")
+        .list(usuario.user.id, { limit: 10 });
+      const arquivo = arquivos?.find((item) => item.name.startsWith("ultima-imagem-gemini."));
+      if (arquivo) {
+        const { data: endereco } = await administrador.storage
+          .from("imagens-experimentais")
+          .createSignedUrl(`${usuario.user.id}/${arquivo.name}`, 600);
+        imagemUrl = endereco?.signedUrl || null;
+      }
+    }
+    return responder({ diagnostico: diagnostico || null, imagem_url: imagemUrl });
   }
   const composicao = corpo.composicao_base64;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
