@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; connect-src 'self'; img-src 'self' data: blob:; object-src 'none'">
+  <title>Teste da exibição de imagens</title>
+</head>
+<body>
+  <button data-gerar-realista="gpt">GPT</button>
+  <button data-gerar-realista="gpt-referencias">GPT com referências</button>
+  <button data-gerar-realista="gemini">Gemini</button>
+  <div class="lesao-editavel" data-nome="Cisto"></div>
+  <p data-estado-realista="gpt" hidden></p>
+  <p data-estado-realista="gpt-referencias" hidden></p>
+  <p data-estado-realista="gemini" hidden></p>
+  <section data-resultado-realista hidden>
+    <img data-imagem-original alt="Original">
+    <div data-resultado-gpt hidden><img data-imagem-gpt alt="GPT"></div>
+    <div data-resultado-gpt-referencias hidden><img data-imagem-gpt-referencias alt="GPT com referências"></div>
+    <div data-resultado-gemini hidden><img data-imagem-realista alt="Gemini"></div>
+  </section>
+  <pre id="testes">PENDENTE</pre>
+  <script src="geracao-imagem.js"></script>
+  <script src="../editor-manual-ia.js"></script>
+</body>
+</html>

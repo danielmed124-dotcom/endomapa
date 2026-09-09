@@ -56,7 +56,7 @@
       if (error) throw new Error(await traduzirErro(error));
       if (!data?.imagem_base64 && !data?.imagem_url) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
       const imagemRecebida = data.imagem_url || `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
-      const comparacao = await compararImagens(composicao, imagemRecebida);
+      await carregarImagem(imagemRecebida);
       if (provedor === "gpt-referencias") {
         imagemGptReferencias.src = imagemRecebida;
         resultadoGptReferencias.hidden = false;
@@ -68,13 +68,20 @@
         resultadoGemini.hidden = false;
       }
       resultado.hidden = false;
+      resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+      let comparacao;
+      try {
+        comparacao = await compararImagens(composicao, imagemRecebida);
+      } catch (_erroComparacao) {
+        mostrar(estado, "A imagem foi recebida e está disponível abaixo, mas a comparação automática falhou. Confira visualmente as lesões, a anatomia e as medidas.", true);
+        return;
+      }
       const verificacao = comparacao.arquivosIdenticos
         ? "Alerta: a imagem recebida é exatamente igual à imagem enviada."
         : comparacao.diferencaVisual < 0.5
           ? `Alerta: o arquivo mudou, mas a diferença visual média foi de apenas ${formatarPercentual(comparacao.diferencaVisual)}%. As imagens são praticamente iguais.`
-          : `Verificação concluída: a diferença visual média foi de ${formatarPercentual(comparacao.diferencaVisual)}%.`;
+          : `A diferença visual média foi de ${formatarPercentual(comparacao.diferencaVisual)}%. Esse número não confirma a fidelidade das lesões.`;
       mostrar(estado, `${verificacao} ${data.aviso || "Compare cuidadosamente as imagens."}`, comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5);
-      resultado.scrollIntoView({ behavior: "smooth", block: "start" });
     } catch (erro) {
       const diagnostico = provedor === "gemini" && erro.message === "Failed to fetch"
         ? await consultarDiagnosticoGemini(funcao)
@@ -82,7 +89,7 @@
       if (diagnostico?.imagemUrl) {
         exibirResultadoGeminiRecuperado(diagnostico.imagemUrl, diagnostico.mensagem);
       } else {
-        mostrar(estado, diagnostico?.mensagem || erro.message || "Não foi possível gerar a versão realista.", true);
+        mostrar(estado, diagnostico?.mensagem || await traduzirErro(erro), true);
       }
     } finally {
       gerando[provedor] = false;
@@ -96,7 +103,13 @@
       const corpo = await erro.context?.json();
       if (corpo?.erro) return corpo.erro;
     } catch (_erro) {}
-    return "Não foi possível gerar a versão realista.";
+    if (erro.name === "FunctionsFetchError" || /Failed to fetch|Failed to send a request|NetworkError|Load failed/i.test(erro.message || "")) {
+      return "A conexão foi interrompida antes de receber a imagem. Não foi possível confirmar se a geração terminou no servidor.";
+    }
+    if (erro.name === "FunctionsHttpError" || erro.name === "FunctionsRelayError") {
+      return "O servidor não conseguiu concluir o pedido de imagem. Tente novamente mais tarde.";
+    }
+    return erro.message || "Não foi possível gerar a versão realista.";
   }
 
   async function consultarDiagnosticoGemini(funcao) {
@@ -166,7 +179,19 @@
   }
 
   async function calcularHash(dataUrl) {
-    const bytes = await (await fetch(dataUrl)).arrayBuffer();
+    let bytes;
+    if (dataUrl.startsWith("data:")) {
+      // A imagem já está na memória. fetch(data:) é bloqueado pela proteção da página.
+      const separador = dataUrl.indexOf(",");
+      if (separador < 0 || !dataUrl.slice(0, separador).endsWith(";base64")) {
+        throw new Error("A imagem não está no formato esperado para comparação.");
+      }
+      bytes = Uint8Array.from(atob(dataUrl.slice(separador + 1)), (caractere) => caractere.charCodeAt(0));
+    } else {
+      const resposta = await fetch(dataUrl);
+      if (!resposta.ok) throw new Error("Não foi possível ler a imagem para comparação.");
+      bytes = await resposta.arrayBuffer();
+    }
     const hash = await crypto.subtle.digest("SHA-256", bytes);
     return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
@@ -176,7 +201,7 @@
       const imagem = new Image();
       if (src.startsWith("http")) imagem.crossOrigin = "anonymous";
       imagem.onload = () => resolver(imagem);
-      imagem.onerror = () => rejeitar(new Error("Não foi possível comparar as imagens."));
+      imagem.onerror = () => rejeitar(new Error("A imagem não pôde ser carregada no navegador."));
       imagem.src = src;
     });
   }
