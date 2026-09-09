@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Junção do ligamento · Endomapa</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #f4f5f1; color: #24372e; font: 17px/1.6 system-ui, sans-serif; }
+    main { max-width: 1160px; padding: 24px 18px 56px; margin: auto; }
+    h1 { font-size: clamp(27px, 5vw, 38px); line-height: 1.2; margin: 12px 0; }
+    h2 { font-size: 21px; margin: 0; }
+    p { max-width: 790px; }
+    a { color: #215d3e; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0; }
+    button { min-height: 46px; padding: 10px 16px; border: 1px solid #637668; border-radius: 8px; background: white; color: #24372e; font: inherit; cursor: pointer; }
+    button[aria-pressed="true"] { background: #215d3e; color: white; }
+    button:focus-visible, a:focus-visible { outline: 3px solid #a97616; outline-offset: 3px; }
+    .comparacao { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    figure { margin: 0; padding: 14px; border-radius: 14px; background: white; min-width: 0; }
+    figcaption { margin: 0 0 12px; }
+    canvas { display: block; width: 100%; height: auto; }
+    .nota { background: #fff9e9; padding: 12px 18px; border-left: 4px solid #ac8434; }
+    #estado { min-height: 28px; }
+    @media (max-width: 650px) { .comparacao { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="index.html">Voltar aos estudos ampliados</a>
+    <h1>Ajuste da junção com o ligamento</h1>
+    <p>Compare as duas versões na mesma ampliação. Alterne entre o cisto, a lesão no ligamento e o mapa inteiro.</p>
+    <p class="nota">O cisto foi mantido. A nova proposta trabalha a junção com o ligamento, preservando o aspecto nodular da referência V1. Compare as bordas, a forma e o contato com o tecido.</p>
+    <nav aria-label="Região da comparação">
+      <button type="button" data-vista="cisto" aria-pressed="true">Cisto ampliado</button>
+      <button type="button" data-vista="ligamento" aria-pressed="false">Ligamento ampliado</button>
+      <button type="button" data-vista="mapa" aria-pressed="false">Mapa inteiro</button>
+    </nav>
+    <p id="estado" role="status">Preparando a comparação…</p>
+    <div class="comparacao">
+      <figure><figcaption><h2>Antes deste ajuste</h2></figcaption><canvas id="original" aria-label="Versão anterior na ampliação escolhida"></canvas></figure>
+      <figure><figcaption><h2>Junção ajustada</h2></figcaption><canvas id="proposta" aria-label="Proposta de junção com o ligamento na ampliação escolhida"></canvas></figure>
+    </div>
+    <noscript>Ative o JavaScript para abrir a comparação.</noscript>
+  </main>
+  <script src="montagem-juncao.js"></script>
+</body>
+</html>

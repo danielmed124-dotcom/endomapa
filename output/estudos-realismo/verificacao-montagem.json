@@ -1,0 +1,8 @@
+{
+  "largura": 1024,
+  "altura": 1536,
+  "pixels_alterados_fora_das_areas": 0,
+  "pixels_alterados_na_area_do_cisto": 4490,
+  "pixels_alterados_na_area_do_ligamento": 2856,
+  "limite_da_verificacao": "Confere os pixels fora das áreas de montagem. Não valida clinicamente a aparência, as medidas ou os contornos dentro das áreas editadas."
+}
