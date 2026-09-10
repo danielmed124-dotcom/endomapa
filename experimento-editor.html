@@ -48,7 +48,7 @@
         <figure class="mapa-visual mapa-editor" data-mapa-editor>
           <img src="assets/mapa-base-coronal.png" alt="Mapa anatômico coronal sem lesões" draggable="false" />
           <div class="mapa-editor__camada" data-camada-editor aria-label="Lesões adicionadas ao mapa"></div>
-          <figcaption>Arraste a lesão ou o texto das medidas para ajustar suas posições</figcaption>
+          <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
         </figure>
       </section>
 
@@ -87,6 +87,10 @@
         </label>
         <fieldset class="medidas-editor">
           <legend>Medidas em centímetros</legend>
+          <label class="medidas-editor__nome">
+            <span>Nome da lesão no mapa · opcional</span>
+            <input type="text" maxlength="60" placeholder="Ex.: Endometrioma esquerdo" data-controle-nome-lesao />
+          </label>
           <label>
             <span>1ª medida</span>
             <input type="text" inputmode="decimal" placeholder="Ex.: 1,0" data-medida="1" />

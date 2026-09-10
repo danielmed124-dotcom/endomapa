@@ -1698,6 +1698,10 @@ h1 span {
   gap: 8px;
 }
 
+.medidas-editor .medidas-editor__nome {
+  grid-column: 1 / -1;
+}
+
 .medidas-editor legend {
   padding-inline: 4px;
   color: var(--texto);
@@ -1741,7 +1745,8 @@ h1 span {
   font-weight: 800;
   line-height: 1.15;
   transform: translateX(-50%);
-  white-space: nowrap;
+  white-space: pre;
+  text-align: center;
   cursor: grab;
   touch-action: none;
   user-select: none;

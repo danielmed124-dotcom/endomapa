@@ -1,0 +1,54 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Verificação de nomes no editor</title>
+<pre id="resultado">Executando</pre>
+<iframe src="../experimento-editor.html" style="width:390px;height:844px"></iframe>
+<script>
+document.querySelector('iframe').addEventListener('load', async function () {
+  const resultado = document.querySelector('#resultado');
+  try {
+    const janela = this.contentWindow;
+    const doc = janela.document;
+    const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+    const campo = doc.querySelector('[data-controle-nome-lesao]');
+    const medida = doc.querySelector('[data-medida="1"]');
+    const preencher = (elemento, valor) => {
+      elemento.value = valor;
+      elemento.dispatchEvent(new janela.Event('input', { bubbles: true }));
+    };
+    doc.querySelector('[data-nome="Endometrioma"]').click();
+    const rotulo = doc.querySelector('[data-medida-id="1"]');
+    verificar(rotulo.hidden, 'Rótulo vazio deve ficar oculto');
+    preencher(campo, 'Endometrioma esquerdo');
+    verificar(rotulo.textContent === 'Endometrioma esquerdo' && !rotulo.hidden, 'Nome sem medidas');
+    preencher(medida, '2,5');
+    verificar(rotulo.textContent === 'Endometrioma esquerdo\n2,5 cm', 'Nome acima das medidas');
+    verificar(janela.getComputedStyle(rotulo).whiteSpace === 'pre', 'Quebra de linha visível');
+    doc.querySelector('[data-nome="Adenomiose 1"]').click();
+    verificar(campo.value === '', 'Nome independente para cada lesão');
+    preencher(campo, 'Adenomiose');
+    doc.querySelector('.lesao-editavel[data-id="1"]').click();
+    verificar(campo.value === 'Endometrioma esquerdo', 'Nome restaurado ao selecionar');
+    const textos = [];
+    const original = janela.CanvasRenderingContext2D.prototype.fillText;
+    janela.CanvasRenderingContext2D.prototype.fillText = function (texto, x, y) {
+      textos.push({ texto, y });
+      return original.apply(this, arguments);
+    };
+    await janela.endomapaCapturarMapaManual();
+    verificar(textos.some(item => item.texto === 'Adenomiose'), 'Nome sem medidas na captura');
+    verificar(textos.find(item => item.texto === 'Endometrioma esquerdo').y < textos.find(item => item.texto === '2,5 cm').y, 'Nome acima das medidas na captura');
+    preencher(campo, '<b>Nome</b>');
+    verificar(!rotulo.querySelector('b'), 'Nome tratado como texto');
+    preencher(campo, '');
+    verificar(rotulo.textContent === '2,5 cm', 'Medidas continuam após apagar nome');
+    preencher(medida, '');
+    verificar(rotulo.hidden, 'Apagar nome e medidas oculta rótulo');
+    doc.querySelector('[data-remover-lesao]').click();
+    verificar(!doc.querySelector('[data-medida-id="1"]'), 'Excluir lesão remove rótulo');
+    resultado.textContent = 'PASSOU: nomes independentes, seleção, texto seguro, captura, remoção e medidas.';
+  } catch (erro) {
+    resultado.textContent = 'FALHOU: ' + erro.message;
+  }
+});
+</script>

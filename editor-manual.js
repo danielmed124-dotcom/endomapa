@@ -7,6 +7,7 @@
   const tamanho = document.querySelector("[data-controle-tamanho]");
   const eixoX = document.querySelector("[data-controle-eixo-x]");
   const eixoY = document.querySelector("[data-controle-eixo-y]");
+  const nomeNoMapa = document.querySelector("[data-controle-nome-lesao]");
   let selecionada = null;
   let proximoId = 1;
   if (!camada || !controles) return;
@@ -20,6 +21,11 @@
   tamanho.addEventListener("input", aplicarControles);
   eixoX.addEventListener("input", aplicarControles);
   eixoY.addEventListener("input", aplicarControles);
+  nomeNoMapa.addEventListener("input", function () {
+    if (!selecionada) return;
+    selecionada.dataset.nomeNoMapa = nomeNoMapa.value;
+    atualizarRotuloDeMedidas(selecionada);
+  });
   document.querySelectorAll("[data-medida]").forEach(function (campo) {
     campo.addEventListener("input", aplicarMedidas);
   });
@@ -45,6 +51,7 @@
     lesao.className = "lesao-editavel";
     lesao.dataset.id = String(proximoId++);
     lesao.dataset.nome = nome;
+    lesao.dataset.nomeNoMapa = "";
     lesao.dataset.proporcao = proporcao;
     lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
@@ -81,6 +88,7 @@
     tamanho.value = lesao.dataset.tamanho;
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
+    nomeNoMapa.value = lesao.dataset.nomeNoMapa || "";
     document.querySelectorAll("[data-medida]").forEach(function (campo) {
       campo.value = lesao.dataset[`medida${campo.dataset.medida}`] || "";
     });
@@ -149,7 +157,7 @@
     rotulo.className = "medida-lesao-editavel";
     rotulo.dataset.medidaId = lesao.dataset.id;
     rotulo.hidden = true;
-    rotulo.setAttribute("aria-label", "Arraste para mover as medidas");
+    rotulo.setAttribute("aria-label", "Arraste para mover o nome e as medidas");
     rotulo.addEventListener("pointerdown", iniciarMovimentoDaMedida);
     camada.append(linha, rotulo);
     atualizarRotuloDeMedidas(lesao);
@@ -158,14 +166,19 @@
   function atualizarRotuloDeMedidas(lesao) {
     const rotulo = camada.querySelector(`[data-medida-id="${lesao.dataset.id}"]`);
     if (!rotulo) return;
-    const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
-      .filter(Boolean)
-      .map(formatarMedida);
-    rotulo.textContent = valores.length ? `${valores.join(" × ")} cm` : "";
-    rotulo.hidden = !valores.length;
+    const linhas = linhasDoRotulo(lesao);
+    rotulo.textContent = linhas.join("\n");
+    rotulo.hidden = !linhas.length;
     rotulo.style.left = `${lesao.dataset.medidaX}%`;
     rotulo.style.top = `${lesao.dataset.medidaY}%`;
-    atualizarLinhaDeMedida(lesao, Boolean(valores.length));
+    atualizarLinhaDeMedida(lesao, Boolean(linhas.length));
+  }
+
+  function linhasDoRotulo(lesao) {
+    const nome = (lesao.dataset.nomeNoMapa || "").trim();
+    const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
+      .filter(Boolean).map(formatarMedida);
+    return [nome, valores.length ? `${valores.join(" × ")} cm` : ""].filter(Boolean);
   }
 
   function iniciarMovimentoDaMedida(evento) {
@@ -297,8 +310,8 @@
     contexto.textAlign = "center";
     contexto.textBaseline = "middle";
     for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
-      const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3].filter(Boolean).map(formatarMedida);
-      if (!valores.length) continue;
+      const linhas = linhasDoRotulo(lesao);
+      if (!linhas.length) continue;
       const inicioX = canvas.width * Number(lesao.dataset.x) / 100;
       const inicioY = canvas.height * Number(lesao.dataset.y) / 100;
       const fimX = canvas.width * Number(lesao.dataset.medidaX) / 100;
@@ -310,12 +323,14 @@
       contexto.beginPath();
       contexto.arc(inicioX, inicioY, 3, 0, Math.PI * 2);
       contexto.fill();
-      const texto = `${valores.join(" × ")} cm`;
-      const larguraTexto = contexto.measureText(texto).width + 12;
+      const alturaLinha = Math.max(15, canvas.width / 58) * 1.15;
+      const larguraTexto = Math.max(...linhas.map((texto) => contexto.measureText(texto).width)) + 12;
       contexto.fillStyle = "rgba(255,255,255,0.9)";
-      contexto.fillRect(fimX - larguraTexto / 2, fimY - 13, larguraTexto, 26);
+      contexto.fillRect(fimX - larguraTexto / 2, fimY, larguraTexto, alturaLinha * linhas.length + 4);
       contexto.fillStyle = "#7c1919";
-      contexto.fillText(texto, fimX, fimY);
+      linhas.forEach((texto, indice) => {
+        contexto.fillText(texto, fimX, fimY + 2 + alturaLinha * (indice + 0.5));
+      });
       contexto.fillStyle = "#000";
     }
     return canvas.toDataURL("image/jpeg", 0.9);
