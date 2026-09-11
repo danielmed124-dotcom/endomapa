@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- Atualização de Aderências 1: Daniel pediu retirar a imagem antiga de `Aderências.png` e usar a nova `Aderência 1.png`. Substituído o conteúdo de `assets/lesoes/aderencias-1-referencia.png` pela nova imagem original, mantendo uma única opção “Aderências 1”. Referência no editor usa `?versao=2` para atualizar a imagem armazenada pelo navegador. Aderência 2, 3 e 4 permanecem disponíveis.
+
 - Daniel pediu acrescentar separadamente `Aderência 2.png`, `Aderência 3.png` e `Aderência 4.png`, com os nomes dos arquivos. Opções “Aderência 2”, “Aderência 3” e “Aderência 4” adicionadas com suas respectivas imagens originais em `assets/lesoes/aderencia-2-referencia.png`, `aderencia-3-referencia.png` e `aderencia-4-referencia.png`. Todas 1254 × 1254, com transparência, sem recorte e tamanho inicial de 100%.
 
 - Daniel enviou `Aderências.png` e pediu a opção “Aderências 1”. Imagem original preservada em `assets/lesoes/aderencias-1-referencia.png`, 1254 × 1254, com transparência, sem recorte e tamanho inicial padrão de 100%. Usa os controles manuais de posição, tamanho, rotação, nome e medidas.
