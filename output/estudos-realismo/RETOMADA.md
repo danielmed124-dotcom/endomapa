@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- Daniel enviou `Aderências.png` e pediu a opção “Aderências 1”. Imagem original preservada em `assets/lesoes/aderencias-1-referencia.png`, 1254 × 1254, com transparência, sem recorte e tamanho inicial padrão de 100%. Usa os controles manuais de posição, tamanho, rotação, nome e medidas.
+
 - Daniel pediu tamanho de 150% para DIU de Cobre e DIU hormonal. Ambos agora são inseridos com tamanho inicial de 150%, mantendo proporção e controles de ajuste. Os outros modelos continuam com tamanho inicial de 100%.
 
 - Depois do DIU de Cobre, Daniel enviou `DIU hormonal.png`. Imagem original preservada em `assets/lesoes/diu-hormonal-referencia.png`, com transparência e proporção 1672/941. Opção “DIU hormonal” adicionada ao editor com os mesmos controles manuais.
