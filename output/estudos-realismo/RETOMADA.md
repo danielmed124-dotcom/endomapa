@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- Depois de Teratoma, Daniel pediu acrescentar DIU de Cobre com `DIU cobre.png`. Arquivo original preservado em `assets/lesoes/diu-cobre-referencia.png`, com transparência e proporção 1122/1402 no editor, sem recorte do dispositivo ou do fio. Usa os controles manuais existentes, incluindo nome e medidas.
+
 - Continuação após o encerramento: Daniel enviou `Teratoma.png` e pediu publicar Teratoma. A nova imagem foi copiada integralmente para `assets/lesoes/teratoma-referencia.png` e adicionada ao editor, preservando também o fundo marrom presente nela. Esse novo pedido não retoma a edição cancelada de `Tera 1.png`.
 
 - Cisto hemorrágico: imagem fornecida por Daniel em `assets/lesoes/cisto-hemorragico-referencia.png`.
