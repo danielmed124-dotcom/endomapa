@@ -10,7 +10,7 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 - Daniel pediu acrescentar separadamente `Aderência 2.png`, `Aderência 3.png` e `Aderência 4.png`, com os nomes dos arquivos. Opções “Aderência 2”, “Aderência 3” e “Aderência 4” adicionadas com suas respectivas imagens originais em `assets/lesoes/aderencia-2-referencia.png`, `aderencia-3-referencia.png` e `aderencia-4-referencia.png`. Todas 1254 × 1254, com transparência, sem recorte e tamanho inicial de 100%.
 
-- Daniel enviou `Aderências.png` e pediu a opção “Aderências 1”. Imagem original preservada em `assets/lesoes/aderencias-1-referencia.png`, 1254 × 1254, com transparência, sem recorte e tamanho inicial padrão de 100%. Usa os controles manuais de posição, tamanho, rotação, nome e medidas.
+- A primeira imagem de “Aderências 1”, enviada como `Aderências.png`, foi substituída pela nova `Aderência 1.png`, conforme registrado acima. A versão antiga permanece apenas no histórico do Git.
 
 - Daniel pediu tamanho de 150% para DIU de Cobre e DIU hormonal. Ambos agora são inseridos com tamanho inicial de 150%, mantendo proporção e controles de ajuste. Os outros modelos continuam com tamanho inicial de 100%.
 
@@ -27,9 +27,9 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 - Campo opcional “Nome da lesão no mapa” nos ajustes de cada lesão. O nome aparece acima das medidas; nome e medidas são arrastados juntos. Cada lesão conserva seu próprio nome durante a montagem. O nome também entra na captura da montagem enviada à IA.
 - Verificação no Chrome, com tela de 390 × 844, em `tests/editor-manual-nomes.html`: nomes independentes, seleção, texto seguro, captura, remoção e medidas passaram. Campo, código e estilo foram conferidos na página publicada.
 
-Commits das entregas: `1b4eb67`, `2f71643`, `b1e5a7c` e `d585b16`.
+Commits das entregas: `1b4eb67`, `2f71643`, `b1e5a7c`, `d585b16`, `cd3e90e`, `922ae1e`, `cf8003f`, `d50ce00`, `c746dc8`, `86a9f1d` e `c2a59d2`.
 
-Editor de teste: https://experimento-editor-manual.endomapa.pages.dev/experimento-editor?versao=d585b16
+Editor de teste: https://experimento-editor-manual.endomapa.pages.dev/experimento-editor?versao=c2a59d2
 
 Ramo de trabalho e publicação: `experimento-editor-manual`. A publicação ocorre por envio desse ramo ao GitHub.
 
@@ -37,7 +37,7 @@ Ramo de trabalho e publicação: `experimento-editor-manual`. A publicação oco
 
 Daniel pediu ampliar `Tera 1.png`, remover a legenda e tornar o fundo transparente. A ferramenta produziu duas versões com quadriculado desenhado, sem transparência real. Daniel cancelou essa lesão: não adicioná-la ao editor e não continuar o recorte. As versões geradas não foram incorporadas ao projeto.
 
-Daniel encerrou a sessão pedindo salvar e publicar o trabalho de hoje para retornar amanhã, mas depois enviou uma nova imagem `Teratoma.png` e pediu sua publicação, registrada acima. Após essa inclusão, nenhuma próxima lesão ou mudança foi escolhida. Na retomada, seguir o editor manual e pedir o próximo item desejado, sem retomar a edição cancelada de `Tera 1.png`.
+Último pedido: salvar e publicar tudo até aqui, após a substituição de Aderências 1. Foram concluídos também Teratoma, os dois DIUs com tamanho inicial de 150% e Aderência 2, 3 e 4 como opções separadas. Todos os recursos pedidos estão salvos no histórico e publicados no editor de teste. Nenhuma próxima lesão ou mudança foi escolhida. Na retomada, seguir o editor manual e pedir o próximo item desejado, sem retomar a edição cancelada de `Tera 1.png`.
 
 Os arquivos não rastreados em `.ferramentas-publicacao/`, `supabase/.temp/` e os cinco mapas soltos em `assets/` já apareciam antes das alterações de hoje. Não foram incluídos nesta publicação; preservar os arquivos locais.
 
