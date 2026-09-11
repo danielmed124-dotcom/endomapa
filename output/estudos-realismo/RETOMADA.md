@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- REVERSÃO SOLICITADA: Daniel pediu desfazer o escurecimento e o tom arroxeado das aderências. O editor voltou a usar as quatro imagens originais: `aderencias-1-referencia.png?versao=2` e `aderencia-2-referencia.png` até `aderencia-4-referencia.png`. A alteração de cor abaixo foi desfeita; não reaplicá-la na retomada.
+
 - Última alteração: as quatro aderências ficaram mais escuras e arroxeadas por ajuste de cor em código, explicitamente autorizado por Daniel após a ferramenta de IA perder a transparência. O editor usa `assets/lesoes/aderencia-1-arroxeada.png` até `aderencia-4-arroxeada.png`. Os originais permanecem preservados. O script `ajustar-cor-aderencias.ps1` reproduz o ajuste a partir dos originais e verifica que a transparência de cada pixel permaneceu idêntica. Nenhuma forma, dimensão ou posição foi alterada.
 
 - Atualização de Aderências 1: Daniel pediu retirar a imagem antiga de `Aderências.png` e usar a nova `Aderência 1.png`. Substituído o conteúdo de `assets/lesoes/aderencias-1-referencia.png` pela nova imagem original, mantendo uma única opção “Aderências 1”. Referência no editor usa `?versao=2` para atualizar a imagem armazenada pelo navegador. Aderência 2, 3 e 4 permanecem disponíveis.
