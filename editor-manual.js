@@ -14,7 +14,7 @@
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte);
+      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial);
     });
   });
   giro.addEventListener("input", aplicarControles);
@@ -44,7 +44,7 @@
   window.addEventListener("resize", atualizarTodasAsLinhas);
   window.endomapaCapturarMapaManual = capturarMapa;
 
-  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false") {
+  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100") {
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
@@ -57,7 +57,7 @@
     lesao.dataset.x = String(44 + deslocamento);
     lesao.dataset.y = String(45 + deslocamento);
     lesao.dataset.giro = "0";
-    lesao.dataset.tamanho = "100";
+    lesao.dataset.tamanho = tamanhoInicial;
     lesao.dataset.eixoX = "100";
     lesao.dataset.eixoY = "100";
     lesao.dataset.medida1 = "";
