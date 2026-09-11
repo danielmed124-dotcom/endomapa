@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- Continuação após o encerramento: Daniel enviou `Teratoma.png` e pediu publicar Teratoma. A nova imagem foi copiada integralmente para `assets/lesoes/teratoma-referencia.png` e adicionada ao editor, preservando também o fundo marrom presente nela. Esse novo pedido não retoma a edição cancelada de `Tera 1.png`.
+
 - Cisto hemorrágico: imagem fornecida por Daniel em `assets/lesoes/cisto-hemorragico-referencia.png`.
 - Endometrioma: imagem fornecida por Daniel em `assets/lesoes/endometrioma-referencia.png`.
 - Adenomiose 1: imagem fornecida por Daniel em `assets/lesoes/adenomiose-1-referencia.png`.
@@ -23,7 +25,7 @@ Ramo de trabalho e publicação: `experimento-editor-manual`. A publicação oco
 
 Daniel pediu ampliar `Tera 1.png`, remover a legenda e tornar o fundo transparente. A ferramenta produziu duas versões com quadriculado desenhado, sem transparência real. Daniel cancelou essa lesão: não adicioná-la ao editor e não continuar o recorte. As versões geradas não foram incorporadas ao projeto.
 
-Daniel encerrou a sessão pedindo salvar e publicar o trabalho de hoje para retornar amanhã. Nenhuma próxima lesão ou mudança foi escolhida. Na retomada, seguir o editor manual e pedir o próximo item desejado, sem retomar a lesão cancelada.
+Daniel encerrou a sessão pedindo salvar e publicar o trabalho de hoje para retornar amanhã, mas depois enviou uma nova imagem `Teratoma.png` e pediu sua publicação, registrada acima. Após essa inclusão, nenhuma próxima lesão ou mudança foi escolhida. Na retomada, seguir o editor manual e pedir o próximo item desejado, sem retomar a edição cancelada de `Tera 1.png`.
 
 Os arquivos não rastreados em `.ferramentas-publicacao/`, `supabase/.temp/` e os cinco mapas soltos em `assets/` já apareciam antes das alterações de hoje. Não foram incluídos nesta publicação; preservar os arquivos locais.
 
