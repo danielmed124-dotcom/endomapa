@@ -6,6 +6,8 @@ Continuar no editor manual experimental. Usar os mapas anatômicos já salvos no
 
 ## Entregas de hoje, salvas e publicadas
 
+- Depois do DIU de Cobre, Daniel enviou `DIU hormonal.png`. Imagem original preservada em `assets/lesoes/diu-hormonal-referencia.png`, com transparência e proporção 1672/941. Opção “DIU hormonal” adicionada ao editor com os mesmos controles manuais.
+
 - Depois de Teratoma, Daniel pediu acrescentar DIU de Cobre com `DIU cobre.png`. Arquivo original preservado em `assets/lesoes/diu-cobre-referencia.png`, com transparência e proporção 1122/1402 no editor, sem recorte do dispositivo ou do fio. Usa os controles manuais existentes, incluindo nome e medidas.
 
 - Continuação após o encerramento: Daniel enviou `Teratoma.png` e pediu publicar Teratoma. A nova imagem foi copiada integralmente para `assets/lesoes/teratoma-referencia.png` e adicionada ao editor, preservando também o fundo marrom presente nela. Esse novo pedido não retoma a edição cancelada de `Tera 1.png`.
