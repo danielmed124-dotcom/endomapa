@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { prepararEdicaoGPT } from "../_shared/mascara-imagem-gpt.js";
 import { diagnosticarErroImagem } from "../_shared/erro-imagem-gpt.js";
 
 const ORIGENS = new Set([
@@ -43,9 +44,13 @@ Deno.serve(async (req) => {
   // Consulta gratuita: termina antes da reserva e de qualquer chamada à OpenAI.
   if (corpo.verificar_conexao === true) return responder({ conexao_ok: true });
   const composicao = corpo.composicao_base64;
-  if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
+  if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 14_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
+
+  let edicao;
+  try { edicao = prepararEdicaoGPT(composicao, corpo.mascara_base64); }
+  catch (erro) { return responder({ erro: (erro as Error).message }, 400); }
 
   const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem").single();
   if (erroReserva || !reserva) return responder({ erro: "Não foi possível conferir o limite de imagens." }, 500);
@@ -54,10 +59,11 @@ Deno.serve(async (req) => {
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
   try {
-    const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
+    const bytes = edicao.imagem;
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2");
-    formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
+    formulario.append("image", new File([bytes], `mapa-manual.${edicao.extensao}`, { type: edicao.tipo }));
+    if (edicao.mascara) formulario.append("mask", new File([edicao.mascara], "area-integracao.png", { type: "image/png" }));
     formulario.append("quality", "medium");
     // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
     formulario.append("size", "1056x1408");
@@ -65,6 +71,7 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", [
+      ...(edicao.mascara ? ["EDIÇÃO LOCALIZADA: a máscara transparente delimita as lesões e o tecido adjacente que devem ser redesenhados em conjunto. Reconstrua o material e a iluminação nessa região como uma única ilustração anatômica contínua, eliminando a aparência de recorte colado. Use a montagem para preservar tipo, localização, extensão e conteúdo de cada achado; não a copie pixel a pixel. A faixa de tecido incluída serve para integração de superfície e sombras, não para ampliar a doença. Preserve as regiões opacas da máscara."] : []),
       "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
       "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
       "A imagem recebida é uma composição final feita e revisada manualmente por um médico adulto para documentação clínica.",

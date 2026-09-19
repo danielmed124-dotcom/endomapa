@@ -276,13 +276,20 @@
   function mostrar(texto) { mensagem.textContent = texto; }
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
 
-  async function capturarMapa() {
+  async function capturarMapa(opcoes = {}) {
     const base = await carregarImagem("assets/mapa-base-coronal.png");
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
+    const mascara = document.createElement("canvas");
+    mascara.width = canvas.width;
+    mascara.height = canvas.height;
+    const area = mascara.getContext("2d");
+    area.fillRect(0, 0, mascara.width, mascara.height);
+    const dispositivos = [];
+    let areasEditaveis = 0;
 
     for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
       const imagem = await carregarImagem(lesao.querySelector("img").src);
@@ -301,6 +308,27 @@
       }
       contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
       contexto.restore();
+      if (opcoes.integracao) {
+        const regiao = { x, y, largura, altura, giro: Number(lesao.dataset.giro) };
+        if (/diu/i.test(lesao.dataset.nome)) dispositivos.push(regiao);
+        else {
+          // A área inclui tecido vizinho; não representa aumento da lesão.
+          pintarRegiao(regiao, "destination-out", Math.max(12, Math.min(largura, altura) * 0.15));
+          areasEditaveis += 1;
+        }
+      }
+    }
+
+    // Protege dispositivos mesmo quando outra região editável os sobrepõe.
+    dispositivos.forEach((regiao) => pintarRegiao(regiao, "source-over", 4));
+    function pintarRegiao(regiao, operacao, margem) {
+      area.save();
+      area.globalCompositeOperation = operacao;
+      area.translate(regiao.x, regiao.y);
+      area.rotate(regiao.giro * Math.PI / 180);
+      area.fillRect(-regiao.largura / 2 - margem, -regiao.altura / 2 - margem,
+        regiao.largura + margem * 2, regiao.altura + margem * 2);
+      area.restore();
     }
 
     contexto.strokeStyle = "#000";
@@ -325,6 +353,15 @@
       contexto.fill();
       const alturaLinha = Math.max(15, canvas.width / 58) * 1.15;
       const larguraTexto = Math.max(...linhas.map((texto) => contexto.measureText(texto).width)) + 12;
+      area.lineWidth = contexto.lineWidth + 6;
+      area.beginPath();
+      area.moveTo(inicioX, inicioY);
+      area.lineTo(fimX, fimY);
+      area.stroke();
+      area.beginPath();
+      area.arc(inicioX, inicioY, 6, 0, Math.PI * 2);
+      area.fill();
+      area.fillRect(fimX - larguraTexto / 2 - 3, fimY - 3, larguraTexto + 6, alturaLinha * linhas.length + 10);
       contexto.fillStyle = "rgba(255,255,255,0.9)";
       contexto.fillRect(fimX - larguraTexto / 2, fimY, larguraTexto, alturaLinha * linhas.length + 4);
       contexto.fillStyle = "#7c1919";
@@ -332,6 +369,10 @@
         contexto.fillText(texto, fimX, fimY + 2 + alturaLinha * (indice + 0.5));
       });
       contexto.fillStyle = "#000";
+    }
+    if (opcoes.integracao) {
+      if (!areasEditaveis) throw new Error("Adicione uma lesão para integrar ao mapa. O DIU será preservado.");
+      return { composicao: canvas.toDataURL("image/png"), mascara: mascara.toDataURL("image/png") };
     }
     return canvas.toDataURL("image/jpeg", 0.9);
   }
