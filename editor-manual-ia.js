@@ -16,8 +16,56 @@
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false };
+  const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
+  botaoConexao?.addEventListener("click", verificarConexaoGPT);
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
   restaurarUltimoResultadoGemini();
+
+  async function verificarConexaoGPT() {
+    if (botaoConexao.disabled) return;
+    const estado = document.querySelector("[data-estado-conexao-gpt]");
+    botaoConexao.disabled = true;
+    let etapa = "login";
+    mostrar(estado, "Verificando login e conexão. Nenhuma imagem será gerada.", false);
+    try {
+      if (window.location.protocol === "file:") {
+        mostrar(estado, "Abra o editor no site do Endomapa para verificar a conexão.", true);
+        return;
+      }
+      if (navigator.onLine === false) {
+        mostrar(estado, "O navegador está sem conexão com a internet. Nenhuma geração foi solicitada.", true);
+        return;
+      }
+      const { data, error } = await cliente.auth.getSession();
+      if (error) throw error;
+      if (!data?.session) {
+        mostrar(estado, "Não há uma sessão conectada. Entre no Endomapa em outra aba e volte aqui para verificar novamente, mantendo sua montagem aberta.", true);
+        return;
+      }
+      etapa = "servidor";
+      const resposta = await cliente.functions.invoke("finalizar-mapa-manual-gpt", {
+        body: { verificar_conexao: true }, timeout: 20000,
+      });
+      if (resposta.error) throw resposta.error;
+      if (resposta.data?.conexao_ok !== true) {
+        mostrar(estado, "O servidor respondeu, mas não confirmou esta verificação. Nenhuma geração foi solicitada.", true);
+        return;
+      }
+      mostrar(estado, "Login e conexão com o servidor do Endomapa confirmados. Nenhuma imagem foi enviada à OpenAI e nenhum crédito de geração foi usado. Este teste não confirma a aceitação de uma imagem pelo GPT.", false);
+    } catch (erro) {
+      let detalhe;
+      try { detalhe = (await erro.context?.json())?.erro; } catch (_erro) {}
+      const status = erro.context?.status;
+      if (!detalhe && status === 401) detalhe = "Sua sessão não foi aceita. Entre no Endomapa em outra aba e volte para verificar novamente.";
+      if (!detalhe && status === 403) detalhe = "O acesso foi recusado. Confirme que o editor foi aberto no endereço endomapa.pages.dev.";
+      if (!detalhe) detalhe = etapa === "login"
+        ? "Não foi possível consultar seu login neste navegador."
+        : "O navegador não recebeu uma resposta legível do servidor. Isso pode envolver a rede, extensões, proteção do navegador ou indisponibilidade do serviço.";
+      mostrar(estado, `${detalhe} Nenhuma geração foi solicitada por esta verificação.`, true);
+    } finally {
+      botaoConexao.disabled = false;
+    }
+  }
 
   async function gerar(provedor, botao) {
     if (!["gemini", "gpt", "gpt-referencias"].includes(provedor) || gerando[provedor]) return;

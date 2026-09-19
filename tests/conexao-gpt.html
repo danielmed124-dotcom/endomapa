@@ -1,0 +1,58 @@
+<!doctype html><meta charset="utf-8">
+<title>Verificação gratuita de conexão GPT</title>
+<button data-gerar-realista="gpt">Gerar</button>
+<button data-verificar-conexao-gpt>Verificar</button>
+<p data-estado-conexao-gpt hidden></p>
+<pre id="resultado">PENDENTE</pre>
+<script>
+let sessaoTeste = {}, erroLogin = null, erroServidor = null, respostaTeste = {conexao_ok:true};
+let verificacoes = 0, geracoes = 0;
+window.ENDOMAPA_SUPABASE = {projectUrl:'teste',publicAnonKey:'teste'};
+window.supabase = {createClient:()=>({
+  auth:{getSession:async()=>({data:{session:sessaoTeste},error:erroLogin})},
+  functions:{invoke:async(nome,pedido)=>{
+    if (pedido.body.consultar_diagnostico) return {data:{}};
+    if (nome !== 'finalizar-mapa-manual-gpt' || JSON.stringify(pedido.body) !== '{"verificar_conexao":true}') {
+      geracoes++; throw new Error('O teste tentou gerar ou enviar uma imagem');
+    }
+    verificacoes++;
+    await new Promise(r=>setTimeout(r,20));
+    return {data:respostaTeste,error:erroServidor};
+  }}
+})};
+</script>
+<script src="../editor-manual-ia.js"></script>
+<script>
+window.addEventListener('load',async()=>{
+  const botao=document.querySelector('[data-verificar-conexao-gpt]');
+  const estado=document.querySelector('[data-estado-conexao-gpt]');
+  const conferir=(ok,texto)=>{if(!ok)throw new Error(texto)};
+  const verificar=async()=>{
+    botao.click();
+    for(let i=0;i<100&&botao.disabled;i++)await new Promise(r=>setTimeout(r,10));
+    conferir(!botao.disabled,'Botão não liberado');
+    return estado.textContent;
+  };
+  try {
+    sessaoTeste=null;
+    conferir((await verificar()).includes('Não há uma sessão')&&verificacoes===0,'Ausência de login');
+    sessaoTeste={}; erroLogin=new Error('Falha de login');
+    conferir((await verificar()).includes('consultar seu login')&&verificacoes===0,'Falha ao ler sessão');
+    erroLogin=null;
+    erroServidor={name:'FunctionsHttpError',context:{status:401,json:async()=>({erro:'Sua sessão terminou. Entre novamente.'})}};
+    conferir((await verificar()).includes('Sua sessão terminou'),'Sessão vencida');
+    erroServidor={name:'FunctionsFetchError',message:'Failed to fetch'};
+    conferir((await verificar()).includes('resposta legível'),'Falha imediata de conexão');
+    erroServidor=null;
+    conferir((await verificar()).includes('Login e conexão com o servidor do Endomapa confirmados'),'Conexão válida');
+    respostaTeste={};
+    conferir((await verificar()).includes('não confirmou'),'Resposta antiga não pode confirmar sucesso');
+    respostaTeste={conexao_ok:true};
+    const antes=verificacoes;
+    const espera=verificar(); botao.click(); await espera;
+    conferir(verificacoes===antes+1,'Dois cliques geraram verificações duplicadas');
+    conferir(geracoes===0,'Verificação acionou geração');
+    document.querySelector('#resultado').textContent='PASSOU: sem login, erro de sessão, sessão vencida, falha imediata, conexão válida, resposta antiga e clique duplo. Nenhuma geração acionada.';
+  }catch(erro){document.querySelector('#resultado').textContent='FALHOU: '+erro.message}
+});
+</script>

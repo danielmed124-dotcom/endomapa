@@ -113,6 +113,8 @@
         </div>
         <button class="botao" type="button" data-gerar-realista="gemini">Gerar versão realista com Gemini</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt">Gerar versão realista com GPT</button>
+        <button class="botao botao--secundario" type="button" data-verificar-conexao-gpt>Verificar conexão com GPT</button>
+        <p class="mensagem-formulario" data-estado-conexao-gpt role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt-referencias">Testar GPT com referências</button>
         <p class="mensagem-formulario" data-estado-realista="gemini" hidden></p>
         <p class="mensagem-formulario" data-estado-realista="gpt" hidden></p>
@@ -189,6 +191,6 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js"></script>
-    <script src="editor-manual-ia.js"></script>
+    <script src="editor-manual-ia.js?v=diagnostico-conexao-1"></script>
   </body>
 </html>

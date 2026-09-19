@@ -40,6 +40,8 @@ Deno.serve(async (req) => {
 
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
+  // Consulta gratuita: termina antes da reserva e de qualquer chamada à OpenAI.
+  if (corpo.verificar_conexao === true) return responder({ conexao_ok: true });
   const composicao = corpo.composicao_base64;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
