@@ -1,4 +1,8 @@
-# Ponto de retomada — 10 de setembro de 2026
+# Ponto de retomada — 18 de setembro de 2026
+
+## Integração ao Endomapa principal
+
+Daniel solicitou incorporar tudo do experimento ao projeto principal. A linha `main` recebeu o histórico completo de `experimento-editor-manual` até `280ebf9`, incluindo as aderências marrons, Pólipo, Mioma 1, Mioma 2, Mioma 3 e Mioma pediculado. A tela de ditado agora oferece acesso ao editor manual, que mantém acesso de volta ao ditado. O ramo experimental foi preservado. Esta integração local ainda não foi publicada; não executar migrações ou funções do servidor apenas por causa da troca de ramo. Os registros abaixo descrevem o histórico anterior à integração.
 
 ## Direção atual confirmada por Daniel
 

@@ -28,13 +28,15 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Atualização de 18/09/2026: por solicitação de Daniel, o editor manual e todos os recursos do ramo `experimento-editor-manual` foram incorporados ao projeto principal. Além do ditado, o médico pode abrir o editor manual, escolher imagens da biblioteca e ajustar posição, tamanho, rotação, nome e medidas. Os recursos de comparação por IA continuam experimentais e sujeitos à revisão do médico.
+
 - Cadastro ou identificação de pacientes.
 - Histórico de exames.
 - Integração com sistemas de laudos.
 - Interpretação dos achados, sugestão de diagnóstico ou escrita automática do laudo.
 - Envio de gravações prontas; o ditado será somente ao vivo.
 - Exportação em PNG, JPEG ou outros formatos além de PDF.
-- Correção manual por toque ou mouse; as correções serão feitas por comando de voz.
+- Substituir o fluxo de ditado pelo editor manual; ambos permanecem disponíveis.
 - Representação de estruturas além de útero, ovários, tubas uterinas, ligamentos uterossacros, região retrocervical, reto/sigmoide, bexiga e recessos pélvicos.
 - IA inventando uma aparência diferente para cada exame; será usada uma aparência visual aprovada para cada categoria de lesão.
 - Painel de vendas, cobrança ou administração de várias clínicas na mesma instalação.
