@@ -66,7 +66,8 @@ Deno.serve(async (req) => {
       formulario.append("image[]", new File([await respostasReferencias[indice].blob()], referencia.arquivo, { type: "image/png" }));
     }
     formulario.append("quality", "medium");
-    formulario.append("size", "1024x1536");
+    // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
+    formulario.append("size", "1056x1408");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
@@ -76,10 +77,14 @@ Deno.serve(async (req) => {
       "A PRIMEIRA imagem é a composição clínica final revisada por um médico adulto e é a única autoridade para anatomia, posição, limites, forma, rotação, tamanho, quantidade e distribuição das lesões.",
       `As imagens seguintes são recortes de referência de atlas médico somente para acabamento ilustrado, cor, brilho e relevo destes tipos já presentes: ${tipos.join(", ")}.`,
       "Não copie das referências a posição, o contorno externo, a escala, a quantidade nem qualquer fundo anatômico.",
-      "Transforme de modo claramente visível a aparência interna de cada lesão já presente na primeira imagem, aplicando acabamento de atlas médico, variação de cor, relevo ilustrado e integração visual discreta conforme as referências.",
+      "Integre visualmente as lesões já inseridas à renderização médica tridimensional da primeira imagem: harmonize a direção da luz, a intensidade do brilho e a textura com os tecidos vizinhos. Use as referências para reconhecer a textura de cada lesão, adaptando a iluminação ao mapa.",
+      "Use variações sutis de cor e relevo dentro de cada lesão, com sombras suaves de contato na sua própria borda de inserção. A lesão deve parecer ligada à superfície em que foi posicionada, sem halo, contorno artificial ou aspecto de adesivo.",
+      "Suavize a transição visual das bordas sem deslocar, expandir ou apagar os contornos. Não engrosse nem agrupe focos separados para aumentar o efeito visual.",
+      "Nas aderências, preserve cada faixa, ramificação, abertura e espaço vazio; integre visualmente os pontos de contato já existentes, sem criar novas conexões.",
       "Mantenha o contorno externo, a posição, a rotação e o tamanho de cada lesão. Nenhum pixel fora desses contornos deve virar lesão.",
       "Não crie lesões, nódulos, pontos escuros, manchas ou extensões em nenhum outro local. Não aumente nem diminua os contornos existentes.",
-      "Preserve exatamente anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas da primeira imagem.",
+      "Preserve a proporção 3:4 da primeira imagem, seu enquadramento e suas margens. Não alongue, comprima, recorte nem reposicione o mapa.",
+      "Mantenha inalterados os tecidos fora das lesões, a anatomia de base e suas cores, os dispositivos como o DIU e seu fio, a logomarca, a marca-d'água, as linhas pretas e os textos de medidas da primeira imagem.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
     ].join(" "));
 

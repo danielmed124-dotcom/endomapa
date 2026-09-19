@@ -59,7 +59,8 @@ Deno.serve(async (req) => {
     formulario.append("model", "gpt-image-2");
     formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     formulario.append("quality", "medium");
-    formulario.append("size", "1024x1536");
+    // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
+    formulario.append("size", "1056x1408");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
@@ -67,10 +68,13 @@ Deno.serve(async (req) => {
       "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
       "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
       "A imagem recebida é uma composição final feita e revisada manualmente por um médico adulto para documentação clínica.",
-      "Transforme de modo claramente visível somente a aparência interna das lesões inseridas: aplique acabamento de atlas médico, variação natural de cor, relevo ilustrado e integração visual discreta.",
-      "A mudança visual das lesões deve ser perceptível na comparação, sem alterar seus limites externos.",
+      "Integre visualmente as lesões já inseridas à renderização médica tridimensional do mapa: harmonize a direção da luz, a intensidade do brilho e a textura com os tecidos vizinhos.",
+      "Use variações sutis de cor e relevo dentro de cada lesão, com sombras suaves de contato na sua própria borda de inserção. A lesão deve parecer ligada à superfície em que foi posicionada, sem halo, contorno artificial ou aspecto de adesivo.",
+      "Suavize a transição visual das bordas sem deslocar, expandir ou apagar os contornos. Não engrosse nem agrupe focos separados para aumentar o efeito visual.",
+      "Nas aderências, preserve cada faixa, ramificação, abertura e espaço vazio; integre visualmente os pontos de contato já existentes, sem criar novas conexões.",
       "Preserve com máxima fidelidade a posição, rotação, comprimento, largura, quantidade e distribuição de todas as lesões.",
-      "Preserve exatamente toda a anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas.",
+      "Preserve a proporção 3:4 da composição original, seu enquadramento e suas margens. Não alongue, comprima, recorte nem reposicione o mapa.",
+      "Mantenha inalterados os tecidos fora das lesões, a anatomia de base e suas cores, os dispositivos como o DIU e seu fio, a logomarca, a marca-d'água, as linhas pretas e os textos de medidas.",
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
     ].join(" "));
