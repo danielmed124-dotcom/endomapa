@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { diagnosticarErroImagem } from "../_shared/erro-imagem-gpt.js";
 
 const ORIGENS = new Set([
   "https://endomapa.pages.dev",
@@ -77,6 +78,8 @@ Deno.serve(async (req) => {
     });
     if (!resposta.ok) {
       const detalhes = await resposta.json().catch(() => null);
+      const diagnostico = diagnosticarErroImagem(detalhes, resposta.headers.get("x-request-id"));
+      if (diagnostico) return responder(diagnostico, 422);
       const motivo = typeof detalhes?.error?.message === "string" ? ` Motivo: ${detalhes.error.message}` : "";
       return responder({ erro: `O GPT recusou a geração (código GPT-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
     }

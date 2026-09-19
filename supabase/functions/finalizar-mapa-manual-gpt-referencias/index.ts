@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { diagnosticarErroImagem } from "../_shared/erro-imagem-gpt.js";
 
 const ORIGENS = new Set(["https://endomapa.pages.dev", "https://experimento-editor-manual.endomapa.pages.dev"]);
 const BASE_PUBLICA = "https://experimento-editor-manual.endomapa.pages.dev";
@@ -85,6 +86,8 @@ Deno.serve(async (req) => {
     const resposta = await fetch("https://api.openai.com/v1/images/edits", { method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario });
     if (!resposta.ok) {
       const detalhes = await resposta.json().catch(() => null);
+      const diagnostico = diagnosticarErroImagem(detalhes, resposta.headers.get("x-request-id"));
+      if (diagnostico) return responder(diagnostico, 422);
       const motivo = typeof detalhes?.error?.message === "string" ? ` Motivo: ${detalhes.error.message}` : "";
       return responder({ erro: `O GPT recusou o teste com referências (código GPT-REF-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
     }
