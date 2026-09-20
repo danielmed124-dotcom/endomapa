@@ -46,12 +46,12 @@
         body: { verificar_conexao: true }, timeout: 20000,
       });
       if (resposta.error) throw resposta.error;
-      if (resposta.data?.conexao_ok !== true || resposta.data?.modelo !== "gpt-image-2") {
+      if (resposta.data?.conexao_ok !== true || resposta.data?.modelo !== "gpt-image-2.5-sunburst") {
         mostrar(estado, "O servidor respondeu, mas não confirmou o acesso ao modelo de imagens da OpenAI. Nenhuma geração foi solicitada.", true);
         return;
       }
       const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(resposta.data.pedido_id || "") ? ` Pedido OpenAI: ${resposta.data.pedido_id}.` : "";
-      mostrar(estado, `Login, servidor do Endomapa, chave da OpenAI e acesso ao modelo gpt-image-2 confirmados.${pedido} Nenhuma imagem foi gerada. Este teste não confirma que uma imagem específica será aceita.`, false);
+      mostrar(estado, `Login, servidor do Endomapa, chave da OpenAI e acesso ao modelo gpt-image-2.5-sunburst confirmados.${pedido} Nenhuma imagem foi gerada. Este teste não confirma que uma imagem específica será aceita.`, false);
     } catch (erro) {
       let detalhe;
       try { detalhe = (await erro.context?.json())?.erro; } catch (_erro) {}
@@ -70,7 +70,7 @@
   async function gerar(provedor, botao) {
     if (!["gemini", "gpt", "gpt-referencias"].includes(provedor) || gerando[provedor]) return;
     const estado = document.querySelector(`[data-estado-realista="${provedor}"]`);
-    const nomeProvedor = provedor === "gemini" ? "Gemini" : provedor === "gpt" ? "GPT" : "GPT com referências";
+    const nomeProvedor = provedor === "gemini" ? "Gemini" : provedor === "gpt" ? "GPT Sunburst" : "GPT com referências";
     if (!document.querySelector(".lesao-editavel")) {
       mostrar(estado, "Adicione pelo menos uma lesão antes de gerar a versão realista.", true);
       return;

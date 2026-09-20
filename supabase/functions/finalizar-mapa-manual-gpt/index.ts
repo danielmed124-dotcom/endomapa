@@ -45,15 +45,15 @@ Deno.serve(async (req) => {
     const controladorTeste = new AbortController();
     const temporizadorTeste = setTimeout(() => controladorTeste.abort(), 15_000);
     try {
-      const respostaTeste = await fetch("https://api.openai.com/v1/models/gpt-image-2", {
+      const respostaTeste = await fetch("https://api.openai.com/v1/models/gpt-image-2.5-sunburst", {
         headers: { Authorization: `Bearer ${chave}` }, signal: controladorTeste.signal,
       });
       const pedido = respostaTeste.headers.get("x-request-id");
       const pedidoId = pedido && /^req_[a-zA-Z0-9_-]{1,180}$/.test(pedido) ? pedido : null;
       if (!respostaTeste.ok) return responder({ erro: `A OpenAI recusou a verificação da chave ou do modelo (código ${respostaTeste.status}).`, pedido_id: pedidoId }, 502);
       const modelo = await respostaTeste.json().catch(() => null);
-      if (modelo?.id !== "gpt-image-2") return responder({ erro: "A OpenAI respondeu, mas não confirmou o modelo de imagens.", pedido_id: pedidoId }, 502);
-      return responder({ conexao_ok: true, modelo: "gpt-image-2", pedido_id: pedidoId });
+      if (modelo?.id !== "gpt-image-2.5-sunburst") return responder({ erro: "A OpenAI respondeu, mas não confirmou o modelo de imagens.", pedido_id: pedidoId }, 502);
+      return responder({ conexao_ok: true, modelo: "gpt-image-2.5-sunburst", pedido_id: pedidoId });
     } catch (_erro) {
       return responder({ erro: "O servidor não conseguiu consultar a OpenAI. Verifique a conexão e tente novamente." }, 502);
     } finally { clearTimeout(temporizadorTeste); }
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
   try {
     const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
-    formulario.append("model", "gpt-image-2");
+    formulario.append("model", "gpt-image-2.5-sunburst");
     formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     formulario.append("quality", "medium");
     // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
