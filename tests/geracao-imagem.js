@@ -23,7 +23,8 @@
     functions: { invoke: async (_nome, pedido) => {
       if (pedido.body.consultar_diagnostico) return { data: { imagem_url: original } };
       if (falhaServidor) return { error: falhaServidor };
-      return { data: { imagem_base64: respostaImagem.split(",")[1], formato: "image/png" } };
+      return { data: { imagem_base64: respostaImagem.split(",")[1], formato: "image/png",
+        ...(_nome.includes("gpt") ? { pedido_id: "req_teste123" } : {}) } };
     } },
   }) };
 
@@ -63,6 +64,7 @@
       for (const provedor of ["gpt", "gpt-referencias", "gemini"]) {
         const texto = await gerar(provedor);
         conferir(texto.includes("A diferença visual média foi de"), `${provedor}: comparação não concluída: ${texto}`);
+        conferir(texto.includes("Pedido OpenAI: req_teste123.") === provedor.includes("gpt"), `${provedor}: identificador da chamada exibido incorretamente.`);
         conferir(!document.querySelector(`[data-resultado-${provedor}]`).hidden, `${provedor}: imagem escondida.`);
         conferir(!document.querySelector("[data-resultado-realista]").hidden, "Comparação escondida.");
         resultados.push(`PASSOU: ${provedor} exibe e compara a imagem com a proteção ativa.`);

@@ -105,10 +105,12 @@
       if (error) throw new Error(await traduzirErro(error));
       if (!data?.imagem_base64 && !data?.imagem_url) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
       const imagemRecebida = data.imagem_url || `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
+      const identificador = provedor !== "gemini" && /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "")
+        ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
       await carregarImagem(imagemRecebida);
       if (provedor !== "gemini") {
         const apagadas = await conferirLesoesVisiveis(composicao, imagemRecebida);
-        if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia foi recusada; sua montagem manual permanece no editor.`);
+        if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia foi recusada; sua montagem manual permanece no editor.${identificador}`);
       }
       if (provedor === "gpt-referencias") {
         imagemGptReferencias.src = imagemRecebida;
@@ -126,7 +128,7 @@
       try {
         comparacao = await compararImagens(composicao, imagemRecebida);
       } catch (_erroComparacao) {
-        mostrar(estado, "A imagem foi recebida e está disponível abaixo, mas a comparação automática falhou. Confira visualmente as lesões, a anatomia e as medidas.", true);
+        mostrar(estado, `A imagem foi recebida e está disponível abaixo, mas a comparação automática falhou. Confira visualmente as lesões, a anatomia e as medidas.${identificador}`, true);
         return;
       }
       const verificacao = comparacao.arquivosIdenticos
@@ -134,7 +136,7 @@
         : comparacao.diferencaVisual < 0.5
           ? `Alerta: o arquivo mudou, mas a diferença visual média foi de apenas ${formatarPercentual(comparacao.diferencaVisual)}%. As imagens são praticamente iguais.`
           : `A diferença visual média foi de ${formatarPercentual(comparacao.diferencaVisual)}%. Esse número não confirma a fidelidade das lesões.`;
-      mostrar(estado, `${verificacao} ${data.aviso || "Compare cuidadosamente as imagens."}`, comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5);
+      mostrar(estado, `${verificacao} ${data.aviso || "Compare cuidadosamente as imagens."}${identificador}`, comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5);
     } catch (erro) {
       const diagnostico = provedor === "gemini" && erro.message === "Failed to fetch"
         ? await consultarDiagnosticoGemini(funcao)

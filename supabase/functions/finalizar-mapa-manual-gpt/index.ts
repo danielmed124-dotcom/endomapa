@@ -97,7 +97,9 @@ Deno.serve(async (req) => {
     const dados = await resposta.json();
     const imagem = dados?.data?.[0]?.b64_json;
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
-    return responder({ imagem_base64: imagem, formato: "image/webp", aviso: "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
+    const identificador = resposta.headers.get("x-request-id");
+    const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
+    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
     if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O GPT demorou mais de dois minutos." }, 504);
     return responder({ erro: "Não foi possível gerar a versão realista com GPT." }, 502);
