@@ -59,6 +59,7 @@ Deno.serve(async (req) => {
     } finally { clearTimeout(temporizadorTeste); }
   }
   const composicao = corpo.composicao_base64;
+  const modoDetalhe = corpo.modo_detalhe === true;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
@@ -75,12 +76,17 @@ Deno.serve(async (req) => {
     formulario.append("model", "gpt-image-2.5-sunburst");
     formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     formulario.append("quality", "medium");
-    // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
-    formulario.append("size", "1056x1408");
+    // A edição local recebe um recorte quadrado ampliado pelo editor.
+    formulario.append("size", modoDetalhe ? "1024x1024" : "1056x1408");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
-    formulario.append("prompt", [
+    formulario.append("prompt", (modoDetalhe ? [
+      "Close de uma ilustração científica de órgãos pélvicos internos, para revisão por médico radiologista. A imagem mostra tecido interno isolado, sem pessoa ou anatomia externa.",
+      "Trabalhe apenas na lesão já visível no centro do recorte e no tecido imediatamente ao seu redor. Integre a lesão ao órgão com iluminação contínua, sombra de contato, reflexos e textura orgânica coerentes nos dois lados da borda. A mudança deve ser claramente visível nesta área ampliada.",
+      "Preserve o tipo, a quantidade, o lado, a posição, a forma, o tamanho, a distribuição, a parede e o conteúdo da lesão. Se houver focos ou ramos separados, mantenha todos separados. Não acrescente nem remova achados.",
+      "Mantenha a anatomia do recorte e qualquer linha ou medida. Não altere áreas distantes da lesão. A imagem será recolocada apenas na área local e revisada pelo médico.",
+    ] : [
       "Ilustração científica de atlas ginecológico para revisão por médico radiologista. A figura mostra somente órgãos pélvicos internos isolados, sem pessoa ou anatomia externa.",
       "A tarefa é integrar visualmente as lesões já presentes à superfície dos órgãos. Trabalhe primeiro nos pontos de contato: crie sombra suave sob cada lesão, reflita a luz do tecido vizinho em sua borda e faça a textura superficial continuar naturalmente entre lesão e órgão.",
       "Nos cistos e nódulos, mantenha a parede e o conteúdo interno reconhecíveis; substitua o brilho e a borda de adesivo por volume orgânico com sombra de contato. Nos focos escuros, mantenha cada foco separado e faça a pigmentação acompanhar a curvatura do tecido. Nas aderências, dê relevo fibroso aos ramos existentes sem criar novas conexões.",
@@ -88,7 +94,7 @@ Deno.serve(async (req) => {
       "Mantenha exatamente a quantidade, o tipo, o lado, o centro, o tamanho e os contornos clínicos de cada lesão, além dos espaços entre focos e ramos. Não crie, apague, agrupe ou desloque achados.",
       "Preserve a anatomia, o enquadramento 3:4, o DIU e seu fio, a logomarca, a marca-d'água e qualquer texto. Fora das lesões e de uma faixa estreita de tecido em seus pontos de contato, mantenha a composição como está.",
       "O resultado é uma prévia experimental que exige comparação e aprovação médica.",
-    ].join(" "));
+    ]).join(" "));
 
     const resposta = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
@@ -105,7 +111,9 @@ Deno.serve(async (req) => {
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
     const identificador = resposta.headers.get("x-request-id");
     const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
-    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
+    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: modoDetalhe
+      ? "Prévia de uma lesão: compare o conteúdo e o contorno com a montagem manual antes de aceitar."
+      : "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
     if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O GPT demorou mais de dois minutos." }, 504);
     return responder({ erro: "Não foi possível gerar a versão realista com GPT." }, 502);

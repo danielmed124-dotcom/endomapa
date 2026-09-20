@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8" />
+<title>Teste da edição local</title>
+<pre id="resultado">PENDENTE</pre>
+<script type="module">
+  import { prepararRecorte, recomporRecorte } from "../detalhe-local.js";
+
+  const saida = document.querySelector("#resultado");
+  try {
+    const mapa = document.createElement("canvas");
+    mapa.width = 320;
+    mapa.height = 420;
+    const contextoMapa = mapa.getContext("2d");
+    contextoMapa.fillStyle = "white";
+    contextoMapa.fillRect(0, 0, mapa.width, mapa.height);
+    const composicao = mapa.toDataURL("image/png");
+
+    const lesaoCanvas = document.createElement("canvas");
+    lesaoCanvas.width = lesaoCanvas.height = 64;
+    const contextoLesao = lesaoCanvas.getContext("2d");
+    contextoLesao.fillStyle = "red";
+    contextoLesao.fillRect(0, 0, 64, 64);
+    const lesao = document.createElement("div");
+    lesao.dataset.x = "50";
+    lesao.dataset.y = "50";
+    lesao.dataset.tamanho = "100";
+    lesao.dataset.eixoX = "100";
+    lesao.dataset.eixoY = "100";
+    lesao.dataset.proporcao = "1";
+    lesao.dataset.giro = "0";
+    lesao.dataset.semRecorte = "false";
+    const imagemLesao = document.createElement("img");
+    imagemLesao.src = lesaoCanvas.toDataURL("image/png");
+    lesao.append(imagemLesao);
+
+    const { imagem: recorte, regiao } = await prepararRecorte(composicao, lesao);
+    if (!recorte.startsWith("data:image/jpeg;base64,")) throw new Error("Recorte não criado.");
+    const gerada = document.createElement("canvas");
+    gerada.width = gerada.height = 1024;
+    const contextoGerada = gerada.getContext("2d");
+    contextoGerada.fillStyle = "green";
+    contextoGerada.fillRect(0, 0, 1024, 1024);
+    const final = await recomporRecorte(composicao, gerada.toDataURL("image/png"), regiao);
+    const imagem = new Image();
+    imagem.src = final;
+    await imagem.decode();
+    const leitura = document.createElement("canvas");
+    leitura.width = 320;
+    leitura.height = 420;
+    const contexto = leitura.getContext("2d");
+    contexto.drawImage(imagem, 0, 0);
+    const pixel = (x, y) => [...contexto.getImageData(x, y, 1, 1).data];
+    const centro = pixel(160, 210);
+    const longe = pixel(10, 10);
+    if (centro[1] < 90 || centro[0] > 80) throw new Error("Lesão central não foi refinada.");
+    if (longe[0] !== 255 || longe[1] !== 255 || longe[2] !== 255) throw new Error("O mapa fora da lesão foi alterado.");
+    saida.textContent = "PASSOU: recorte criado; somente a lesão selecionada recebeu os pixels gerados.";
+  } catch (erro) {
+    saida.textContent = `FALHOU: ${erro.message}`;
+  }
+</script>
+</html>

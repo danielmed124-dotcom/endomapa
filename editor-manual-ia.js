@@ -7,6 +7,8 @@
   const realista = document.querySelector("[data-imagem-realista]");
   const resultadoGpt = document.querySelector("[data-resultado-gpt]");
   const imagemGpt = document.querySelector("[data-imagem-gpt]");
+  const resultadoGptDetalhe = document.querySelector("[data-resultado-gpt-detalhe]");
+  const imagemGptDetalhe = document.querySelector("[data-imagem-gpt-detalhe]");
   const resultadoGptReferencias = document.querySelector("[data-resultado-gpt-referencias]");
   const imagemGptReferencias = document.querySelector("[data-imagem-gpt-referencias]");
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
@@ -15,9 +17,11 @@
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
-  const gerando = { gemini: false, gpt: false, "gpt-referencias": false };
+  const gerando = { gemini: false, gpt: false, "gpt-referencias": false, detalhe: false };
   const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
+  const botaoDetalhe = document.querySelector("[data-gerar-detalhe-gpt]");
   botaoConexao?.addEventListener("click", verificarConexaoGPT);
+  botaoDetalhe?.addEventListener("click", gerarDetalhe);
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
 
   async function verificarConexaoGPT() {
@@ -260,6 +264,58 @@
     const contexto = canvas.getContext("2d");
     contexto.drawImage(imagem, 0, 0, largura, altura);
     return contexto.getImageData(0, 0, largura, altura).data;
+  }
+
+  async function gerarDetalhe() {
+    const estado = document.querySelector("[data-estado-detalhe-gpt]");
+    const lesao = document.querySelector(".lesao-editavel--selecionada");
+    if (!lesao) {
+      mostrar(estado, "Selecione uma lesão no mapa antes de testar a integração local.", true);
+      return;
+    }
+    if (gerando.detalhe) return;
+    if (window.location.protocol === "file:") {
+      mostrar(estado, "Abra o editor publicado e entre na sua conta para testar esta opção.", true);
+      return;
+    }
+    const { data: sessao } = await cliente.auth.getSession();
+    if (!sessao?.session) {
+      mostrar(estado, "Entre na sua conta do Endomapa antes de gerar a imagem.", true);
+      return;
+    }
+    gerando.detalhe = true;
+    botaoDetalhe.disabled = true;
+    botaoDetalhe.textContent = "Refinando a lesão selecionada...";
+    resultadoGptDetalhe.hidden = true;
+    mostrar(estado, "Ampliando a lesão selecionada para o GPT Sunburst. Esta geração usa uma chamada paga.", false);
+    try {
+      const composicao = await window.endomapaCapturarMapaManual();
+      const { prepararRecorte, recomporRecorte } = await import("./detalhe-local.js");
+      const { imagem, regiao } = await prepararRecorte(composicao, lesao);
+      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gpt", {
+        body: { composicao_base64: imagem.split(",")[1], modo_detalhe: true },
+      });
+      if (error) throw new Error(await traduzirErro(error));
+      if (!data?.imagem_base64) throw new Error("O GPT terminou sem devolver o detalhe da lesão.");
+      const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "")
+        ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
+      const detalhe = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+      const imagemFinal = await recomporRecorte(composicao, detalhe, regiao);
+      const apagadas = await conferirLesoesVisiveis(composicao, imagemFinal);
+      if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia local foi recusada.${pedido}`);
+      original.src = composicao;
+      imagemGptDetalhe.src = imagemFinal;
+      resultadoGptDetalhe.hidden = false;
+      resultado.hidden = false;
+      resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+      mostrar(estado, `O GPT refinou somente a lesão selecionada e sua borda imediata. Confira contorno, conteúdo e tamanho antes de aceitar.${pedido}`, false);
+    } catch (erro) {
+      mostrar(estado, await traduzirErro(erro), true);
+    } finally {
+      gerando.detalhe = false;
+      botaoDetalhe.disabled = false;
+      botaoDetalhe.textContent = "Testar integração de 1 lesão selecionada · cobra 1 imagem";
+    }
   }
 
   async function conferirLesoesVisiveis(composicao, gerada) {

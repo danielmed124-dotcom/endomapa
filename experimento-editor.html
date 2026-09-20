@@ -115,6 +115,8 @@
         </div>
         <button class="botao" type="button" data-gerar-realista="gemini">Gerar versão realista com Gemini</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt">Gerar com GPT Sunburst · custo maior</button>
+        <button class="botao botao--secundario" type="button" data-gerar-detalhe-gpt>Testar integração de 1 lesão selecionada · cobra 1 imagem</button>
+        <p class="mensagem-formulario" data-estado-detalhe-gpt role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-verificar-conexao-gpt>Verificar chave da OpenAI</button>
         <p class="mensagem-formulario" data-estado-conexao-gpt role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt-referencias">Testar GPT com referências</button>
@@ -180,6 +182,10 @@
             <img data-imagem-gpt alt="Versão realista experimental criada pelo GPT" />
             <figcaption>Versão GPT Sunburst · ainda não aprovada</figcaption>
           </figure>
+          <figure class="mapa-visual" data-resultado-gpt-detalhe hidden>
+            <img data-imagem-gpt-detalhe alt="Mapa com uma lesão refinada localmente pelo GPT" />
+            <figcaption>Teste local de uma lesão · ainda não aprovado</figcaption>
+          </figure>
           <figure class="mapa-visual" data-resultado-gpt-referencias hidden>
             <img data-imagem-gpt-referencias alt="Versão experimental criada pelo GPT com referências visuais" />
             <figcaption>GPT com referências · ainda não aprovado</figcaption>
@@ -194,6 +200,6 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=painel-recolhivel-1"></script>
-    <script src="editor-manual-ia.js?v=gpt-sunburst-1"></script>
+    <script src="editor-manual-ia.js?v=detalhe-local-1"></script>
   </body>
 </html>
