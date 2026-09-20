@@ -2,6 +2,7 @@
   "use strict";
   const camada = document.querySelector("[data-camada-editor]");
   const controles = document.querySelector("[data-controles-lesao]");
+  const alternarControles = document.querySelector("[data-alternar-controles]");
   const mensagem = document.querySelector("[data-mensagem-editor]");
   const giro = document.querySelector("[data-controle-giro]");
   const tamanho = document.querySelector("[data-controle-tamanho]");
@@ -11,6 +12,17 @@
   let selecionada = null;
   let proximoId = 1;
   if (!camada || !controles) return;
+
+  alternarControles?.addEventListener("click", function () {
+    definirControlesRecolhidos(!controles.classList.contains("controles-lesao--recolhido"));
+  });
+
+  function definirControlesRecolhidos(recolhido) {
+    if (!alternarControles) return;
+    controles.classList.toggle("controles-lesao--recolhido", recolhido);
+    alternarControles.setAttribute("aria-expanded", String(!recolhido));
+    alternarControles.textContent = recolhido ? "Mostrar ajustes" : "Recolher";
+  }
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     botao.addEventListener("click", function () {
@@ -79,6 +91,7 @@
   }
 
   function selecionar(lesao) {
+    if (selecionada !== lesao) definirControlesRecolhidos(false);
     camada.querySelectorAll(".lesao-editavel").forEach(function (item) {
       item.classList.toggle("lesao-editavel--selecionada", item === lesao);
     });

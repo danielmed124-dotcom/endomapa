@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17201a" />
     <title>Editor manual | Endomapa</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles.css?v=painel-recolhivel-1" />
   </head>
   <body>
     <main class="editor-manual">
@@ -104,7 +104,9 @@
         <div class="controles-lesao__topo">
           <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
           <strong data-nome-lesao>Lesão selecionada</strong>
+          <button class="controles-lesao__alternar" type="button" data-alternar-controles aria-expanded="true" aria-controls="conteudo-controles-lesao">Recolher</button>
         </div>
+        <div class="controles-lesao__conteudo" id="conteudo-controles-lesao">
         <div class="controles-lesao__atalhos" aria-label="Ajustes rápidos">
           <button type="button" data-girar="-10" aria-label="Girar para a esquerda">↶<span>Esquerda</span></button>
           <button type="button" data-girar="10" aria-label="Girar para a direita">↷<span>Direita</span></button>
@@ -155,6 +157,7 @@
           </label>
         </fieldset>
         <button class="botao botao--perigo" type="button" data-remover-lesao>Excluir esta lesão</button>
+        </div>
       </section>
 
       <div class="acoes editor-manual__acoes">
@@ -190,7 +193,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="editor-manual.js"></script>
+    <script src="editor-manual.js?v=painel-recolhivel-1"></script>
     <script src="editor-manual-ia.js?v=verificar-chave-openai-1"></script>
   </body>
 </html>
