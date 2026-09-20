@@ -289,7 +289,7 @@
   function mostrar(texto) { mensagem.textContent = texto; }
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
 
-  async function capturarMapa() {
+  async function capturarMapa(opcoes = {}) {
     const base = await carregarImagem("assets/mapa-base-coronal.png");
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
@@ -311,6 +311,31 @@
         contexto.beginPath();
         contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
         contexto.clip();
+      }
+      if (opcoes.miomaIntegradoId === lesao.dataset.id && lesao.dataset.nome.startsWith("Mioma")) {
+        // A sombra é isolada em outra camada para preservar até os pixels translúcidos do mioma.
+        const margem = Math.ceil(Math.max(20, largura * 0.35));
+        const sombra = document.createElement("canvas");
+        sombra.width = Math.ceil(largura + 2 * margem);
+        sombra.height = Math.ceil(altura + 2 * margem);
+        const contextoSombra = sombra.getContext("2d");
+        contextoSombra.shadowColor = "rgba(69, 27, 24, 0.72)";
+        contextoSombra.shadowBlur = Math.max(7, largura * 0.14);
+        contextoSombra.shadowOffsetX = Math.max(1, largura * 0.015);
+        contextoSombra.shadowOffsetY = Math.max(2, altura * 0.06);
+        contextoSombra.drawImage(imagem, margem, margem, largura, altura);
+        const mascara = document.createElement("canvas");
+        mascara.width = sombra.width;
+        mascara.height = sombra.height;
+        const contextoMascara = mascara.getContext("2d");
+        contextoMascara.drawImage(imagem, margem, margem, largura, altura);
+        const pixelsSombra = contextoSombra.getImageData(0, 0, sombra.width, sombra.height);
+        const pixelsMascara = contextoMascara.getImageData(0, 0, sombra.width, sombra.height).data;
+        for (let indice = 3; indice < pixelsSombra.data.length; indice += 4) {
+          if (pixelsMascara[indice] > 0) pixelsSombra.data[indice] = 0;
+        }
+        contextoSombra.putImageData(pixelsSombra, 0, 0);
+        contexto.drawImage(sombra, -largura / 2 - margem, -altura / 2 - margem);
       }
       contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
       contexto.restore();

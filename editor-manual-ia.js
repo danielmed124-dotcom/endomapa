@@ -9,8 +9,12 @@
   const imagemGpt = document.querySelector("[data-imagem-gpt]");
   const resultadoGeminiDetalhe = document.querySelector("[data-resultado-gemini-detalhe]");
   const imagemGeminiDetalhe = document.querySelector("[data-imagem-gemini-detalhe]");
+  const resultadoMioma = document.querySelector("[data-resultado-mioma]");
+  const imagemMioma = document.querySelector("[data-imagem-mioma]");
   const resultadoGptReferencias = document.querySelector("[data-resultado-gpt-referencias]");
   const imagemGptReferencias = document.querySelector("[data-imagem-gpt-referencias]");
+  const botaoPreviaMioma = document.querySelector("[data-previa-mioma]");
+  botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
   const cliente = window.supabase.createClient(
@@ -265,6 +269,54 @@
     const contexto = canvas.getContext("2d");
     contexto.drawImage(imagem, 0, 0, largura, altura);
     return contexto.getImageData(0, 0, largura, altura).data;
+  }
+
+  async function gerarPreviaMioma() {
+    const estado = document.querySelector("[data-estado-previa-mioma]");
+    const lesao = document.querySelector(".lesao-editavel--selecionada");
+    if (!lesao?.dataset.nome.startsWith("Mioma")) {
+      mostrar(estado, "Selecione um mioma no mapa para comparar a integração gratuita.", true);
+      return;
+    }
+    botaoPreviaMioma.disabled = true;
+    mostrar(estado, "Preparando as duas imagens no navegador, sem chamar a API.", false);
+    try {
+      const composicao = await window.endomapaCapturarMapaManual();
+      const integrada = await window.endomapaCapturarMapaManual({ miomaIntegradoId: lesao.dataset.id });
+      const [antesAmpliado, depoisAmpliado] = await Promise.all([
+        ampliarMioma(composicao, lesao), ampliarMioma(integrada, lesao),
+      ]);
+      original.src = composicao;
+      imagemMioma.src = integrada;
+      document.querySelector("[data-mioma-antes-ampliado]").src = antesAmpliado;
+      document.querySelector("[data-mioma-depois-ampliado]").src = depoisAmpliado;
+      document.querySelector("[data-comparacao-mioma-ampliada]").hidden = false;
+      resultadoMioma.hidden = false;
+      resultado.hidden = false;
+      const alternarControles = document.querySelector("[data-alternar-controles]");
+      if (alternarControles?.getAttribute("aria-expanded") === "true") alternarControles.click();
+      document.querySelector("[data-comparacao-mioma-ampliada]").scrollIntoView({ behavior: "smooth", block: "start" });
+      mostrar(estado, "Prévia gratuita pronta. Compare a borda do mioma e o tecido adjacente. A lesão não foi redesenhada e sua montagem manual permanece no editor.", false);
+    } catch (erro) {
+      mostrar(estado, erro.message || "Não foi possível montar a prévia gratuita.", true);
+    } finally {
+      botaoPreviaMioma.disabled = false;
+    }
+  }
+
+  async function ampliarMioma(src, lesao) {
+    const imagem = await carregarImagem(src);
+    const x = imagem.naturalWidth * Number(lesao.dataset.x) / 100;
+    const y = imagem.naturalHeight * Number(lesao.dataset.y) / 100;
+    const largura = imagem.naturalWidth * 0.13 * Number(lesao.dataset.tamanho) / 100 * Number(lesao.dataset.eixoX) / 100;
+    const altura = imagem.naturalWidth * 0.13 / Number(lesao.dataset.proporcao || 1.8) * Number(lesao.dataset.tamanho) / 100 * Number(lesao.dataset.eixoY) / 100;
+    const lado = Math.min(Math.max(150, Math.max(largura, altura) * 2.4), imagem.naturalWidth, imagem.naturalHeight);
+    const esquerda = Math.min(Math.max(0, x - lado / 2), imagem.naturalWidth - lado);
+    const topo = Math.min(Math.max(0, y - lado / 2), imagem.naturalHeight - lado);
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 420;
+    canvas.getContext("2d").drawImage(imagem, esquerda, topo, lado, lado, 0, 0, 420, 420);
+    return canvas.toDataURL("image/png");
   }
 
   async function gerarDetalhe() {

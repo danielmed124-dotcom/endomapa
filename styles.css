@@ -1850,6 +1850,10 @@ h1 span {
   gap: 14px;
 }
 
+.resultado-editor-ia__grade[hidden] {
+  display: none;
+}
+
 @media (min-width: 600px) {
   .resultado-editor-ia__grade {
     grid-template-columns: 1fr 1fr;

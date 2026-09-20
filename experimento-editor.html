@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17201a" />
     <title>Editor manual | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=painel-recolhivel-1" />
+    <link rel="stylesheet" href="styles.css?v=previa-mioma-1" />
   </head>
   <body>
     <main class="editor-manual">
@@ -113,6 +113,8 @@
           <button type="button" data-redimensionar="-10" aria-label="Diminuir lesão">−<span>Diminuir</span></button>
           <button type="button" data-redimensionar="10" aria-label="Aumentar lesão">+<span>Aumentar</span></button>
         </div>
+        <button class="botao" type="button" data-previa-mioma>Prévia gratuita: integrar mioma selecionado</button>
+        <p class="mensagem-formulario" data-estado-previa-mioma role="status" hidden></p>
         <p class="mensagem-formulario" role="status">Gerações experimentais pausadas: os resultados não melhoraram visivelmente o mapa. A montagem manual continua disponível sem custo de geração.</p>
         <button class="botao" type="button" data-gerar-realista="gemini" disabled>Gemini · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt" disabled>GPT Sunburst · pausado</button>
@@ -187,9 +189,23 @@
             <img data-imagem-gemini-detalhe alt="Mapa com uma lesão refinada localmente pelo Gemini" />
             <figcaption>Teste local Gemini · ainda não aprovado</figcaption>
           </figure>
+          <figure class="mapa-visual" data-resultado-mioma hidden>
+            <img data-imagem-mioma alt="Prévia do mioma com sombra de contato no tecido adjacente" />
+            <figcaption>Integração gratuita do mioma · prévia para avaliação</figcaption>
+          </figure>
           <figure class="mapa-visual" data-resultado-gpt-referencias hidden>
             <img data-imagem-gpt-referencias alt="Versão experimental criada pelo GPT com referências visuais" />
             <figcaption>GPT com referências · ainda não aprovado</figcaption>
+          </figure>
+        </div>
+        <div class="resultado-editor-ia__grade" data-comparacao-mioma-ampliada hidden>
+          <figure class="mapa-visual">
+            <img data-mioma-antes-ampliado alt="Mioma original ampliado com o tecido ao redor" />
+            <figcaption>Mioma antes · ampliação para comparar a borda</figcaption>
+          </figure>
+          <figure class="mapa-visual">
+            <img data-mioma-depois-ampliado alt="Mioma ampliado com sombra de contato ao redor" />
+            <figcaption>Mioma com integração gratuita · ampliação</figcaption>
           </figure>
         </div>
       </section>
@@ -200,7 +216,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="editor-manual.js?v=painel-recolhivel-1"></script>
-    <script src="editor-manual-ia.js?v=detalhe-gemini-1"></script>
+    <script src="editor-manual.js?v=previa-mioma-1"></script>
+    <script src="editor-manual-ia.js?v=previa-mioma-1"></script>
   </body>
 </html>

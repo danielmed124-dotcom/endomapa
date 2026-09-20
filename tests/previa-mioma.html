@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8" />
+<title>Teste da prévia gratuita do mioma</title>
+<pre id="resultado">PENDENTE</pre>
+<iframe src="../experimento-editor.html" style="width:1100px;height:900px"></iframe>
+<script>
+  const saida = document.querySelector("#resultado");
+  const iframe = document.querySelector("iframe");
+  const esperar = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
+  iframe.onload = async () => {
+    try {
+      const pagina = iframe.contentDocument;
+      pagina.querySelector('[data-nome="Mioma 1"]').click();
+      pagina.querySelector("[data-previa-mioma]").click();
+      for (let tentativa = 0; tentativa < 60; tentativa++) {
+        if (!pagina.querySelector("[data-resultado-mioma]").hidden) break;
+        await esperar(100);
+      }
+      if (pagina.querySelector("[data-resultado-mioma]").hidden) {
+        throw new Error(pagina.querySelector("[data-estado-previa-mioma]").textContent || "A prévia não apareceu.");
+      }
+      const imagens = [
+        pagina.querySelector("[data-imagem-original]"),
+        pagina.querySelector("[data-imagem-mioma]"),
+      ].map((imagem) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = imagem.naturalWidth; canvas.height = imagem.naturalHeight;
+        const contexto = canvas.getContext("2d"); contexto.drawImage(imagem, 0, 0);
+        return contexto;
+      });
+      const [antes, depois] = imagens;
+      const igual = (x, y) => {
+        const a = antes.getImageData(x, y, 1, 1).data;
+        const b = depois.getImageData(x, y, 1, 1).data;
+        return a.every((valor, indice) => valor === b[indice]);
+      };
+      if (!igual(10, 10)) throw new Error("Uma região distante do mioma mudou.");
+      const largura = antes.canvas.width, altura = antes.canvas.height;
+      const centroX = Math.round(largura * 0.44), centroY = Math.round(altura * 0.45);
+      if (!igual(centroX, centroY)) throw new Error("O centro do mioma foi alterado.");
+      let mudouNaBorda = false;
+      for (let y = centroY - 55; y <= centroY + 55; y += 2) {
+        for (let x = centroX - 55; x <= centroX + 55; x += 2) {
+          if (!igual(x, y)) { mudouNaBorda = true; break; }
+        }
+        if (mudouNaBorda) break;
+      }
+      if (!mudouNaBorda) throw new Error("A sombra não apareceu perto do mioma.");
+      if (pagina.querySelector("[data-comparacao-mioma-ampliada]").hidden ||
+          !pagina.querySelector("[data-mioma-antes-ampliado]").src.startsWith("data:image/png") ||
+          !pagina.querySelector("[data-mioma-depois-ampliado]").src.startsWith("data:image/png")) {
+        throw new Error("A comparação ampliada não apareceu.");
+      }
+      pagina.querySelector("[data-resultado-realista]").scrollIntoView({ block: "start" });
+      saida.textContent = "PASSOU: prévia criada sem API; borda alterada; centro do mioma e área distante preservados.";
+    } catch (erro) {
+      saida.textContent = `FALHOU: ${erro.message}`;
+    }
+  };
+</script>
+</html>
