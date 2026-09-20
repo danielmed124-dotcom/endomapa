@@ -14,10 +14,8 @@
   const resultadoGptReferencias = document.querySelector("[data-resultado-gpt-referencias]");
   const imagemGptReferencias = document.querySelector("[data-imagem-gpt-referencias]");
   const botaoPreviaMioma = document.querySelector("[data-previa-mioma]");
-  const botaoPrepararRegioes = document.querySelector("[data-preparar-regioes]");
   const botaoGerarRegioes = document.querySelector("[data-gerar-regioes]");
   const estadoRegioes = document.querySelector("[data-estado-regioes]");
-  let planoRegioes = null;
   botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
@@ -25,51 +23,38 @@
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
-  botaoPrepararRegioes?.addEventListener("click", prepararRegioes);
   botaoGerarRegioes?.addEventListener("click", gerarRegioes);
 
   function assinaturaMapa() {
     return JSON.stringify([...document.querySelectorAll(".lesao-editavel")].map((lesao) => ({ ...lesao.dataset })));
   }
 
-  async function prepararRegioes() {
-    botaoGerarRegioes.disabled = true;
-    planoRegioes = null;
-    try {
-      const { planejarRegioes } = await import("./mapa-regioes.js");
-      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
-      const imagem = await carregarImagem(composicao);
-      const regioes = planejarRegioes(document.querySelectorAll(".lesao-editavel"), imagem.naturalWidth, imagem.naturalHeight);
-      planoRegioes = { composicao, regioes, assinatura: assinaturaMapa() };
-      const nomes = regioes.map((regiao, indice) => `${indice + 1}: ${regiao.nomes.join(", ")}`).join("; ");
-      mostrar(estadoRegioes, `Nenhuma imagem foi gerada e nenhuma lesão mudou. Para criar a prévia com a referência aprovada, use o botão pago abaixo. Serão ${regioes.length} ${regioes.length === 1 ? "geração" : "gerações"} se todas as regiões forem enviadas. Regiões: ${nomes}.`, false);
-      botaoGerarRegioes.disabled = false;
-    } catch (erro) {
-      mostrar(estadoRegioes, erro.message || "Não foi possível preparar as regiões.", true);
-    }
-  }
-
   async function gerarRegioes() {
-    if (!planoRegioes || botaoGerarRegioes.disabled) return;
-    if (planoRegioes.assinatura !== assinaturaMapa()) {
-      botaoGerarRegioes.disabled = true;
-      mostrar(estadoRegioes, "O mapa mudou. Prepare novamente para conferir a quantidade de chamadas pagas.", true);
-      return;
-    }
+    if (botaoGerarRegioes.disabled) return;
     if (window.location.protocol === "file:") {
       mostrar(estadoRegioes, "Abra o editor publicado para gerar com sua conta do Endomapa.", true);
       return;
     }
-    const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
-    if (erroSessao || !sessao?.session) {
-      mostrar(estadoRegioes, "Entre na sua conta do Endomapa antes de gerar.", true);
-      return;
-    }
     botaoGerarRegioes.disabled = true;
-    const { recortarRegiao, montarRegioes } = await import("./mapa-regioes.js");
     const respostas = [];
     const ids = [];
+    let composicao = null;
+    let assinatura = null;
+    let montarRegioes = null;
     try {
+      const ferramentas = await import("./mapa-regioes.js");
+      const { planejarRegioes, recortarRegiao } = ferramentas;
+      montarRegioes = ferramentas.montarRegioes;
+      const lesoes = document.querySelectorAll(".lesao-editavel");
+      if (!lesoes.length) throw new Error("Adicione pelo menos uma lesão ao mapa antes de gerar.");
+      const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
+      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa antes de gerar.");
+      mostrar(estadoRegioes, "Preparando o mapa e localizando as lesões...", false);
+      composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
+      const imagemOriginal = await carregarImagem(composicao);
+      const regioes = planejarRegioes(lesoes, imagemOriginal.naturalWidth, imagemOriginal.naturalHeight);
+      assinatura = assinaturaMapa();
+      const planoRegioes = { composicao, regioes };
       for (let indice = 0; indice < planoRegioes.regioes.length; indice++) {
         const regiao = planoRegioes.regioes[indice];
         mostrar(estadoRegioes, `Gerando região ${indice + 1} de ${planoRegioes.regioes.length}. As regiões seguintes só serão enviadas se esta mudar visivelmente.`, false);
@@ -86,19 +71,32 @@
         respostas.push({ regiao, imagem });
         if (data.pedido_id) ids.push(data.pedido_id);
       }
-      const montagem = await montarRegioes(planoRegioes.composicao, respostas);
+      if (assinatura !== assinaturaMapa()) throw new Error("As lesões foram alteradas durante a geração. A montagem final foi interrompida para evitar medidas incorretas.");
+      const montagem = await montarRegioes(composicao, respostas);
       const final = await window.endomapaAdicionarRotulos(montagem);
       original.src = await window.endomapaCapturarMapaManual();
       document.querySelector("[data-imagem-regioes]").src = final;
+      document.querySelector("[data-legenda-regioes]").textContent = "Mapa final por regiões · exige revisão médica";
       document.querySelector("[data-resultado-regioes]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
       mostrar(estadoRegioes, `Mapa completo gerado com ${respostas.length} ${respostas.length === 1 ? "região" : "regiões"}. Confira tipo, posição, tamanho e quantidade de cada lesão antes de usar. Pedidos: ${ids.join(", ") || "não informados"}.`, false);
     } catch (erro) {
-      mostrar(estadoRegioes, `${erro.message} ${respostas.length} ${respostas.length === 1 ? "região foi gerada" : "regiões foram geradas"}; nenhuma outra chamada será feita. Pedidos: ${ids.join(", ") || "não informados"}.`, true);
+      let parcial = "";
+      if (respostas.length && composicao && montarRegioes && assinatura === assinaturaMapa()) {
+        try {
+          const montagem = await montarRegioes(composicao, respostas);
+          document.querySelector("[data-imagem-regioes]").src = await window.endomapaAdicionarRotulos(montagem);
+          document.querySelector("[data-legenda-regioes]").textContent = "Resultado parcial · algumas regiões não foram geradas";
+          original.src = await window.endomapaCapturarMapaManual();
+          document.querySelector("[data-resultado-regioes]").hidden = false;
+          resultado.hidden = false;
+          parcial = " As regiões concluídas estão visíveis na comparação como resultado parcial.";
+        } catch (_erroMontagem) {}
+      }
+      mostrar(estadoRegioes, `${erro.message} ${respostas.length} ${respostas.length === 1 ? "região foi gerada" : "regiões foram geradas"}; nenhuma outra chamada será feita.${parcial} Pedidos: ${ids.join(", ") || "não informados"}.`, true);
     } finally {
-      planoRegioes = null;
-      botaoGerarRegioes.disabled = true;
+      botaoGerarRegioes.disabled = false;
     }
   }
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false, detalhe: false };

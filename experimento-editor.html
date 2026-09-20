@@ -120,10 +120,6 @@
         </div>
         <button class="botao" type="button" data-previa-mioma>Prévia gratuita: integrar mioma selecionado</button>
         <p class="mensagem-formulario" data-estado-previa-mioma role="status" hidden></p>
-        <p class="mensagem-formulario" role="status">A preparação apenas conta os recortes: não muda as lesões. A geração usa <a href="output/estudos-realismo/mapa-realista-completo-estudo-v1.png" target="_blank" rel="noopener">o mapa que você aprovou</a> como referência visual e cobra uma chamada por região. O resultado pode variar e exige sua revisão.</p>
-        <button class="botao" type="button" data-preparar-regioes>Contar recortes e custo · sem gerar imagem</button>
-        <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
-        <button class="botao botao--secundario" type="button" data-gerar-regioes disabled>Gerar lesões com referência aprovada · pago</button>
         <button class="botao" type="button" data-gerar-realista="gemini" disabled>Gemini · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt" disabled>GPT Sunburst · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-detalhe-gemini disabled>Teste de 1 lesão com Gemini · pausado</button>
@@ -174,6 +170,8 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
+        <button class="botao" type="button" data-gerar-regioes>Gerar mapa final realista · pago</button>
+        <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao ditado</a>
       </div>
@@ -195,7 +193,7 @@
           </figure>
           <figure class="mapa-visual" data-resultado-regioes hidden>
             <img data-imagem-regioes alt="Mapa completo com regiões integradas experimentalmente" />
-            <figcaption>Mapa completo por regiões · exige revisão médica</figcaption>
+            <figcaption data-legenda-regioes>Mapa final por regiões · exige revisão médica</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-gemini-detalhe hidden>
             <img data-imagem-gemini-detalhe alt="Mapa com uma lesão refinada localmente pelo Gemini" />
@@ -229,6 +227,6 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=regioes-1"></script>
-    <script src="editor-manual-ia.js?v=regioes-2"></script>
+    <script src="editor-manual-ia.js?v=mapa-final-1"></script>
   </body>
 </html>
