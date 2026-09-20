@@ -25,7 +25,7 @@
     const estado = document.querySelector("[data-estado-conexao-gpt]");
     botaoConexao.disabled = true;
     let etapa = "login";
-    mostrar(estado, "Verificando login e conexão. Nenhuma imagem será gerada.", false);
+    mostrar(estado, "Verificando login, chave da OpenAI e acesso ao modelo. Nenhuma imagem será gerada.", false);
     try {
       if (window.location.protocol === "file:") {
         mostrar(estado, "Abra o editor no site do Endomapa para verificar a conexão.", true);
@@ -46,11 +46,12 @@
         body: { verificar_conexao: true }, timeout: 20000,
       });
       if (resposta.error) throw resposta.error;
-      if (resposta.data?.conexao_ok !== true) {
-        mostrar(estado, "O servidor respondeu, mas não confirmou esta verificação. Nenhuma geração foi solicitada.", true);
+      if (resposta.data?.conexao_ok !== true || resposta.data?.modelo !== "gpt-image-2") {
+        mostrar(estado, "O servidor respondeu, mas não confirmou o acesso ao modelo de imagens da OpenAI. Nenhuma geração foi solicitada.", true);
         return;
       }
-      mostrar(estado, "Login e conexão com o servidor do Endomapa confirmados. Nenhuma imagem foi enviada à OpenAI e nenhum crédito de geração foi usado. Este teste não confirma a aceitação de uma imagem pelo GPT.", false);
+      const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(resposta.data.pedido_id || "") ? ` Pedido OpenAI: ${resposta.data.pedido_id}.` : "";
+      mostrar(estado, `Login, servidor do Endomapa, chave da OpenAI e acesso ao modelo gpt-image-2 confirmados.${pedido} Nenhuma imagem foi gerada. Este teste não confirma que uma imagem específica será aceita.`, false);
     } catch (erro) {
       let detalhe;
       try { detalhe = (await erro.context?.json())?.erro; } catch (_erro) {}

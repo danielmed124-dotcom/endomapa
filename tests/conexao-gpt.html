@@ -5,7 +5,7 @@
 <p data-estado-conexao-gpt hidden></p>
 <pre id="resultado">PENDENTE</pre>
 <script>
-let sessaoTeste = {}, erroLogin = null, erroServidor = null, respostaTeste = {conexao_ok:true};
+let sessaoTeste = {}, erroLogin = null, erroServidor = null, respostaTeste = {conexao_ok:true,modelo:'gpt-image-2',pedido_id:'req_teste123'};
 let verificacoes = 0, geracoes = 0;
 window.ENDOMAPA_SUPABASE = {projectUrl:'teste',publicAnonKey:'teste'};
 window.supabase = {createClient:()=>({
@@ -44,10 +44,11 @@ window.addEventListener('load',async()=>{
     erroServidor={name:'FunctionsFetchError',message:'Failed to fetch'};
     conferir((await verificar()).includes('resposta legível'),'Falha imediata de conexão');
     erroServidor=null;
-    conferir((await verificar()).includes('Login e conexão com o servidor do Endomapa confirmados'),'Conexão válida');
+    const confirmado=await verificar();
+    conferir(confirmado.includes('chave da OpenAI e acesso ao modelo gpt-image-2 confirmados')&&confirmado.includes('req_teste123'),'Conexão válida');
     respostaTeste={};
     conferir((await verificar()).includes('não confirmou'),'Resposta antiga não pode confirmar sucesso');
-    respostaTeste={conexao_ok:true};
+    respostaTeste={conexao_ok:true,modelo:'gpt-image-2',pedido_id:'req_teste123'};
     const antes=verificacoes;
     const espera=verificar(); botao.click(); await espera;
     conferir(verificacoes===antes+1,'Dois cliques geraram verificações duplicadas');

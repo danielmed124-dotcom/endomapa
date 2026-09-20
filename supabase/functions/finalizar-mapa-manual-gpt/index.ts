@@ -40,8 +40,24 @@ Deno.serve(async (req) => {
 
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
-  // Consulta gratuita: termina antes da reserva e de qualquer chamada à OpenAI.
-  if (corpo.verificar_conexao === true) return responder({ conexao_ok: true });
+  // Confere a chave e o acesso ao modelo sem reservar geração nem enviar imagem.
+  if (corpo.verificar_conexao === true) {
+    const controladorTeste = new AbortController();
+    const temporizadorTeste = setTimeout(() => controladorTeste.abort(), 15_000);
+    try {
+      const respostaTeste = await fetch("https://api.openai.com/v1/models/gpt-image-2", {
+        headers: { Authorization: `Bearer ${chave}` }, signal: controladorTeste.signal,
+      });
+      const pedido = respostaTeste.headers.get("x-request-id");
+      const pedidoId = pedido && /^req_[a-zA-Z0-9_-]{1,180}$/.test(pedido) ? pedido : null;
+      if (!respostaTeste.ok) return responder({ erro: `A OpenAI recusou a verificação da chave ou do modelo (código ${respostaTeste.status}).`, pedido_id: pedidoId }, 502);
+      const modelo = await respostaTeste.json().catch(() => null);
+      if (modelo?.id !== "gpt-image-2") return responder({ erro: "A OpenAI respondeu, mas não confirmou o modelo de imagens.", pedido_id: pedidoId }, 502);
+      return responder({ conexao_ok: true, modelo: "gpt-image-2", pedido_id: pedidoId });
+    } catch (_erro) {
+      return responder({ erro: "O servidor não conseguiu consultar a OpenAI. Verifique a conexão e tente novamente." }, 502);
+    } finally { clearTimeout(temporizadorTeste); }
+  }
   const composicao = corpo.composicao_base64;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
