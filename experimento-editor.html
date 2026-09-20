@@ -120,10 +120,10 @@
         </div>
         <button class="botao" type="button" data-previa-mioma>Prévia gratuita: integrar mioma selecionado</button>
         <p class="mensagem-formulario" data-estado-previa-mioma role="status" hidden></p>
-        <p class="mensagem-formulario" role="status">Os testes antigos de imagem inteira estão pausados. O novo teste prepara regiões ampliadas e informa o número de chamadas pagas antes da geração.</p>
-        <button class="botao" type="button" data-preparar-regioes>Preparar mapa completo por regiões · grátis</button>
+        <p class="mensagem-formulario" role="status">A preparação apenas conta os recortes: não muda as lesões. A geração usa <a href="output/estudos-realismo/mapa-realista-completo-estudo-v1.png" target="_blank" rel="noopener">o mapa que você aprovou</a> como referência visual e cobra uma chamada por região. O resultado pode variar e exige sua revisão.</p>
+        <button class="botao" type="button" data-preparar-regioes>Contar recortes e custo · sem gerar imagem</button>
         <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
-        <button class="botao botao--secundario" type="button" data-gerar-regioes disabled>Gerar mapa completo por regiões · chamadas pagas</button>
+        <button class="botao botao--secundario" type="button" data-gerar-regioes disabled>Gerar lesões com referência aprovada · pago</button>
         <button class="botao" type="button" data-gerar-realista="gemini" disabled>Gemini · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt" disabled>GPT Sunburst · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-detalhe-gemini disabled>Teste de 1 lesão com Gemini · pausado</button>
@@ -229,6 +229,6 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=regioes-1"></script>
-    <script src="editor-manual-ia.js?v=regioes-1"></script>
+    <script src="editor-manual-ia.js?v=regioes-2"></script>
   </body>
 </html>

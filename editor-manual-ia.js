@@ -42,7 +42,7 @@
       const regioes = planejarRegioes(document.querySelectorAll(".lesao-editavel"), imagem.naturalWidth, imagem.naturalHeight);
       planoRegioes = { composicao, regioes, assinatura: assinaturaMapa() };
       const nomes = regioes.map((regiao, indice) => `${indice + 1}: ${regiao.nomes.join(", ")}`).join("; ");
-      mostrar(estadoRegioes, `Mapa preparado: ${regioes.length} ${regioes.length === 1 ? "geração paga" : "gerações pagas"}. Regiões: ${nomes}. A prévia exige revisão médica.`, false);
+      mostrar(estadoRegioes, `Nenhuma imagem foi gerada e nenhuma lesão mudou. Para criar a prévia com a referência aprovada, use o botão pago abaixo. Serão ${regioes.length} ${regioes.length === 1 ? "geração" : "gerações"} se todas as regiões forem enviadas. Regiões: ${nomes}.`, false);
       botaoGerarRegioes.disabled = false;
     } catch (erro) {
       mostrar(estadoRegioes, erro.message || "Não foi possível preparar as regiões.", true);

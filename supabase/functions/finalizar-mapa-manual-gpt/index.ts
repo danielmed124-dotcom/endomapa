@@ -70,6 +70,23 @@ Deno.serve(async (req) => {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
 
+  // A referência aprovada é pública e fixa; obtê-la antes da reserva evita gastar
+  // uma geração caso o arquivo não esteja disponível.
+  let referenciaAprovada: Uint8Array | null = null;
+  if (modoRegiao) {
+    try {
+      const respostaReferencia = await fetch("https://endomapa.pages.dev/output/estudos-realismo/mapa-realista-completo-estudo-v1.png");
+      if (!respostaReferencia.ok) return responder({ erro: "A referência visual aprovada não está disponível. Nenhuma geração foi solicitada." }, 503);
+      const arquivoReferencia = await respostaReferencia.arrayBuffer();
+      if (arquivoReferencia.byteLength < 100_000 || arquivoReferencia.byteLength > 5_000_000) {
+        return responder({ erro: "A referência visual aprovada está inválida. Nenhuma geração foi solicitada." }, 503);
+      }
+      referenciaAprovada = new Uint8Array(arquivoReferencia);
+    } catch (_erro) {
+      return responder({ erro: "Não foi possível obter a referência aprovada. Nenhuma geração foi solicitada." }, 503);
+    }
+  }
+
   const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem").single();
   if (erroReserva || !reserva) return responder({ erro: "Não foi possível conferir o limite de imagens." }, 500);
   if (!reserva.permitido) return responder({ erro: reserva.motivo === "limite_atingido" ? "O limite diário de imagens foi atingido." : "A geração paga não foi liberada para esta conta." }, 429);
@@ -80,7 +97,10 @@ Deno.serve(async (req) => {
     const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2.5-sunburst");
-    formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
+    formulario.append(modoRegiao ? "image[]" : "image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
+    if (referenciaAprovada) {
+      formulario.append("image[]", new File([referenciaAprovada], "referencia-aprovada.png", { type: "image/png" }));
+    }
     formulario.append("quality", "medium");
     // A edição local recebe um recorte quadrado ampliado pelo editor.
     formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : "1056x1408");
@@ -88,8 +108,8 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", (modoRegiao ? [
-      "Edit this close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs.",
-      "Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
+      "Image 1 is the exact crop to edit. Image 2 is the physician-approved reference for the finished appearance, material, relief, lighting and tissue integration. Reproduce the approved rendering style of relevant findings from image 2, while using ONLY image 1 for the type, count, position, size and anatomy in this new case. Do not copy the layout or extra findings from image 2.",
+      "This is a close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs. Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
       `Expected existing findings: ${(nomesRegiao as string[]).join(", ")}.`,
       "Preserve the count, type, approximate center, size, side and distinct foci or branches of each finding. Do not invent or erase findings. Preserve surrounding anatomy and align all outer crop edges with the source image. Do not add text, labels, devices or logos. This is an experimental medical preview for physician review.",
     ] : modoDetalhe ? [
