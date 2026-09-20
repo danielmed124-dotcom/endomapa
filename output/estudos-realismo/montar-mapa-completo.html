@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8" />
+<title>Montagem experimental do mapa completo</title>
+<pre id="estado">PENDENTE</pre>
+<script>
+  const partes = [
+    { arquivo: "utero-integrado-estudo.png", x: 365, y: 390, largura: 360, altura: 320, margem: 28, topoProtegido: 0 },
+    { arquivo: "ovario-esquerdo-integrado-estudo.png", x: 210, y: 600, largura: 345, altura: 335, margem: 26, topoProtegido: 0 },
+    { arquivo: "ovario-direito-integrado-estudo.png", x: 605, y: 595, largura: 310, altura: 340, margem: 26, topoProtegido: 55 },
+  ];
+
+  function abrir(src) {
+    return new Promise((resolver, rejeitar) => {
+      const imagem = new Image();
+      imagem.onload = () => resolver(imagem);
+      imagem.onerror = () => rejeitar(new Error(`Não foi possível abrir ${src}.`));
+      imagem.src = src;
+    });
+  }
+
+  function aplicarParte(mapa, imagem, parte) {
+    const temporario = document.createElement("canvas");
+    temporario.width = parte.largura;
+    temporario.height = parte.altura;
+    const contexto = temporario.getContext("2d", { willReadFrequently: true });
+    contexto.imageSmoothingQuality = "high";
+    contexto.drawImage(imagem, 0, 0, parte.largura, parte.altura);
+    const pixels = contexto.getImageData(0, 0, parte.largura, parte.altura);
+    for (let y = 0; y < parte.altura; y++) {
+      for (let x = 0; x < parte.largura; x++) {
+        const inicioY = Math.max(parte.margem, parte.topoProtegido);
+        const distancia = Math.min(x, parte.largura - 1 - x, y - inicioY, parte.altura - 1 - y);
+        const peso = Math.max(0, Math.min(1, distancia / parte.margem));
+        pixels.data[(y * parte.largura + x) * 4 + 3] = Math.round(pixels.data[(y * parte.largura + x) * 4 + 3] * peso);
+      }
+    }
+    contexto.putImageData(pixels, 0, 0);
+    mapa.drawImage(temporario, parte.x, parte.y);
+  }
+
+  (async () => {
+    const estado = document.querySelector("#estado");
+    try {
+      const [original, ...imagens] = await Promise.all([
+        abrir("mapa-base-estudo-original.jpg"),
+        ...partes.map((parte) => abrir(parte.arquivo)),
+      ]);
+      if (original.naturalWidth !== 1086 || original.naturalHeight !== 1448) {
+        throw new Error("O mapa original tem dimensões inesperadas.");
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = original.naturalWidth;
+      canvas.height = original.naturalHeight;
+      const contexto = canvas.getContext("2d");
+      contexto.drawImage(original, 0, 0);
+      partes.forEach((parte, indice) => aplicarParte(contexto, imagens[indice], parte));
+      const arquivo = document.createElement("script");
+      arquivo.type = "application/json";
+      arquivo.id = "artefato-png";
+      arquivo.textContent = JSON.stringify(canvas.toDataURL("image/png"));
+      document.body.append(arquivo);
+      estado.textContent = "PASSOU: mapa completo montado com três regiões editadas.";
+    } catch (erro) {
+      estado.textContent = `FALHOU: ${erro.message}`;
+    }
+  })();
+</script>
+</html>
