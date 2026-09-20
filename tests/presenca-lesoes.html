@@ -1,0 +1,30 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Teste de preservação das lesões</title>
+<pre id="resultado">Executando</pre>
+<script type="module">
+import { lesaoDesapareceu } from '../presenca-lesoes.js';
+try {
+  const criar = (r, g, b, alpha = 255) => {
+    const pixels = new Uint8ClampedArray(40 * 4);
+    for (let i = 0; i < pixels.length; i += 4) {
+      pixels.set([r, g, b, alpha], i);
+    }
+    return pixels;
+  };
+  const base = criar(205, 160, 145);
+  const original = criar(80, 35, 50);
+  const mascara = criar(255, 255, 255);
+  const conferir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  conferir(lesaoDesapareceu(original, base, base, mascara), 'Uma lesão apagada deve ser recusada');
+  conferir(!lesaoDesapareceu(original, base, criar(92, 43, 56), mascara), 'Uma lesão preservada deve passar');
+  conferir(!lesaoDesapareceu(original, base, criar(150, 80, 90), mascara), 'Mudança visual com contraste deve passar');
+  conferir(!lesaoDesapareceu(original, base, base, criar(255, 255, 255, 0)), 'Área sem lesão visível não deve gerar alarme');
+  let recusouTamanhos = false;
+  try { lesaoDesapareceu(original, base, base, new Uint8ClampedArray(4)); } catch (_) { recusouTamanhos = true; }
+  conferir(recusouTamanhos, 'Tamanhos incompatíveis devem ser recusados');
+  document.querySelector('#resultado').textContent = 'PASSOU: ausência evidente, preservação, transformação visual, área vazia e tamanhos.';
+} catch (erro) {
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message;
+}
+</script>

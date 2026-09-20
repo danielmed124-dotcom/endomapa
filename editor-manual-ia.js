@@ -87,6 +87,8 @@
     gerando[provedor] = true;
     botao.disabled = true;
     botao.textContent = `Gerando com ${nomeProvedor}...`;
+    if (provedor === "gpt") resultadoGpt.hidden = true;
+    if (provedor === "gpt-referencias") resultadoGptReferencias.hidden = true;
     mostrar(estado, `O ${nomeProvedor} está trabalhando sobre uma cópia. Isso pode levar até dois minutos.`, false);
     const funcoes = {
       gemini: "finalizar-mapa-manual-gemini",
@@ -105,6 +107,10 @@
       if (!data?.imagem_base64 && !data?.imagem_url) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);
       const imagemRecebida = data.imagem_url || `data:${data.formato || (provedor === "gemini" ? "image/jpeg" : "image/webp")};base64,${data.imagem_base64}`;
       await carregarImagem(imagemRecebida);
+      if (provedor !== "gemini") {
+        const apagadas = await conferirLesoesVisiveis(composicao, imagemRecebida);
+        if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia foi recusada; sua montagem manual permanece no editor.`);
+      }
       if (provedor === "gpt-referencias") {
         imagemGptReferencias.src = imagemRecebida;
         resultadoGptReferencias.hidden = false;
@@ -261,6 +267,45 @@
     const contexto = canvas.getContext("2d");
     contexto.drawImage(imagem, 0, 0, largura, altura);
     return contexto.getImageData(0, 0, largura, altura).data;
+  }
+
+  async function conferirLesoesVisiveis(composicao, gerada) {
+    const lesoes = [...document.querySelectorAll(".lesao-editavel")].filter((item) => item.querySelector("img"));
+    if (!lesoes.length) return [];
+    const { lesaoDesapareceu } = await import("./presenca-lesoes.js");
+    const largura = 384, altura = 512;
+    const [imagemOriginal, imagemGerada, imagemBase] = await Promise.all([
+      carregarImagem(composicao), carregarImagem(gerada), carregarImagem("assets/mapa-base-coronal.png"),
+    ]);
+    const original = obterPixels(imagemOriginal, largura, altura);
+    const resultado = obterPixels(imagemGerada, largura, altura);
+    const base = obterPixels(imagemBase, largura, altura);
+    const canvas = document.createElement("canvas");
+    canvas.width = largura;
+    canvas.height = altura;
+    const contexto = canvas.getContext("2d");
+    const apagadas = [];
+    for (const lesao of lesoes) {
+      const dados = lesao.dataset;
+      const imagem = await carregarImagem(lesao.querySelector("img").src);
+      const escala = Number(dados.tamanho) / 100;
+      const larguraLesao = largura * 0.13 * escala * Number(dados.eixoX) / 100;
+      const alturaLesao = largura * 0.13 / Number(dados.proporcao || 1.8) * escala * Number(dados.eixoY) / 100;
+      contexto.clearRect(0, 0, largura, altura);
+      contexto.save();
+      contexto.translate(largura * Number(dados.x) / 100, altura * Number(dados.y) / 100);
+      contexto.rotate(Number(dados.giro) * Math.PI / 180);
+      if (dados.semRecorte !== "true") {
+        contexto.beginPath();
+        contexto.ellipse(0, 0, larguraLesao / 2, alturaLesao / 2, 0, 0, Math.PI * 2);
+        contexto.clip();
+      }
+      contexto.drawImage(imagem, -larguraLesao / 2, -alturaLesao / 2, larguraLesao, alturaLesao);
+      contexto.restore();
+      const mascara = contexto.getImageData(0, 0, largura, altura).data;
+      if (lesaoDesapareceu(original, base, resultado, mascara)) apagadas.push(dados.nome || "uma lesão");
+    }
+    return [...new Set(apagadas)];
   }
 
   function formatarPercentual(valor) {
