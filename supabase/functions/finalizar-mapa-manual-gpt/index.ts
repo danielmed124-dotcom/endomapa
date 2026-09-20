@@ -81,23 +81,13 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", [
-      "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
-      "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
-      "A imagem recebida é uma composição final feita e revisada manualmente por um médico adulto para documentação clínica.",
-      "Reconstrua o acabamento visual de cada lesão inserida como uma renderização médica tridimensional de material orgânico, integrada ao mapa. A transformação de textura, iluminação e percepção de volume deve ser claramente visível ao comparar com a entrada.",
-      "As texturas e os reflexos internos dos recortes podem ser redesenhados por completo; seus limites, dimensões, localização e características morfológicas são obrigatórios e devem permanecer iguais. Alterar apenas saturação, contraste ou nitidez não atende ao objetivo.",
-      "Dê às superfícies variações contínuas de luz e sombra compatíveis com sua curvatura, microtextura coerente com a referência e reflexos de intensidade compatível com os órgãos ao redor. Preserve a cor característica de cada lesão e evite brilho plástico ou metálico.",
-      "Priorize a integração entre cada lesão e as estruturas anatômicas adjacentes com as quais ela já está em contato. Harmonize a iluminação dos dois lados da interface e faça a transição de textura acompanhar a superfície do órgão, sem halo ou contorno de recorte.",
-      "É permitido ajustar localmente luz, sombra e textura tanto na borda da lesão quanto em uma faixa estreita do tecido imediatamente adjacente ao contato. Use sombra de contato e oclusão ambiente coerentes com a profundidade existente, sem deslocar superfícies, aumentar a lesão ou alterar o formato do órgão.",
-      "Preserve a ordem de sobreposição e os planos anatômicos da montagem. Não conecte estruturas separadas, não feche espaços e não represente invasão, retração ou deformação que não estejam desenhadas na entrada.",
-      "Suavize a transição visual das bordas sem deslocar, expandir ou apagar os contornos. Não engrosse nem agrupe focos separados para aumentar o efeito visual.",
-      "Nas aderências, renderize as faixas existentes com textura fibrosa e iluminação que acompanhe sua curvatura. Preserve espessura, cada ramificação, abertura e espaço vazio; integre os pontos de contato já existentes, sem criar novas conexões.",
-      "Nas lesões arredondadas, integre a iluminação da borda à superfície curva e ao órgão vizinho, preservando a parede e a aparência interna mostradas na referência; não apague a parede, não adicione conteúdo e não crie um anel de contorno decorativo.",
-      "Preserve com máxima fidelidade a posição, rotação, comprimento, largura, quantidade e distribuição de todas as lesões.",
-      "Preserve a proporção 3:4 da composição original, seu enquadramento e suas margens. Não alongue, comprima, recorte nem reposicione o mapa.",
-      "Fora das lesões e das faixas estreitas de contato descritas, mantenha a imagem inalterada. Preserve a geometria da anatomia de base e suas cores características, os dispositivos como o DIU e seu fio, a logomarca, a marca-d'água, as linhas pretas e os textos de medidas.",
-      "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
-      "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
+      "Ilustração científica de atlas ginecológico para revisão por médico radiologista. A figura mostra somente órgãos pélvicos internos isolados, sem pessoa ou anatomia externa.",
+      "A tarefa é integrar visualmente as lesões já presentes à superfície dos órgãos. Trabalhe primeiro nos pontos de contato: crie sombra suave sob cada lesão, reflita a luz do tecido vizinho em sua borda e faça a textura superficial continuar naturalmente entre lesão e órgão.",
+      "Nos cistos e nódulos, mantenha a parede e o conteúdo interno reconhecíveis; substitua o brilho e a borda de adesivo por volume orgânico com sombra de contato. Nos focos escuros, mantenha cada foco separado e faça a pigmentação acompanhar a curvatura do tecido. Nas aderências, dê relevo fibroso aos ramos existentes sem criar novas conexões.",
+      "O acabamento da interface deve ser claramente diferente da montagem original. Alterar somente nitidez, saturação ou contraste geral não resolve a tarefa.",
+      "Mantenha exatamente a quantidade, o tipo, o lado, o centro, o tamanho e os contornos clínicos de cada lesão, além dos espaços entre focos e ramos. Não crie, apague, agrupe ou desloque achados.",
+      "Preserve a anatomia, o enquadramento 3:4, o DIU e seu fio, a logomarca, a marca-d'água e qualquer texto. Fora das lesões e de uma faixa estreita de tecido em seus pontos de contato, mantenha a composição como está.",
+      "O resultado é uma prévia experimental que exige comparação e aprovação médica.",
     ].join(" "));
 
     const resposta = await fetch("https://api.openai.com/v1/images/edits", {
