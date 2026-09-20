@@ -307,7 +307,7 @@
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
 
-    for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
+    for (const lesao of opcoes.semLesoes ? [] : camada.querySelectorAll(".lesao-editavel")) {
       const imagem = await carregarImagem(lesao.querySelector("img").src);
       const x = canvas.width * Number(lesao.dataset.x) / 100;
       const y = canvas.height * Number(lesao.dataset.y) / 100;

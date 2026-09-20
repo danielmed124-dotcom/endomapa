@@ -1,0 +1,26 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Teste do botão sem API</title>
+<p id="estado">EXECUTANDO</p><iframe src="../experimento-editor.html" width="1000" height="900"></iframe>
+<script>
+const quadro = document.querySelector("iframe");
+quadro.addEventListener("load", async () => {
+  const documento = quadro.contentDocument;
+  try {
+    documento.querySelector('[data-nome="Mioma 1"]').click();
+    const botao = documento.querySelector("[data-gerar-regioes]");
+    if (!botao || !/grátis/i.test(botao.textContent)) throw new Error("Botão gratuito ausente");
+    botao.click();
+    const prazo = Date.now() + 12000;
+    while (Date.now() < prazo) {
+      const imagem = documento.querySelector("[data-imagem-regioes]");
+      const estado = documento.querySelector("[data-estado-regioes]").textContent;
+      if (imagem.src.startsWith("data:image/png")) {
+        document.querySelector("#estado").textContent = "PASSOU: o botão produziu o mapa sem API.";
+        return;
+      }
+      if (/não foi possível|não carregou|erro/i.test(estado)) throw new Error(estado);
+      await new Promise((resolver) => setTimeout(resolver, 150));
+    }
+    throw new Error("O botão não produziu uma imagem no tempo esperado");
+  } catch (erro) { document.querySelector("#estado").textContent = "FALHOU: " + erro.message; }
+});
+</script></html>

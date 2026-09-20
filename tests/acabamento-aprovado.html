@@ -1,0 +1,43 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Estudo do acabamento aprovado</title>
+<style>body{margin:0;background:#151915;color:white;font:16px Arial}#estado{padding:8px}#saida{display:block;width:1086px}</style>
+<p id="estado">Preparando estudo local...</p><img id="saida" alt="Mapa montado para conferência" />
+<script src="../mapa-acabamento-aprovado.js"></script>
+<script>
+const especificacoes = [
+  ["Adenomiose 1", "assets/lesoes/adenomiose-1-referencia.png", 42.5, 30.7, 50],
+  ["Adenomiose 1", "assets/lesoes/adenomiose-1-referencia.png", 59.0, 29.0, 50],
+  ["Adenomiose 1", "assets/lesoes/adenomiose-1-referencia.png", 57.0, 38.0, 50],
+  ["Mioma 1", "assets/lesoes/mioma-1-referencia.png", 49.5, 34.0, 65],
+  ["Cisto hemorrágico", "assets/lesoes/cisto-hemorragico-referencia.png", 28.0, 47.0, 65],
+  ["Endometrioma", "assets/lesoes/endometrioma-referencia.png", 70.0, 47.0, 65],
+  ["Ligamento uterossacro", "assets/lesoes/endometriose-isolada-referencia-transparente.png", 42.0, 49.0, 65],
+];
+const lesoes = especificacoes.map(([nome, arquivo, x, y, tamanho], indice) => {
+  const elemento = document.createElement("div");
+  elemento.dataset.id = String(indice + 1);
+  elemento.dataset.nome = nome;
+  elemento.dataset.x = String(x);
+  elemento.dataset.y = String(y);
+  elemento.dataset.tamanho = String(tamanho);
+  elemento.dataset.eixoX = "100";
+  elemento.dataset.eixoY = "100";
+  elemento.dataset.proporcao = "1";
+  elemento.dataset.giro = "0";
+  const imagem = document.createElement("img"); imagem.src = "../" + arquivo;
+  elemento.append(imagem);
+  return elemento;
+});
+(async () => {
+  try {
+    const base = await new Promise((resolver, rejeitar) => {
+      const imagem = new Image(); imagem.onload = () => resolver(imagem); imagem.onerror = rejeitar;
+      imagem.src = "../assets/mapa-base-coronal.png";
+    });
+    const canvas = document.createElement("canvas"); canvas.width = base.naturalWidth; canvas.height = base.naturalHeight;
+    canvas.getContext("2d").drawImage(base, 0, 0);
+    const resultado = await window.EndomapaAcabamentoAprovado.montar(canvas.toDataURL("image/jpeg", .95), lesoes);
+    document.querySelector("#saida").src = resultado.imagem;
+    document.querySelector("#estado").textContent = "PASSOU: mapa montado sem API; sem exemplo: " + resultado.semExemplo.join(", ");
+  } catch (erro) { document.querySelector("#estado").textContent = "FALHOU: " + erro.message; }
+})();
+</script></html>
