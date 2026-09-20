@@ -19,7 +19,6 @@
   const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
   botaoConexao?.addEventListener("click", verificarConexaoGPT);
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
-  restaurarUltimoResultadoGemini();
 
   async function verificarConexaoGPT() {
     if (botaoConexao.disabled) return;
@@ -182,15 +181,6 @@
       };
     } catch (_erro) {
       return { mensagem: "A conexão com o Supabase foi interrompida e o diagnóstico também não pôde ser consultado.", imagemUrl: null };
-    }
-  }
-
-  async function restaurarUltimoResultadoGemini() {
-    const { data: sessao } = await cliente.auth.getSession();
-    if (!sessao.session) return;
-    const diagnostico = await consultarDiagnosticoGemini("finalizar-mapa-manual-gemini");
-    if (diagnostico.imagemUrl) {
-      exibirResultadoGeminiRecuperado(diagnostico.imagemUrl, "Última imagem Gemini recuperada do servidor.");
     }
   }
 

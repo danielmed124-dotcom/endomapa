@@ -21,7 +21,7 @@
   window.supabase = { createClient: () => ({
     auth: { getSession: async () => ({ data: { session: {} } }) },
     functions: { invoke: async (_nome, pedido) => {
-      if (pedido.body.consultar_diagnostico) return { data: {} };
+      if (pedido.body.consultar_diagnostico) return { data: { imagem_url: original } };
       if (falhaServidor) return { error: falhaServidor };
       return { data: { imagem_base64: respostaImagem.split(",")[1], formato: "image/png" } };
     } },
@@ -48,6 +48,10 @@
     const saida = document.getElementById("testes");
     const resultados = [];
     try {
+      await new Promise((resolver) => setTimeout(resolver, 30));
+      conferir(document.querySelector("[data-resultado-gemini]").hidden, "Imagem Gemini antiga apareceu ao abrir o editor.");
+      conferir(document.querySelector("[data-resultado-realista]").hidden, "Comparação antiga apareceu ao abrir o editor.");
+      resultados.push("PASSOU: editor abre sem resultado Gemini antigo.");
       // Reproduz o erro anterior com a mesma restrição de conexão da página real.
       let bloqueado = false;
       try { await fetch(original); } catch (erro) { bloqueado = erro instanceof TypeError; }
