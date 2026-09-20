@@ -1,0 +1,28 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Teste das regiões</title><body data-teste="executando">
+<script type="module">
+import { planejarRegioes, recortarRegiao, montarRegioes } from "../mapa-regioes.js";
+try {
+  const criar = (id, x, y, nome) => ({ dataset: { id, x, y, nome, tamanho: "100", eixoX: "100", eixoY: "100", proporcao: "1.8", giro: "0" } });
+  const lesoes = [criar("a", 40, 30, "Mioma"), criar("b", 48, 31, "Endometriose"), criar("c", 70, 60, "Cisto")];
+  const regioes = planejarRegioes(lesoes, 1086, 1448);
+  if (regioes.length !== 2 || regioes.flatMap((r) => r.ids).sort().join() !== "a,b,c") throw new Error("Planejamento incorreto");
+  document.body.dataset.teste = "planejamento-passou";
+  const base = document.createElement("canvas"); base.width = 1086; base.height = 1448;
+  const contexto = base.getContext("2d"); contexto.fillStyle = "white"; contexto.fillRect(0, 0, base.width, base.height);
+  const original = base.toDataURL("image/png");
+  const recorte = await recortarRegiao(original, regioes[0]);
+  document.body.dataset.teste = "recorte-passou";
+  const imagemRecorte = new Image(); imagemRecorte.src = recorte; await imagemRecorte.decode();
+  if (imagemRecorte.naturalWidth !== 1024) throw new Error("Recorte incorreto");
+  const gerada = document.createElement("canvas"); gerada.width = gerada.height = 1024;
+  const contextoGerada = gerada.getContext("2d"); contextoGerada.fillStyle = "red"; contextoGerada.fillRect(0, 0, 1024, 1024);
+  const composta = await montarRegioes(original, [{ regiao: regioes[0], imagem: gerada.toDataURL() }]);
+  document.body.dataset.teste = "montagem-passou";
+  const imagemFinal = new Image(); imagemFinal.src = composta; await imagemFinal.decode();
+  contexto.drawImage(imagemFinal, 0, 0);
+  const centro = contexto.getImageData(regioes[0].esquerda + regioes[0].lado / 2 | 0, regioes[0].topo + regioes[0].lado / 2 | 0, 1, 1).data;
+  const canto = contexto.getImageData(0, 0, 1, 1).data;
+  if (centro[0] < 200 || centro[1] > 50 || canto[1] < 200) throw new Error("Montagem incorreta");
+  document.body.dataset.teste = "passou";
+} catch (erro) { document.body.dataset.teste = "falhou"; document.body.textContent = erro.stack || erro.message; }
+</script></body></html>

@@ -60,6 +60,12 @@ Deno.serve(async (req) => {
   }
   const composicao = corpo.composicao_base64;
   const modoDetalhe = corpo.modo_detalhe === true;
+  const modoRegiao = corpo.modo_regiao === true;
+  const nomesRegiao = corpo.tipos_lesao;
+  if (modoRegiao && (!Array.isArray(nomesRegiao) || nomesRegiao.length < 1 || nomesRegiao.length > 10 ||
+    !nomesRegiao.every((nome) => typeof nome === "string" && nome.length >= 1 && nome.length <= 60))) {
+    return responder({ erro: "A lista de lesões desta região é inválida." }, 400);
+  }
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
@@ -77,11 +83,16 @@ Deno.serve(async (req) => {
     formulario.append("image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     formulario.append("quality", "medium");
     // A edição local recebe um recorte quadrado ampliado pelo editor.
-    formulario.append("size", modoDetalhe ? "1024x1024" : "1056x1408");
+    formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : "1056x1408");
     formulario.append("output_format", "webp");
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
-    formulario.append("prompt", (modoDetalhe ? [
+    formulario.append("prompt", (modoRegiao ? [
+      "Edit this close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs.",
+      "Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
+      `Expected existing findings: ${(nomesRegiao as string[]).join(", ")}.`,
+      "Preserve the count, type, approximate center, size, side and distinct foci or branches of each finding. Do not invent or erase findings. Preserve surrounding anatomy and align all outer crop edges with the source image. Do not add text, labels, devices or logos. This is an experimental medical preview for physician review.",
+    ] : modoDetalhe ? [
       "Close de uma ilustração científica de órgãos pélvicos internos, para revisão por médico radiologista. A imagem mostra tecido interno isolado, sem pessoa ou anatomia externa.",
       "Trabalhe apenas na lesão já visível no centro do recorte e no tecido imediatamente ao seu redor. Integre a lesão ao órgão com iluminação contínua, sombra de contato, reflexos e textura orgânica coerentes nos dois lados da borda. A mudança deve ser claramente visível nesta área ampliada.",
       "Preserve o tipo, a quantidade, o lado, a posição, a forma, o tamanho, a distribuição, a parede e o conteúdo da lesão. Se houver focos ou ramos separados, mantenha todos separados. Não acrescente nem remova achados.",
@@ -111,7 +122,9 @@ Deno.serve(async (req) => {
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
     const identificador = resposta.headers.get("x-request-id");
     const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
-    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: modoDetalhe
+    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: modoRegiao
+      ? "Região experimental: confira cada lesão e a anatomia antes de usar o mapa completo."
+      : modoDetalhe
       ? "Prévia de uma lesão: compare o conteúdo e o contorno com a montagem manual antes de aceitar."
       : "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {

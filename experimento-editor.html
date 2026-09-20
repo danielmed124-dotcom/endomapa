@@ -120,7 +120,10 @@
         </div>
         <button class="botao" type="button" data-previa-mioma>Prévia gratuita: integrar mioma selecionado</button>
         <p class="mensagem-formulario" data-estado-previa-mioma role="status" hidden></p>
-        <p class="mensagem-formulario" role="status">Gerações experimentais pausadas: os resultados não melhoraram visivelmente o mapa. A montagem manual continua disponível sem custo de geração.</p>
+        <p class="mensagem-formulario" role="status">Os testes antigos de imagem inteira estão pausados. O novo teste prepara regiões ampliadas e informa o número de chamadas pagas antes da geração.</p>
+        <button class="botao" type="button" data-preparar-regioes>Preparar mapa completo por regiões · grátis</button>
+        <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
+        <button class="botao botao--secundario" type="button" data-gerar-regioes disabled>Gerar mapa completo por regiões · chamadas pagas</button>
         <button class="botao" type="button" data-gerar-realista="gemini" disabled>Gemini · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-realista="gpt" disabled>GPT Sunburst · pausado</button>
         <button class="botao botao--secundario" type="button" data-gerar-detalhe-gemini disabled>Teste de 1 lesão com Gemini · pausado</button>
@@ -190,6 +193,10 @@
             <img data-imagem-gpt alt="Versão realista experimental criada pelo GPT" />
             <figcaption>Versão GPT Sunburst · ainda não aprovada</figcaption>
           </figure>
+          <figure class="mapa-visual" data-resultado-regioes hidden>
+            <img data-imagem-regioes alt="Mapa completo com regiões integradas experimentalmente" />
+            <figcaption>Mapa completo por regiões · exige revisão médica</figcaption>
+          </figure>
           <figure class="mapa-visual" data-resultado-gemini-detalhe hidden>
             <img data-imagem-gemini-detalhe alt="Mapa com uma lesão refinada localmente pelo Gemini" />
             <figcaption>Teste local Gemini · ainda não aprovado</figcaption>
@@ -221,7 +228,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="editor-manual.js?v=previa-mioma-1"></script>
-    <script src="editor-manual-ia.js?v=previa-mioma-1"></script>
+    <script src="editor-manual.js?v=regioes-1"></script>
+    <script src="editor-manual-ia.js?v=regioes-1"></script>
   </body>
 </html>

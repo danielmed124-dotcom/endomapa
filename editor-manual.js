@@ -55,6 +55,16 @@
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   window.addEventListener("resize", atualizarTodasAsLinhas);
   window.endomapaCapturarMapaManual = capturarMapa;
+  window.endomapaAdicionarRotulos = async function (imagem) {
+    const base = await carregarImagem(imagem);
+    const canvas = document.createElement("canvas");
+    canvas.width = base.naturalWidth;
+    canvas.height = base.naturalHeight;
+    const contexto = canvas.getContext("2d");
+    contexto.drawImage(base, 0, 0);
+    desenharRotulos(contexto, canvas);
+    return canvas.toDataURL("image/png");
+  };
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100") {
     const lesao = document.createElement("button");
@@ -341,6 +351,11 @@
       contexto.restore();
     }
 
+    if (!opcoes.semRotulos) desenharRotulos(contexto, canvas);
+    return canvas.toDataURL("image/jpeg", 0.9);
+  }
+
+  function desenharRotulos(contexto, canvas) {
     contexto.strokeStyle = "#000";
     contexto.fillStyle = "#000";
     contexto.lineWidth = Math.max(1.5, canvas.width / 700);
@@ -371,7 +386,6 @@
       });
       contexto.fillStyle = "#000";
     }
-    return canvas.toDataURL("image/jpeg", 0.9);
   }
 
   function carregarImagem(src) {
