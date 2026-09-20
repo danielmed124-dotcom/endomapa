@@ -79,6 +79,7 @@ Deno.serve(async (req) => {
     return responder({ diagnostico: diagnostico || null, imagem_url: imagemUrl });
   }
   const composicao = corpo.composicao_base64;
+  const modoDetalhe = corpo.modo_detalhe === true;
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
@@ -92,7 +93,12 @@ Deno.serve(async (req) => {
     .from("diagnostico_geracao_gemini")
     .upsert({ user_id: usuario.user.id, etapa, atualizado_em: new Date().toISOString() });
   try {
-    const instrucao = [
+    const instrucao = (modoDetalhe ? [
+      "Close quadrado de uma ilustração científica de órgãos pélvicos internos, para revisão por médico radiologista.",
+      "Refine VISIVELMENTE a lesão no centro e sua união com o tecido ao redor: crie relevo orgânico, sombra de contato e continuidade de luz e textura. A borda deve parecer parte do órgão, sem aspecto de adesivo colado.",
+      "Mantenha a mesma lesão, posição, lado, tamanho, contorno clínico, parede, conteúdo e número de focos. Não crie, apague, una nem desloque achados.",
+      "Mantenha o tecido fora da lesão e da faixa de contato reconhecível. Preserve linhas e medidas visíveis. Devolva o mesmo enquadramento quadrado, sem texto novo.",
+    ] : [
       "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
       "A figura mostra somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
       "A imagem recebida é uma composição clínica final feita e revisada manualmente por um médico adulto.",
@@ -101,7 +107,7 @@ Deno.serve(async (req) => {
       "Preserve exatamente toda a anatomia, cores, enquadramento, logomarca, marca-d'água, linhas pretas e textos de medidas.",
       "Não acrescente nem remova lesões, pontos, textos, números, setas ou estruturas. Não mova nenhum elemento.",
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
-    ].join(" ");
+    ]).join(" ");
     await registrarEtapa("pedido_enviado_ao_gemini");
     const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent", {
       method: "POST", signal: controlador.signal,
@@ -113,7 +119,7 @@ Deno.serve(async (req) => {
         ] }],
         generationConfig: {
           responseModalities: ["IMAGE"],
-          imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
+          imageConfig: { aspectRatio: modoDetalhe ? "1:1" : "3:4", imageSize: "1K" },
           thinkingConfig: { thinkingLevel: "minimal" },
         },
       }),
@@ -128,6 +134,11 @@ Deno.serve(async (req) => {
     const imagem = encontrarImagem(await resposta.json());
     if (!imagem) return responder({ erro: "O Gemini terminou sem devolver uma imagem válida." }, 502);
     await registrarEtapa("imagem_encontrada_na_resposta");
+    if (modoDetalhe) {
+      await registrarEtapa("concluida");
+      return responder({ imagem_base64: imagem.data, formato: imagem.mime_type,
+        aviso: "Prévia local do Gemini: compare contorno, conteúdo e medidas antes de usar." });
+    }
     const extensao = imagem.mime_type === "image/png" ? "png" : imagem.mime_type === "image/webp" ? "webp" : "jpg";
     const caminho = `${usuario.user.id}/ultima-imagem-gemini.${extensao}`;
     const bytesImagem = Uint8Array.from(atob(imagem.data), (caractere) => caractere.charCodeAt(0));

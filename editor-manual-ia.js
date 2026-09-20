@@ -7,8 +7,8 @@
   const realista = document.querySelector("[data-imagem-realista]");
   const resultadoGpt = document.querySelector("[data-resultado-gpt]");
   const imagemGpt = document.querySelector("[data-imagem-gpt]");
-  const resultadoGptDetalhe = document.querySelector("[data-resultado-gpt-detalhe]");
-  const imagemGptDetalhe = document.querySelector("[data-imagem-gpt-detalhe]");
+  const resultadoGeminiDetalhe = document.querySelector("[data-resultado-gemini-detalhe]");
+  const imagemGeminiDetalhe = document.querySelector("[data-imagem-gemini-detalhe]");
   const resultadoGptReferencias = document.querySelector("[data-resultado-gpt-referencias]");
   const imagemGptReferencias = document.querySelector("[data-imagem-gpt-referencias]");
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
@@ -20,7 +20,7 @@
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false, detalhe: false };
   const tentativasSemMudanca = new WeakSet();
   const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
-  const botaoDetalhe = document.querySelector("[data-gerar-detalhe-gpt]");
+  const botaoDetalhe = document.querySelector("[data-gerar-detalhe-gemini]");
   botaoConexao?.addEventListener("click", verificarConexaoGPT);
   botaoDetalhe?.addEventListener("click", gerarDetalhe);
   botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
@@ -268,7 +268,7 @@
   }
 
   async function gerarDetalhe() {
-    const estado = document.querySelector("[data-estado-detalhe-gpt]");
+    const estado = document.querySelector("[data-estado-detalhe-gemini]");
     const lesao = document.querySelector(".lesao-editavel--selecionada");
     if (!lesao) {
       mostrar(estado, "Selecione uma lesão no mapa antes de testar a integração local.", true);
@@ -291,40 +291,38 @@
     gerando.detalhe = true;
     botaoDetalhe.disabled = true;
     botaoDetalhe.textContent = "Refinando a lesão selecionada...";
-    resultadoGptDetalhe.hidden = true;
-    mostrar(estado, "Ampliando a lesão selecionada para o GPT Sunburst. Esta geração usa uma chamada paga.", false);
+    resultadoGeminiDetalhe.hidden = true;
+    mostrar(estado, "Ampliando a lesão selecionada para o Gemini. Esta geração usa uma chamada paga.", false);
     try {
       const composicao = await window.endomapaCapturarMapaManual();
       const { prepararRecorte, recomporRecorte } = await import("./detalhe-local.js");
       const { imagem, regiao } = await prepararRecorte(composicao, lesao);
-      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gpt", {
+      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gemini", {
         body: { composicao_base64: imagem.split(",")[1], modo_detalhe: true },
       });
       if (error) throw new Error(await traduzirErro(error));
-      if (!data?.imagem_base64) throw new Error("O GPT terminou sem devolver o detalhe da lesão.");
-      const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "")
-        ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
-      const detalhe = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+      if (!data?.imagem_base64) throw new Error("O Gemini terminou sem devolver o detalhe da lesão.");
+      const detalhe = `data:${data.formato || "image/png"};base64,${data.imagem_base64}`;
       const comparacaoLocal = await compararImagens(imagem, detalhe);
       if (comparacaoLocal.diferencaVisual < 1) {
         tentativasSemMudanca.add(lesao);
-        throw new Error(`A OpenAI devolveu uma imagem quase igual ao recorte enviado (diferença média de ${formatarPercentual(comparacaoLocal.diferencaVisual)}%). A prévia foi recusada e outra tentativa nesta lesão foi bloqueada nesta sessão para evitar nova cobrança.${pedido}`);
+        throw new Error(`O Gemini devolveu uma imagem quase igual ao recorte enviado (diferença média de ${formatarPercentual(comparacaoLocal.diferencaVisual)}%). A prévia foi recusada e outra tentativa nesta lesão foi bloqueada nesta sessão para evitar nova cobrança.`);
       }
       const imagemFinal = await recomporRecorte(composicao, detalhe, regiao);
       const apagadas = await conferirLesoesVisiveis(composicao, imagemFinal);
-      if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia local foi recusada.${pedido}`);
+      if (apagadas.length) throw new Error(`O Gemini apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia local foi recusada.`);
       original.src = composicao;
-      imagemGptDetalhe.src = imagemFinal;
-      resultadoGptDetalhe.hidden = false;
+      imagemGeminiDetalhe.src = imagemFinal;
+      resultadoGeminiDetalhe.hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estado, `A OpenAI alterou ${formatarPercentual(comparacaoLocal.diferencaVisual)}% do recorte ampliado, em média. A prévia inclui a lesão e o tecido de contato; confira contorno, conteúdo e tamanho. Esse número não confirma realismo nem fidelidade clínica.${pedido}`, false);
+      mostrar(estado, `O Gemini alterou ${formatarPercentual(comparacaoLocal.diferencaVisual)}% do recorte ampliado, em média. A prévia inclui a lesão e o tecido de contato; confira contorno, conteúdo e tamanho. Esse número não confirma realismo nem fidelidade clínica.`, false);
     } catch (erro) {
       mostrar(estado, await traduzirErro(erro), true);
     } finally {
       gerando.detalhe = false;
       botaoDetalhe.disabled = false;
-      botaoDetalhe.textContent = "Testar integração de 1 lesão selecionada · cobra 1 imagem";
+      botaoDetalhe.textContent = "Testar 1 lesão com Gemini · cobra 1 imagem";
     }
   }
 
