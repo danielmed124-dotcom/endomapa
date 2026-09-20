@@ -52,10 +52,14 @@
     contexto.drawImage(imagem, 0, 0);
     const pixel = (x, y) => [...contexto.getImageData(x, y, 1, 1).data];
     const centro = pixel(160, 210);
+    const tecidoDeContato = pixel(190, 210);
+    const foraDaArea = pixel(220, 210);
     const longe = pixel(10, 10);
     if (centro[1] < 90 || centro[0] > 80) throw new Error("Lesão central não foi refinada.");
+    if (tecidoDeContato[1] < 90 || tecidoDeContato[0] > 80) throw new Error("O tecido ao redor da lesão não recebeu a integração.");
+    if (foraDaArea[0] !== 255 || foraDaArea[1] !== 255 || foraDaArea[2] !== 255) throw new Error("Uma área distante da lesão foi alterada.");
     if (longe[0] !== 255 || longe[1] !== 255 || longe[2] !== 255) throw new Error("O mapa fora da lesão foi alterado.");
-    saida.textContent = "PASSOU: recorte criado; somente a lesão selecionada recebeu os pixels gerados.";
+    saida.textContent = "PASSOU: recorte criado; lesão e tecido de contato receberam os pixels gerados; regiões distantes ficaram intactas.";
   } catch (erro) {
     saida.textContent = `FALHOU: ${erro.message}`;
   }

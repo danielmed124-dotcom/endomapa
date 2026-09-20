@@ -1,4 +1,4 @@
-// Amplia uma lesão para edição e recoloca apenas seus pixels e a borda imediata.
+// Amplia uma lesão para edição e recoloca seus pixels e o tecido de contato.
 // O mapa inteiro permanece a referência clínica para comparação.
 
 function carregarImagem(src) {
@@ -44,28 +44,29 @@ export async function prepararRecorte(composicao, lesao) {
 }
 
 export async function recomporRecorte(composicao, detalheGerado, regiao) {
-  const [mapa, detalhe, lesao] = await Promise.all([
-    carregarImagem(composicao), carregarImagem(detalheGerado), carregarImagem(regiao.srcLesao),
+  const [mapa, detalhe] = await Promise.all([
+    carregarImagem(composicao), carregarImagem(detalheGerado),
   ]);
-  const { esquerda, topo, lado, centroX, centroY, larguraLesao, alturaLesao, giro, semRecorte } = regiao;
+  const { esquerda, topo, lado, centroX, centroY, larguraLesao, alturaLesao, giro } = regiao;
   const mascara = document.createElement("canvas");
   mascara.width = mascara.height = lado;
   const contextoMascara = mascara.getContext("2d");
   contextoMascara.save();
   contextoMascara.translate(centroX - esquerda, centroY - topo);
   contextoMascara.rotate(giro);
-  if (!semRecorte) {
-    contextoMascara.beginPath();
-    contextoMascara.ellipse(0, 0, larguraLesao / 2, alturaLesao / 2, 0, 0, Math.PI * 2);
-    contextoMascara.clip();
-  }
-  contextoMascara.drawImage(lesao, -larguraLesao / 2, -alturaLesao / 2, larguraLesao, alturaLesao);
+  // A sombra de contato fica no tecido ao redor, fora da imagem da lesão.
+  // A margem acompanha o tamanho da lesão sem invadir o restante do mapa.
+  const margem = Math.max(16, Math.min(32, Math.max(larguraLesao, alturaLesao) * 0.22));
+  contextoMascara.fillStyle = "white";
+  contextoMascara.beginPath();
+  contextoMascara.ellipse(0, 0, larguraLesao / 2 + margem, alturaLesao / 2 + margem, 0, 0, Math.PI * 2);
+  contextoMascara.fill();
   contextoMascara.restore();
 
   const borda = document.createElement("canvas");
   borda.width = borda.height = lado;
   const contextoBorda = borda.getContext("2d");
-  contextoBorda.filter = "blur(7px)";
+  contextoBorda.filter = "blur(10px)";
   contextoBorda.drawImage(mascara, 0, 0);
 
   const areaEditada = document.createElement("canvas");

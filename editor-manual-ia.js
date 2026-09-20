@@ -18,6 +18,7 @@
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false, detalhe: false };
+  const tentativasSemMudanca = new WeakSet();
   const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
   const botaoDetalhe = document.querySelector("[data-gerar-detalhe-gpt]");
   botaoConexao?.addEventListener("click", verificarConexaoGPT);
@@ -273,6 +274,10 @@
       mostrar(estado, "Selecione uma lesão no mapa antes de testar a integração local.", true);
       return;
     }
+    if (tentativasSemMudanca.has(lesao)) {
+      mostrar(estado, "O último teste desta lesão quase não mudou a imagem. Para evitar outra cobrança pelo mesmo resultado, não repetiremos a geração nesta sessão. Você pode continuar ajustando o mapa manualmente.", true);
+      return;
+    }
     if (gerando.detalhe) return;
     if (window.location.protocol === "file:") {
       mostrar(estado, "Abra o editor publicado e entre na sua conta para testar esta opção.", true);
@@ -300,6 +305,11 @@
       const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "")
         ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
       const detalhe = `data:${data.formato || "image/webp"};base64,${data.imagem_base64}`;
+      const comparacaoLocal = await compararImagens(imagem, detalhe);
+      if (comparacaoLocal.diferencaVisual < 1) {
+        tentativasSemMudanca.add(lesao);
+        throw new Error(`A OpenAI devolveu uma imagem quase igual ao recorte enviado (diferença média de ${formatarPercentual(comparacaoLocal.diferencaVisual)}%). A prévia foi recusada e outra tentativa nesta lesão foi bloqueada nesta sessão para evitar nova cobrança.${pedido}`);
+      }
       const imagemFinal = await recomporRecorte(composicao, detalhe, regiao);
       const apagadas = await conferirLesoesVisiveis(composicao, imagemFinal);
       if (apagadas.length) throw new Error(`O GPT apagou ou enfraqueceu ${apagadas.join(", ")}. A prévia local foi recusada.${pedido}`);
@@ -308,7 +318,7 @@
       resultadoGptDetalhe.hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estado, `O GPT refinou somente a lesão selecionada e sua borda imediata. Confira contorno, conteúdo e tamanho antes de aceitar.${pedido}`, false);
+      mostrar(estado, `A OpenAI alterou ${formatarPercentual(comparacaoLocal.diferencaVisual)}% do recorte ampliado, em média. A prévia inclui a lesão e o tecido de contato; confira contorno, conteúdo e tamanho. Esse número não confirma realismo nem fidelidade clínica.${pedido}`, false);
     } catch (erro) {
       mostrar(estado, await traduzirErro(erro), true);
     } finally {
