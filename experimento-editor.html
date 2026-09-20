@@ -113,13 +113,14 @@
           <button type="button" data-redimensionar="-10" aria-label="Diminuir lesão">−<span>Diminuir</span></button>
           <button type="button" data-redimensionar="10" aria-label="Aumentar lesão">+<span>Aumentar</span></button>
         </div>
-        <button class="botao" type="button" data-gerar-realista="gemini">Gerar versão realista com Gemini</button>
-        <button class="botao botao--secundario" type="button" data-gerar-realista="gpt">Gerar com GPT Sunburst · custo maior</button>
-        <button class="botao botao--secundario" type="button" data-gerar-detalhe-gemini>Testar 1 lesão com Gemini · cobra 1 imagem</button>
+        <p class="mensagem-formulario" role="status">Gerações experimentais pausadas: os resultados não melhoraram visivelmente o mapa. A montagem manual continua disponível sem custo de geração.</p>
+        <button class="botao" type="button" data-gerar-realista="gemini" disabled>Gemini · pausado</button>
+        <button class="botao botao--secundario" type="button" data-gerar-realista="gpt" disabled>GPT Sunburst · pausado</button>
+        <button class="botao botao--secundario" type="button" data-gerar-detalhe-gemini disabled>Teste de 1 lesão com Gemini · pausado</button>
         <p class="mensagem-formulario" data-estado-detalhe-gemini role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-verificar-conexao-gpt>Verificar chave da OpenAI</button>
         <p class="mensagem-formulario" data-estado-conexao-gpt role="status" hidden></p>
-        <button class="botao botao--secundario" type="button" data-gerar-realista="gpt-referencias">Testar GPT com referências</button>
+        <button class="botao botao--secundario" type="button" data-gerar-realista="gpt-referencias" disabled>GPT com referências · pausado</button>
         <p class="mensagem-formulario" data-estado-realista="gemini" hidden></p>
         <p class="mensagem-formulario" data-estado-realista="gpt" hidden></p>
         <p class="mensagem-formulario" data-estado-realista="gpt-referencias" hidden></p>
