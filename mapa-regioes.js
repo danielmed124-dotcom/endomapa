@@ -51,7 +51,7 @@ function distancia(a, b) {
   return Math.hypot(horizontal, vertical);
 }
 
-export function planejarRegioes(lesoes, larguraMapa, alturaMapa) {
+function planejarRegioes(lesoes, larguraMapa, alturaMapa) {
   if (!Number.isFinite(larguraMapa) || !Number.isFinite(alturaMapa) || larguraMapa < 200 || alturaMapa < 200) {
     throw new Error("As dimensões do mapa não são válidas.");
   }
@@ -91,7 +91,7 @@ export function planejarRegioes(lesoes, larguraMapa, alturaMapa) {
   }).sort((a, b) => a.topo - b.topo || a.esquerda - b.esquerda);
 }
 
-export async function recortarRegiao(composicao, regiao) {
+async function recortarRegiao(composicao, regiao) {
   const mapa = await carregarImagem(composicao);
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = 1024;
@@ -100,7 +100,7 @@ export async function recortarRegiao(composicao, regiao) {
   return canvas.toDataURL("image/jpeg", 0.93);
 }
 
-export async function montarRegioes(composicao, respostas) {
+async function montarRegioes(composicao, respostas) {
   const mapa = await carregarImagem(composicao);
   const resultado = document.createElement("canvas");
   resultado.width = mapa.naturalWidth;
@@ -128,3 +128,5 @@ export async function montarRegioes(composicao, respostas) {
   }
   return resultado.toDataURL("image/png");
 }
+
+window.EndomapaRegioes = { planejarRegioes, recortarRegiao, montarRegioes };

@@ -42,7 +42,8 @@
     let assinatura = null;
     let montarRegioes = null;
     try {
-      const ferramentas = await import("./mapa-regioes.js");
+      const ferramentas = window.EndomapaRegioes;
+      if (!ferramentas) throw new Error("O editor não carregou o cálculo das regiões. Atualize a página e tente novamente. Nenhuma geração foi solicitada.");
       const { planejarRegioes, recortarRegiao } = ferramentas;
       montarRegioes = ferramentas.montarRegioes;
       const lesoes = document.querySelectorAll(".lesao-editavel");

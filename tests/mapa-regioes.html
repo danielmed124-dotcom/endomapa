@@ -1,6 +1,7 @@
 <!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Teste das regiões</title><body data-teste="executando">
-<script type="module">
-import { planejarRegioes, recortarRegiao, montarRegioes } from "../mapa-regioes.js";
+<script src="../mapa-regioes.js"></script>
+<script>
+const { planejarRegioes, recortarRegiao, montarRegioes } = window.EndomapaRegioes;
 try {
   const criar = (id, x, y, nome) => ({ dataset: { id, x, y, nome, tamanho: "100", eixoX: "100", eixoY: "100", proporcao: "1.8", giro: "0" } });
   const lesoes = [criar("a", 40, 30, "Mioma"), criar("b", 48, 31, "Endometriose"), criar("c", 70, 60, "Cisto")];
