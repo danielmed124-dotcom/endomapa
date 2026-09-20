@@ -95,15 +95,11 @@
     };
     const funcao = funcoes[provedor];
     try {
-      const captura = await window.endomapaCapturarMapaManual({ integracao: provedor !== "gemini" });
-      const composicao = typeof captura === "string" ? captura : captura.composicao;
+      const composicao = await window.endomapaCapturarMapaManual();
       original.src = composicao;
       const tiposLesao = [...new Set([...document.querySelectorAll(".lesao-editavel")].map((item) => item.dataset.nome))];
       const { data, error } = await cliente.functions.invoke(funcao, {
-        body: {
-          composicao_base64: composicao.split(",")[1], tipos_lesao: tiposLesao,
-          ...(captura.mascara ? { mascara_base64: captura.mascara.split(",")[1] } : {}),
-        },
+        body: { composicao_base64: composicao.split(",")[1], tipos_lesao: tiposLesao },
       });
       if (error) throw new Error(await traduzirErro(error));
       if (!data?.imagem_base64 && !data?.imagem_url) throw new Error(`O ${nomeProvedor} terminou sem devolver uma imagem.`);

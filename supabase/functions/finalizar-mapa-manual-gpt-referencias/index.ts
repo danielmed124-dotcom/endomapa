@@ -1,5 +1,4 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { prepararEdicaoGPT } from "../_shared/mascara-imagem-gpt.js";
 import { diagnosticarErroImagem } from "../_shared/erro-imagem-gpt.js";
 
 const ORIGENS = new Set(["https://endomapa.pages.dev", "https://experimento-editor-manual.endomapa.pages.dev"]);
@@ -42,14 +41,10 @@ Deno.serve(async (req) => {
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
   const composicao = corpo.composicao_base64;
-  if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 14_000_000) return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
+  if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   if (!Array.isArray(corpo.tipos_lesao)) return responder({ erro: "Os tipos de lesão não foram identificados." }, 400);
   const tipos = [...new Set(corpo.tipos_lesao.filter((tipo): tipo is string => typeof tipo === "string" && tipo in REFERENCIAS))];
   if (!tipos.length || tipos.length > 3) return responder({ erro: "Nenhuma referência visual válida foi identificada." }, 400);
-
-  let edicao;
-  try { edicao = prepararEdicaoGPT(composicao, corpo.mascara_base64); }
-  catch (erro) { return responder({ erro: (erro as Error).message }, 400); }
 
   const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem").single();
   if (erroReserva || !reserva) return responder({ erro: "Não foi possível conferir o limite de imagens." }, 500);
@@ -62,15 +57,14 @@ Deno.serve(async (req) => {
     if (respostasReferencias.some((resposta) => !resposta.ok || !resposta.headers.get("content-type")?.startsWith("image/"))) {
       return responder({ erro: "O servidor não devolveu uma imagem válida para uma das referências visuais." }, 502);
     }
-    const bytes = edicao.imagem;
+    const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2");
-    formulario.append("image[]", new File([bytes], `01-mapa-manual.${edicao.extensao}`, { type: edicao.tipo }));
+    formulario.append("image[]", new File([bytes], "01-mapa-manual.jpg", { type: "image/jpeg" }));
     for (let indice = 0; indice < tipos.length; indice += 1) {
       const referencia = REFERENCIAS[tipos[indice]];
       formulario.append("image[]", new File([await respostasReferencias[indice].blob()], referencia.arquivo, { type: "image/png" }));
     }
-    if (edicao.mascara) formulario.append("mask", new File([edicao.mascara], "area-integracao.png", { type: "image/png" }));
     formulario.append("quality", "medium");
     // Mesma proporção 3:4 da base coronal (1086x1448); dimensões múltiplas de 16.
     formulario.append("size", "1056x1408");
@@ -78,7 +72,6 @@ Deno.serve(async (req) => {
     formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", [
-      ...(edicao.mascara ? ["EDIÇÃO LOCALIZADA: a máscara transparente delimita as lesões e o tecido adjacente que devem ser redesenhados em conjunto. Reconstrua o material e a iluminação nessa região como uma única ilustração anatômica contínua, eliminando a aparência de recorte colado. Use a montagem para preservar tipo, localização, extensão e conteúdo de cada achado; não a copie pixel a pixel. A faixa de tecido incluída serve para integração de superfície e sombras, não para ampliar a doença. Preserve as regiões opacas da máscara."] : []),
       "Ilustração científica de atlas ginecológico destinada à revisão por médico radiologista.",
       "As figuras mostram somente órgãos pélvicos internos isolados. Não há pessoa, pele, nudez, anatomia externa ou atividade sexual.",
       "A PRIMEIRA imagem é a composição clínica final revisada por um médico adulto e é a única autoridade para anatomia, posição, limites, forma, rotação, tamanho, quantidade e distribuição das lesões.",

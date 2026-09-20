@@ -17,13 +17,11 @@
   document.addEventListener("securitypolicyviolation", () => { violacoes += 1; });
 
   window.ENDOMAPA_SUPABASE = { projectUrl: "teste", publicAnonKey: "teste" };
-  window.endomapaCapturarMapaManual = async (opcoes) => opcoes.integracao
-    ? { composicao: original, mascara: modificada } : original;
+  window.endomapaCapturarMapaManual = async () => original;
   window.supabase = { createClient: () => ({
     auth: { getSession: async () => ({ data: { session: {} } }) },
     functions: { invoke: async (_nome, pedido) => {
       if (pedido.body.consultar_diagnostico) return { data: {} };
-      conferir(pedido.body.mascara_base64 === (_nome.includes("gpt") ? modificada.split(",")[1] : undefined), "Máscara deve acompanhar somente os pedidos GPT.");
       if (falhaServidor) return { error: falhaServidor };
       return { data: { imagem_base64: respostaImagem.split(",")[1], formato: "image/png" } };
     } },
