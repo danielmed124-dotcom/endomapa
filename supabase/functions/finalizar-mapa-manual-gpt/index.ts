@@ -5,7 +5,7 @@ const ORIGENS = new Set([
   "https://endomapa.pages.dev",
   "https://experimento-editor-manual.endomapa.pages.dev",
 ]);
-const LIMITE_MS = 120_000;
+const LIMITE_MS = 140_000;
 const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -61,6 +61,13 @@ Deno.serve(async (req) => {
   const composicao = corpo.composicao_base64;
   const modoDetalhe = corpo.modo_detalhe === true;
   const modoRegiao = corpo.modo_regiao === true;
+  const modoMapaReferencia = corpo.modo_mapa_referencia === true;
+  const inventario = corpo.inventario_lesoes;
+  if (modoMapaReferencia && (modoRegiao || modoDetalhe || !Array.isArray(inventario) || inventario.length < 1 || inventario.length > 30 ||
+    !inventario.every((item) => item && typeof item.nome === "string" && /^[\p{L}\p{N} .ºª-]{1,60}$/u.test(item.nome) &&
+      [item.x, item.y, item.largura, item.altura].every((valor) => typeof valor === "number" && Number.isFinite(valor) && valor > 0 && valor <= 100)))) {
+    return responder({ erro: "A lista de lesões do mapa está inválida. Nenhuma geração foi solicitada." }, 400);
+  }
   const nomesRegiao = corpo.tipos_lesao;
   if (modoRegiao && (!Array.isArray(nomesRegiao) || nomesRegiao.length < 1 || nomesRegiao.length > 10 ||
     !nomesRegiao.every((nome) => typeof nome === "string" && nome.length >= 1 && nome.length <= 60))) {
@@ -73,7 +80,7 @@ Deno.serve(async (req) => {
   // A referência aprovada é pública e fixa; obtê-la antes da reserva evita gastar
   // uma geração caso o arquivo não esteja disponível.
   let referenciaAprovada: Uint8Array | null = null;
-  if (modoRegiao) {
+  if (modoRegiao || modoMapaReferencia) {
     try {
       const respostaReferencia = await fetch("https://endomapa.pages.dev/output/estudos-realismo/mapa-realista-completo-estudo-v1.png");
       if (!respostaReferencia.ok) return responder({ erro: "A referência visual aprovada não está disponível. Nenhuma geração foi solicitada." }, 503);
@@ -97,17 +104,24 @@ Deno.serve(async (req) => {
     const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2.5-sunburst");
-    formulario.append(modoRegiao ? "image[]" : "image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
+    formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
     if (referenciaAprovada) {
       formulario.append("image[]", new File([referenciaAprovada], "referencia-aprovada.png", { type: "image/png" }));
     }
-    formulario.append("quality", "medium");
+    formulario.append("quality", modoMapaReferencia ? "max" : "medium");
     // A edição local recebe um recorte quadrado ampliado pelo editor.
-    formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : "1056x1408");
-    formulario.append("output_format", "webp");
-    formulario.append("output_compression", "85");
+    formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : modoMapaReferencia ? "1088x1456" : "1056x1408");
+    formulario.append("output_format", modoMapaReferencia ? "png" : "webp");
+    if (!modoMapaReferencia) formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
-    formulario.append("prompt", (modoRegiao ? [
+    formulario.append("prompt", (modoMapaReferencia ? [
+      "Create a complete, polished medical-atlas illustration of isolated internal pelvic organs for physician review. This is an anatomical educational image, with no person or external body visible.",
+      "IMAGE ROLES: Image 1 is the current patient's full map and the sole source of clinical content, anatomy, composition, location, number, size, and shape of findings. Image 2 is an approved example of the desired rendering quality only: continuous tissue texture, organic volume, coherent light, subtle contact shadows, and lesions visibly integrated into adjacent organs. Do not copy any finding, position, device, or layout from image 2.",
+      "RENDERING TASK: Repaint the entire anatomical map and ALL existing findings together in one coherent style matching the finish of image 2. Visibly redraw the findings themselves and their contact with the tissue; a global color, contrast, or sharpness adjustment is insufficient. Replace pasted-on borders with natural tissue transitions while retaining each finding's diagnostic appearance and distinguishable internal content.",
+      `EXACT FINDING INVENTORY IN IMAGE 1 (${(inventario as Array<unknown>).length} separate items): ${(inventario as Array<{ nome: string; x: number; y: number; largura: number; altura: number }>).map((item, indice) => `${indice + 1}. ${item.nome}; center (${item.x.toFixed(1)}%, ${item.y.toFixed(1)}%); approximate footprint ${item.largura.toFixed(1)}% wide by ${item.altura.toFixed(1)}% high`).join(" | ")}. Coordinates refer to the entire image, from its top-left corner. Repeated names mean separate findings; render every listed item.`,
+      "FIDELITY: Keep each finding at its indicated center and approximate footprint, on the same organ and side. Preserve its morphology, distinct foci or branches, and relationship to nearby anatomy. Do not omit, merge, duplicate, invent, or relocate findings. Preserve the base anatomy, full vertical framing, white background, and upper-right logo. Do not add labels or written descriptions; those are added separately by the application.",
+      "Make the result visibly more realistic than image 1 while keeping it suitable as a precise medical illustration. The final image will be reviewed against image 1 by a physician.",
+    ] : modoRegiao ? [
       "Image 1 is the exact crop to edit. Image 2 is the physician-approved reference for the finished appearance, material, relief, lighting and tissue integration. Reproduce the approved rendering style of relevant findings from image 2, while using ONLY image 1 for the type, count, position, size and anatomy in this new case. Do not copy the layout or extra findings from image 2.",
       "This is a close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs. Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
       `Expected existing findings: ${(nomesRegiao as string[]).join(", ")}.`,
@@ -142,13 +156,15 @@ Deno.serve(async (req) => {
     if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
     const identificador = resposta.headers.get("x-request-id");
     const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
-    return responder({ imagem_base64: imagem, formato: "image/webp", pedido_id: pedidoId, aviso: modoRegiao
+    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, aviso: modoMapaReferencia
+      ? "Mapa completo experimental: confira todas as lesões, a anatomia e as medidas antes de usar."
+      : modoRegiao
       ? "Região experimental: confira cada lesão e a anatomia antes de usar o mapa completo."
       : modoDetalhe
       ? "Prévia de uma lesão: compare o conteúdo e o contorno com a montagem manual antes de aceitar."
       : "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
-    if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O GPT demorou mais de dois minutos." }, 504);
+    if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "A OpenAI demorou mais de 140 segundos. A geração pode ter sido cobrada; confira o uso antes de repetir." }, 504);
     return responder({ erro: "Não foi possível gerar a versão realista com GPT." }, 502);
   } finally { clearTimeout(temporizador); }
 });

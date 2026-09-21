@@ -16,6 +16,8 @@
   const botaoPreviaMioma = document.querySelector("[data-previa-mioma]");
   const botaoGerarRegioes = document.querySelector("[data-gerar-regioes]");
   const estadoRegioes = document.querySelector("[data-estado-regioes]");
+  const botaoMapaApi = document.querySelector("[data-gerar-mapa-api]");
+  const estadoMapaApi = document.querySelector("[data-estado-mapa-api]");
   botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
   botaoGerarRegioes?.addEventListener("click", gerarAcabamentoAprovado);
   if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
@@ -24,6 +26,61 @@
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
+  botaoMapaApi?.addEventListener("click", gerarMapaApi);
+
+  async function gerarMapaApi() {
+    if (botaoMapaApi.disabled) return;
+    const lesoes = [...document.querySelectorAll(".lesao-editavel")];
+    if (!lesoes.length) return mostrar(estadoMapaApi, "Adicione pelo menos uma lesão ao mapa.", true);
+    if (window.location.protocol === "file:") return mostrar(estadoMapaApi, "Abra o editor no site do Endomapa para gerar a imagem.", true);
+    const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
+    if (erroSessao || !sessao?.session) return mostrar(estadoMapaApi, "Entre na sua conta do Endomapa antes de gerar a imagem.", true);
+    botaoMapaApi.disabled = true;
+    const assinatura = assinaturaMapa();
+    mostrar(estadoMapaApi, "Gerando o mapa inteiro em qualidade máxima. Esta chamada é paga e pode levar alguns minutos; nenhuma repetição será feita automaticamente.", false);
+    try {
+      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Gere novamente para preservar as posições.");
+      const imagem = await carregarImagem(composicao);
+      const inventario = lesoes.map((lesao) => {
+        const dados = lesao.dataset;
+        const escala = Number(dados.tamanho) / 100;
+        return {
+          nome: dados.nome,
+          x: Number(dados.x), y: Number(dados.y),
+          largura: 13 * escala * Number(dados.eixoX) / 100,
+          altura: imagem.naturalWidth / imagem.naturalHeight * 13 / Number(dados.proporcao || 1.8) * escala * Number(dados.eixoY) / 100,
+        };
+      });
+      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gpt", {
+        body: { composicao_base64: composicao.split(",")[1], modo_mapa_referencia: true, inventario_lesoes: inventario },
+      });
+      if (error) throw new Error(await traduzirErro(error));
+      if (!data?.imagem_base64) throw new Error("A OpenAI não devolveu uma imagem. Sua montagem permanece no editor.");
+      const recebida = `data:${data.formato || "image/png"};base64,${data.imagem_base64}`;
+      await carregarImagem(recebida);
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. O resultado não foi aplicado; gere novamente com a montagem atual.");
+      const final = await window.endomapaAdicionarRotulos(recebida);
+      original.src = await window.endomapaCapturarMapaManual();
+      document.querySelector("[data-imagem-mapa-api]").src = final;
+      document.querySelector("[data-resultado-mapa-api]").hidden = false;
+      resultado.hidden = false;
+      resultado.scrollIntoView({ behavior: "smooth", block: "start" });
+      const avisos = [];
+      try {
+        const comparacao = await compararImagens(composicao, recebida);
+        if (comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5) avisos.push("A imagem é igual ou muito parecida com a montagem; não use sem revisar.");
+        const ausentes = await conferirLesoesVisiveis(composicao, recebida);
+        if (ausentes.length) avisos.push(`Possível ausência de: ${ausentes.join(", ")}.`);
+      } catch (_erro) { avisos.push("A conferência automática não pôde ser concluída."); }
+      const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "") ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
+      mostrar(estadoMapaApi, `${avisos.join(" ") || "Mapa completo recebido."} Confira cada lesão, a anatomia e as medidas antes de usar.${pedido}`, avisos.length > 0);
+    } catch (erro) {
+      mostrar(estadoMapaApi, await traduzirErro(erro), true);
+    } finally {
+      botaoMapaApi.disabled = false;
+    }
+  }
 
   async function gerarAcabamentoAprovado() {
     if (botaoGerarRegioes.disabled) return;

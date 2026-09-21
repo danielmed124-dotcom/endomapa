@@ -172,6 +172,8 @@
       <div class="acoes editor-manual__acoes">
         <button class="botao" type="button" data-gerar-regioes>Gerar mapa com acabamento aprovado · grátis</button>
         <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
+        <button class="botao" type="button" data-gerar-mapa-api>Gerar mapa completo realista com OpenAI · pago</button>
+        <p class="mensagem-formulario" data-estado-mapa-api role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao ditado</a>
       </div>
@@ -194,6 +196,10 @@
           <figure class="mapa-visual" data-resultado-regioes hidden>
             <img data-imagem-regioes alt="Mapa completo com regiões integradas experimentalmente" />
             <figcaption data-legenda-regioes>Mapa com acabamento aprovado · revisão médica necessária</figcaption>
+          </figure>
+          <figure class="mapa-visual" data-resultado-mapa-api hidden>
+            <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
+            <figcaption>Mapa completo OpenAI · revisão médica necessária</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-gemini-detalhe hidden>
             <img data-imagem-gemini-detalhe alt="Mapa com uma lesão refinada localmente pelo Gemini" />
@@ -228,6 +234,6 @@
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=acabamento-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=acabamento-1"></script>
+    <script src="editor-manual-ia.js?v=mapa-api-1"></script>
   </body>
 </html>
