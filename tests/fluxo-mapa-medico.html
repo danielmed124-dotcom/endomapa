@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>Fluxo médico sem API paga</title><pre id="resultado">PENDENTE</pre>
+<script type="module">
+import { construirPromptMapaMedico, VERSAO_PROMPT_MAPA } from '../supabase/functions/_shared/prompt-mapa-medico.js';
+import { misturarPixelsProtegidos } from '../mapa-composicao-protegida.js';
+const conferir = (valor, mensagem) => { if (!valor) throw new Error(mensagem); };
+try {
+  const prompt = construirPromptMapaMedico({ inventario: [{ nome: 'Endometrioma', x: 25, y: 50, largura: 8, altura: 6 }], largura: 1088, altura: 1456, referenciaAnexada: true });
+  conferir(VERSAO_PROMPT_MAPA === 'mapa-medico-v2' && prompt.includes('Endometrioma') && prompt.includes('imagem 2 efetivamente anexada'), 'Prompt ou referência ausente');
+  conferir(prompt.includes('atlas anatômico') && prompt.includes('não é fotografia de procedimento'), 'Contexto visual ausente');
+  let faltou = false; try { construirPromptMapaMedico({ inventario: [], referenciaAnexada: false }); } catch (_) { faltou = true; }
+  conferir(faltou, 'Referência inválida aceita');
+  const origem = new Uint8ClampedArray(4 * 25).fill(0);
+  const gerada = new Uint8ClampedArray(4 * 25).fill(255);
+  const { pixels, alterados } = misturarPixelsProtegidos(origem, gerada, 5, 5, [{ x: 2, y: 2, raioX: 1.5, raioY: 1.5 }]);
+  conferir(alterados > 0 && pixels[0] === 0 && pixels[(2 * 5 + 2) * 4] === 255, 'Máscara não preservou os pixels externos');
+  conferir(pixels[(2 * 5 + 4) * 4] === 0, 'Máscara invertida');
+  let dimensoes = false; try { misturarPixelsProtegidos(origem, gerada, 6, 5, []); } catch (_) { dimensoes = true; }
+  conferir(dimensoes, 'Dimensões inválidas aceitas');
+  document.querySelector('#resultado').textContent = 'PASSOU: prompt, referência, anatomia, máscara e pixels externos.';
+} catch (erro) { document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message; }
+</script>

@@ -3,12 +3,13 @@
 <title>Diagnóstico de bloqueios de imagem</title>
 <pre id="resultado">PENDENTE</pre>
 <script type="module">
-import { diagnosticarErroImagem } from '../supabase/functions/_shared/erro-imagem-gpt.js';
+import { diagnosticarErroImagem, classificarErroImagem } from '../supabase/functions/_shared/erro-imagem-gpt.js';
 const conferir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
 try {
-  const relatado = diagnosticarErroImagem({error:{message:'Your request was rejected by the safety system. Include request ID req_eb07e81d19204b3fab6455cfa7aa6ae9.'}}, null);
-  conferir(relatado.codigo === 'GPT_SEGURANCA' && relatado.pedido_id === 'req_eb07e81d19204b3fab6455cfa7aa6ae9', 'Erro relatado não reconhecido');
+  const relatado = diagnosticarErroImagem({error:{code:'moderation_blocked',message:'texto sensível'}}, 'req_eb07e81d19204b3fab6455cfa7aa6ae9');
+  conferir(relatado.codigo === 'GPT_SEGURANCA' && relatado.pedido_id === 'req_eb07e81d19204b3fab6455cfa7aa6ae9', 'Erro estruturado não reconhecido');
   conferir(relatado.etapa === 'unknown' && relatado.categorias.length === 0, 'Diagnóstico inventado');
+  conferir(diagnosticarErroImagem({error:{message:'Your request was rejected by the safety system.'}}, null) === null, 'Bloqueio inventado somente por frase');
   const entrada = diagnosticarErroImagem({error:{code:'moderation_blocked',moderation_details:{moderation_stage:'input',categories:['sexual','sexual','desconhecida']}}}, 'req_teste');
   conferir(entrada.etapa === 'input' && entrada.categorias.length === 1 && entrada.erro.includes('conteúdo sexual'), 'Diagnóstico da entrada');
   const saida = diagnosticarErroImagem({error:{code:'moderation_blocked',moderation_details:{moderation_stage:'output',categories:['violence']}}}, 'req_saida');
@@ -17,6 +18,11 @@ try {
   conferir(malformado.etapa === 'unknown' && malformado.categorias.length === 0 && malformado.pedido_id === null, 'Resposta malformada');
   conferir(diagnosticarErroImagem(null, null) === null, 'Resposta vazia');
   conferir(diagnosticarErroImagem({error:{code:'rate_limit_exceeded',message:'Limite'}}, 'req_limite') === null, 'Erro de limite confundido com segurança');
+  conferir(classificarErroImagem({error:{code:'insufficient_quota',message:'sk-segredo paciente'}}, 429, 'req_cota').erro.includes('saldo'), 'Saldo confundido com frequência');
+  conferir(!JSON.stringify(classificarErroImagem({error:{code:'invalid_api_key',message:'sk-segredo paciente'}}, 401, null)).includes('sk-segredo'), 'Segredo vazou');
+  conferir(classificarErroImagem({error:{code:'rate_limit_exceeded'}}, 429, null).erro.includes('temporariamente'), 'Frequência');
+  conferir(classificarErroImagem({error:{code:'invalid_prompt'}}, 400, null).estado === 'entrada_invalida', 'HTTP 400 confundido com moderação');
+  conferir(classificarErroImagem({error:{code:'server_error'}}, 500, null).erro.includes('temporária'), 'Erro do servidor');
   document.querySelector('#resultado').textContent = 'PASSOU: erro relatado, identificador, entrada, saída, categorias, campos ausentes, resposta malformada e distinção de limites.';
 } catch (erro) {
   document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message;

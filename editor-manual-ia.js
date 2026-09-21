@@ -36,6 +36,8 @@
     const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
     if (erroSessao || !sessao?.session) return mostrar(estadoMapaApi, "Entre na sua conta do Endomapa antes de gerar a imagem.", true);
     botaoMapaApi.disabled = true;
+    document.querySelector("[data-resultado-mapa-api]").hidden = true;
+    document.querySelector("[data-imagem-mapa-api]").removeAttribute("src");
     const assinatura = assinaturaMapa();
     mostrar(estadoMapaApi, "Gerando o mapa inteiro em qualidade máxima. Esta chamada é paga e pode levar alguns minutos; nenhuma repetição será feita automaticamente.", false);
     try {
@@ -48,6 +50,7 @@
         return {
           nome: dados.nome,
           x: Number(dados.x), y: Number(dados.y),
+          giro: Number(dados.giro || 0),
           largura: 13 * escala * Number(dados.eixoX) / 100,
           altura: imagem.naturalWidth / imagem.naturalHeight * 13 / Number(dados.proporcao || 1.8) * escala * Number(dados.eixoY) / 100,
         };
@@ -60,7 +63,10 @@
       const recebida = `data:${data.formato || "image/png"};base64,${data.imagem_base64}`;
       await carregarImagem(recebida);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. O resultado não foi aplicado; gere novamente com a montagem atual.");
-      const final = await window.endomapaAdicionarRotulos(recebida);
+      const { comporMapaProtegido } = await import("./mapa-composicao-protegida.js");
+      const protegida = await comporMapaProtegido(composicao, recebida, inventario);
+      if (!protegida.pixelsAlterados) throw new Error("A OpenAI respondeu, mas a área das lesões não mudou. Sua montagem permanece preservada.");
+      const final = await window.endomapaAdicionarRotulos(protegida.imagem);
       original.src = await window.endomapaCapturarMapaManual();
       document.querySelector("[data-imagem-mapa-api]").src = final;
       document.querySelector("[data-resultado-mapa-api]").hidden = false;
@@ -70,11 +76,11 @@
       try {
         const comparacao = await compararImagens(composicao, recebida);
         if (comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5) avisos.push("A imagem é igual ou muito parecida com a montagem; não use sem revisar.");
-        const ausentes = await conferirLesoesVisiveis(composicao, recebida);
+        const ausentes = await conferirLesoesVisiveis(composicao, protegida.imagem);
         if (ausentes.length) avisos.push(`Possível ausência de: ${ausentes.join(", ")}.`);
       } catch (_erro) { avisos.push("A conferência automática não pôde ser concluída."); }
       const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "") ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
-      mostrar(estadoMapaApi, `${avisos.join(" ") || "Mapa completo recebido."} Confira cada lesão, a anatomia e as medidas antes de usar.${pedido}`, avisos.length > 0);
+      mostrar(estadoMapaApi, `${avisos.join(" ") || "Mapa recebido com acabamento aplicado nas áreas das lesões."} Os pixels fora dessas áreas foram preservados. Confira cada lesão, a anatomia e as medidas antes de usar.${pedido}`, avisos.length > 0);
     } catch (erro) {
       mostrar(estadoMapaApi, await traduzirErro(erro), true);
     } finally {

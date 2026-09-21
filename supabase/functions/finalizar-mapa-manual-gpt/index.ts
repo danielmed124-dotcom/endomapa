@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { diagnosticarErroImagem } from "../_shared/erro-imagem-gpt.js";
+import { classificarErroImagem } from "../_shared/erro-imagem-gpt.js";
+import { construirPromptMapaMedico, VERSAO_PROMPT_MAPA } from "../_shared/prompt-mapa-medico.js";
 
 const ORIGENS = new Set([
   "https://endomapa.pages.dev",
@@ -21,6 +22,11 @@ function responderComOrigem(corpo: Record<string, unknown>, status = 200, origem
 }
 
 Deno.serve(async (req) => {
+  const operacaoId = crypto.randomUUID();
+  const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({
+    operacao_id: operacaoId, horario_utc: new Date().toISOString(), endpoint: "/v1/images/edits",
+    modelo: "gpt-image-2.5-sunburst", versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", etapa, ...dados,
+  }));
   const origem = req.headers.get("Origin");
   const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem(corpo, status, origem);
   if (req.method === "OPTIONS") return origem && ORIGENS.has(origem) ? new Response("ok", { headers: cabecalhos(origem) }) : responder({ erro: "Origem não autorizada." }, 403);
@@ -65,7 +71,8 @@ Deno.serve(async (req) => {
   const inventario = corpo.inventario_lesoes;
   if (modoMapaReferencia && (modoRegiao || modoDetalhe || !Array.isArray(inventario) || inventario.length < 1 || inventario.length > 30 ||
     !inventario.every((item) => item && typeof item.nome === "string" && /^[\p{L}\p{N} .ºª-]{1,60}$/u.test(item.nome) &&
-      [item.x, item.y, item.largura, item.altura].every((valor) => typeof valor === "number" && Number.isFinite(valor) && valor > 0 && valor <= 100)))) {
+      [item.x, item.y, item.largura, item.altura].every((valor) => typeof valor === "number" && Number.isFinite(valor) && valor > 0 && valor <= 100) &&
+      typeof item.giro === "number" && Number.isFinite(item.giro) && item.giro >= -180 && item.giro <= 180))) {
     return responder({ erro: "A lista de lesões do mapa está inválida. Nenhuma geração foi solicitada." }, 400);
   }
   const nomesRegiao = corpo.tipos_lesao;
@@ -76,6 +83,11 @@ Deno.serve(async (req) => {
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(composicao) || composicao.length % 4 !== 0) return responder({ erro: "A imagem enviada está inválida. Nenhuma geração foi solicitada." }, 400);
+  let bytesComposicao: Uint8Array;
+  try { bytesComposicao = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0)); }
+  catch (_erro) { return responder({ erro: "A imagem enviada não pôde ser lida. Nenhuma geração foi solicitada." }, 400); }
+  if (bytesComposicao[0] !== 0xff || bytesComposicao[1] !== 0xd8) return responder({ erro: "O mapa enviado não é um JPEG válido. Nenhuma geração foi solicitada." }, 400);
 
   // A referência aprovada é pública e fixa; obtê-la antes da reserva evita gastar
   // uma geração caso o arquivo não esteja disponível.
@@ -101,10 +113,9 @@ Deno.serve(async (req) => {
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
   try {
-    const bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0));
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2.5-sunburst");
-    formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytes], "mapa-manual.jpg", { type: "image/jpeg" }));
+    formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytesComposicao], "mapa-manual.jpg", { type: "image/jpeg" }));
     if (referenciaAprovada) {
       formulario.append("image[]", new File([referenciaAprovada], "referencia-aprovada.png", { type: "image/png" }));
     }
@@ -114,14 +125,9 @@ Deno.serve(async (req) => {
     formulario.append("output_format", modoMapaReferencia ? "png" : "webp");
     if (!modoMapaReferencia) formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
-    formulario.append("prompt", (modoMapaReferencia ? [
-      "Create a complete, polished medical-atlas illustration of isolated internal pelvic organs for physician review. This is an anatomical educational image, with no person or external body visible.",
-      "IMAGE ROLES: Image 1 is the current patient's full map and the sole source of clinical content, anatomy, composition, location, number, size, and shape of findings. Image 2 is an approved example of the desired rendering quality only: continuous tissue texture, organic volume, coherent light, subtle contact shadows, and lesions visibly integrated into adjacent organs. Do not copy any finding, position, device, or layout from image 2.",
-      "RENDERING TASK: Repaint the entire anatomical map and ALL existing findings together in one coherent style matching the finish of image 2. Visibly redraw the findings themselves and their contact with the tissue; a global color, contrast, or sharpness adjustment is insufficient. Replace pasted-on borders with natural tissue transitions while retaining each finding's diagnostic appearance and distinguishable internal content.",
-      `EXACT FINDING INVENTORY IN IMAGE 1 (${(inventario as Array<unknown>).length} separate items): ${(inventario as Array<{ nome: string; x: number; y: number; largura: number; altura: number }>).map((item, indice) => `${indice + 1}. ${item.nome}; center (${item.x.toFixed(1)}%, ${item.y.toFixed(1)}%); approximate footprint ${item.largura.toFixed(1)}% wide by ${item.altura.toFixed(1)}% high`).join(" | ")}. Coordinates refer to the entire image, from its top-left corner. Repeated names mean separate findings; render every listed item.`,
-      "FIDELITY: Keep each finding at its indicated center and approximate footprint, on the same organ and side. Preserve its morphology, distinct foci or branches, and relationship to nearby anatomy. Do not omit, merge, duplicate, invent, or relocate findings. Preserve the base anatomy, full vertical framing, white background, and upper-right logo. Do not add labels or written descriptions; those are added separately by the application.",
-      "Make the result visibly more realistic than image 1 while keeping it suitable as a precise medical illustration. The final image will be reviewed against image 1 by a physician.",
-    ] : modoRegiao ? [
+    formulario.append("prompt", modoMapaReferencia
+      ? construirPromptMapaMedico({ inventario, largura: 1088, altura: 1456, referenciaAnexada: !!referenciaAprovada })
+      : (modoRegiao ? [
       "Image 1 is the exact crop to edit. Image 2 is the physician-approved reference for the finished appearance, material, relief, lighting and tissue integration. Reproduce the approved rendering style of relevant findings from image 2, while using ONLY image 1 for the type, count, position, size and anatomy in this new case. Do not copy the layout or extra findings from image 2.",
       "This is a close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs. Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
       `Expected existing findings: ${(nomesRegiao as string[]).join(", ")}.`,
@@ -141,22 +147,43 @@ Deno.serve(async (req) => {
       "O resultado é uma prévia experimental que exige comparação e aprovação médica.",
     ]).join(" "));
 
-    const resposta = await fetch("https://api.openai.com/v1/images/edits", {
-      method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
-    });
-    if (!resposta.ok) {
-      const detalhes = await resposta.json().catch(() => null);
-      const diagnostico = diagnosticarErroImagem(detalhes, resposta.headers.get("x-request-id"));
-      if (diagnostico) return responder(diagnostico, 422);
-      const motivo = typeof detalhes?.error?.message === "string" ? ` Motivo: ${detalhes.error.message}` : "";
-      return responder({ erro: `O GPT recusou a geração (código GPT-${resposta.status}).${motivo}` }, resposta.status === 429 ? 429 : 502);
+    let resposta: Response;
+    let detalhesErro: Record<string, unknown> | null = null;
+    // Apenas recusa explícita por frequência/indisponibilidade permite uma nova
+    // tentativa. Timeout e falha de rede têm estado incerto e não são repetidos.
+    for (let tentativa = 1; ; tentativa++) {
+      registrar("pedido_enviado", { tentativa });
+      resposta = await fetch("https://api.openai.com/v1/images/edits", {
+        method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
+      });
+      if (resposta.ok) break;
+      detalhesErro = await resposta.json().catch(() => null);
+      const codigoErro = (detalhesErro as { error?: { code?: string } } | null)?.error?.code;
+      const transitório = (resposta.status === 429 && codigoErro === "rate_limit_exceeded") ||
+        (resposta.status === 503 && codigoErro === "service_unavailable");
+      if (!transitório || tentativa >= 2) break;
+      const segundos = Number(resposta.headers.get("retry-after"));
+      const espera = Number.isFinite(segundos) && segundos > 0 ? Math.min(segundos * 1000, 10_000) : 1000 * tentativa;
+      await new Promise((resolver) => setTimeout(resolver, espera + Math.floor(Math.random() * 300)));
     }
-    const dados = await resposta.json();
+    if (!resposta.ok) {
+      const diagnostico = classificarErroImagem(detalhesErro, resposta.status, resposta.headers.get("x-request-id"));
+      registrar("resposta_erro", { http_status: diagnostico.http_status, error_type: diagnostico.error_type,
+        error_code: diagnostico.error_code, pedido_id: diagnostico.pedido_id, moderation_stage: diagnostico.etapa || null,
+        categories: diagnostico.categorias || [] });
+      return responder({ ...diagnostico, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado" }, diagnostico.estado === "bloqueado_provedor" ? 422 : resposta.status);
+    }
+    const dados = await resposta.json().catch(() => null);
     const imagem = dados?.data?.[0]?.b64_json;
-    if (typeof imagem !== "string" || !imagem) return responder({ erro: "O GPT terminou sem devolver uma imagem válida." }, 502);
+    if (typeof imagem !== "string" || !imagem) {
+      const idResposta = resposta.headers.get("x-request-id");
+      registrar("resposta_sem_imagem", { http_status: resposta.status, pedido_id: /^req_[a-zA-Z0-9_-]{1,180}$/.test(idResposta || "") ? idResposta : null });
+      return responder({ erro: "A OpenAI respondeu, mas não devolveu uma imagem final utilizável.", estado: "revisao_necessaria", operacao_id: operacaoId }, 502);
+    }
     const identificador = resposta.headers.get("x-request-id");
     const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
-    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, aviso: modoMapaReferencia
+    registrar("imagem_recebida", { http_status: resposta.status, pedido_id: pedidoId });
+    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", aviso: modoMapaReferencia
       ? "Mapa completo experimental: confira todas as lesões, a anatomia e as medidas antes de usar."
       : modoRegiao
       ? "Região experimental: confira cada lesão e a anatomia antes de usar o mapa completo."
@@ -164,7 +191,8 @@ Deno.serve(async (req) => {
       ? "Prévia de uma lesão: compare o conteúdo e o contorno com a montagem manual antes de aceitar."
       : "Prévia GPT: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
-    if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "A OpenAI demorou mais de 140 segundos. A geração pode ter sido cobrada; confira o uso antes de repetir." }, 504);
-    return responder({ erro: "Não foi possível gerar a versão realista com GPT." }, 502);
+    registrar("falha_tecnica", { classe: erro instanceof DOMException && erro.name === "AbortError" ? "timeout" : "rede_ou_processamento" });
+    if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "A OpenAI demorou mais de 140 segundos. O estado da geração é desconhecido; confira o uso antes de repetir.", estado: "falha_tecnica", operacao_id: operacaoId }, 504);
+    return responder({ erro: "Não foi possível concluir a geração. A montagem manual foi preservada.", estado: "falha_tecnica", operacao_id: operacaoId }, 502);
   } finally { clearTimeout(temporizador); }
 });
