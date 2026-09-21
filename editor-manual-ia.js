@@ -96,7 +96,7 @@
       document.querySelector("[data-entrada-referencia]").src = urlReferencia;
       document.querySelector("[data-mascara-teste]").src = criarPreviaMascara(inventario, imagem.naturalWidth, imagem.naturalHeight);
       document.querySelector("[data-dimensoes-mapa]").textContent = `Imagem 1 · mapa didático enviado · ${imagem.naturalWidth} × ${imagem.naturalHeight} px`;
-      document.querySelector("[data-dimensoes-referencia]").textContent = `Imagem 2 · referência aprovada · ${referencia.naturalWidth} × ${referencia.naturalHeight} px`;
+      document.querySelector("[data-dimensoes-referencia]").textContent = `Imagem 2 · referência de estilo; não aprova cada lesão · ${referencia.naturalWidth} × ${referencia.naturalHeight} px`;
       document.querySelector("[data-prompt-teste]").textContent = dados.prompt_visual;
       document.querySelector("[data-configuracao-teste]").textContent = `Função ${dados.versao_funcao}; prompt ${dados.versao_prompt}; ${dados.modelo}; ${dados.endpoint}; moderation=${dados.parametros.moderation}; n=${dados.parametros.n}; size=${dados.parametros.size}; quality=${dados.parametros.quality}; output_format=${dados.parametros.output_format}. Tarifas publicadas: US$ 5 por milhão de tokens de texto de entrada, US$ 8 por milhão de tokens de imagem de entrada e US$ 30 por milhão de tokens de imagem de saída. O número de tokens desta edição não é conhecido antes da chamada; isto não é cobrança confirmada.`;
       document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify({
@@ -202,7 +202,7 @@
         pixels_alterados_dentro: protegida.alteradosDentro, pixels_alterados_fora: protegida.alteradosFora,
         pixels_proposta_bruta_dentro: protegida.mudancaBrutaDentro };
       document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify(diagnostico, null, 2);
-      mostrar(estadoMapaApi, `${avisos.join(" ") || "Imagem recebida para revisão."} Fora da máscara: ${protegida.alteradosFora} pixels alterados; dentro: ${protegida.alteradosDentro}. Confira posição, forma e tamanho de cada lesão. Nenhuma outra geração será feita.`, avisos.length > 0);
+      mostrar(estadoMapaApi, `${avisos.join(" ") || "Imagem recebida para revisão."} Fora da máscara: ${protegida.alteradosFora} pixels alterados; dentro: ${protegida.alteradosDentro}. A referência valida somente o estilo: lesões sem exemplo correspondente continuam pendentes de aprovação individual. Confira posição, forma e tamanho de cada lesão. Nenhuma outra geração será feita.`, avisos.length > 0);
     } catch (erro) {
       if (diagnosticoAtual && diagnosticoAtual.estado === "resposta_recebida") {
         diagnosticoAtual.estado = etapaCliente === "decodificacao" ? "imagem_recebida_falha_decodificacao" : "imagem_recebida_falha_composicao";
