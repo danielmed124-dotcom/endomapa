@@ -3,7 +3,7 @@
 ## O que foi comprovado
 
 - O botão pago do editor captura o mapa em JPEG, sem rótulos, e envia os bytes em base64 e o inventário das lesões à função Supabase `finalizar-mapa-manual-gpt`.
-- A função baixa a referência didática aprovada, anexa os dois arquivos como `image[]` e chama diretamente `POST https://api.openai.com/v1/images/edits` com `gpt-image-2.5-sunburst`. Não há modelo de texto intermediário, SDK OpenAI, gateway de terceiros nem triagem local por nomes anatômicos nesse fluxo. O cliente Supabase usa `@supabase/supabase-js@2` na função e a biblioteca pública do navegador no editor.
+- A função baixa a referência didática aprovada, anexa os dois arquivos como `image[]` e chama diretamente `POST https://api.openai.com/v1/images/edits` com `gpt-image-2.5-sunburst`. Não há modelo de texto intermediário, SDK OpenAI, gateway de terceiros nem triagem local por nomes anatômicos nesse fluxo. O cliente Supabase usa `@supabase/supabase-js@2` na função (sem versão menor fixada) e `@supabase/supabase-js@2.111.0` no navegador.
 - São enviados `moderation=low`, `quality=max`, `size=1088x1456` e `output_format=png` no modo do mapa completo. `low` continua sujeito à verificação do provedor. O prompt visual é `mapa-medico-v2` em `_shared/prompt-mapa-medico.js`.
 - O pedido `req_9311f0a44d18490bb610d862a42d6844` foi apresentado pelo aplicativo com estágio `output` e categoria `sexual`. Isso indica que a resposta recebida continha esses metadados. O status HTTP, `error.code` e o horário exato desse pedido não foram conservados; portanto, não são afirmados aqui.
 - O aplicativo não repetia automaticamente o pedido após essa recusa. A montagem manual foi preservada.
