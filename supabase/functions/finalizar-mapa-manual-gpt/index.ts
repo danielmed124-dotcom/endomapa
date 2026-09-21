@@ -1,13 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { classificarErroImagem } from "../_shared/erro-imagem-gpt.js";
 import { construirPromptMapaMedico, VERSAO_PROMPT_MAPA } from "../_shared/prompt-mapa-medico.js";
+import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-mapa.js";
 
 const ORIGENS = new Set([
   "https://endomapa.pages.dev",
   "https://experimento-editor-manual.endomapa.pages.dev",
 ]);
 const LIMITE_MS = 140_000;
-const VERSAO_FUNCAO = "teste-unico-v1";
+const VERSAO_FUNCAO = "edicao-direta-v1";
 const URL_REFERENCIA = "https://endomapa.pages.dev/output/estudos-realismo/mapa-realista-completo-estudo-v1.png";
 const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -28,7 +29,7 @@ Deno.serve(async (req) => {
   let tentativasEnvioImagem = 0;
   const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({
     operacao_id: operacaoId, horario_utc: new Date().toISOString(), endpoint: "/v1/images/edits",
-    modelo: "gpt-image-2.5-sunburst", versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", etapa, ...dados,
+    modelo: "gpt-image-2.5-sunburst", versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", etapa, ...dados,
   }));
   const origem = req.headers.get("Origin");
   const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem({
@@ -74,6 +75,8 @@ Deno.serve(async (req) => {
   const modoDetalhe = corpo.modo_detalhe === true;
   const modoRegiao = corpo.modo_regiao === true;
   const modoMapaReferencia = corpo.modo_mapa_referencia === true;
+  const modoDireto = corpo.modo_edicao_direta === true;
+  if (modoDireto && (modoMapaReferencia || modoRegiao || modoDetalhe)) return responder({ erro: "Escolha somente um modo de edição." }, 400);
   const inventario = corpo.inventario_lesoes;
   if (modoMapaReferencia && (modoRegiao || modoDetalhe || !Array.isArray(inventario) || inventario.length < 1 || inventario.length > 30 ||
     !inventario.every((item) => item && typeof item.nome === "string" && /^[\p{L}\p{N} .ºª-]{1,60}$/u.test(item.nome) &&
@@ -93,7 +96,10 @@ Deno.serve(async (req) => {
   let bytesComposicao: Uint8Array;
   try { bytesComposicao = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0)); }
   catch (_erro) { return responder({ erro: "A imagem enviada não pôde ser lida. Nenhuma geração foi solicitada." }, 400); }
-  if (bytesComposicao[0] !== 0xff || bytesComposicao[1] !== 0xd8) return responder({ erro: "O mapa enviado não é um JPEG válido. Nenhuma geração foi solicitada." }, 400);
+  const pngValido = bytesComposicao.length > 24 && [137,80,78,71,13,10,26,10].every((byte, indice) => bytesComposicao[indice] === byte);
+  if (modoDireto ? !pngValido : bytesComposicao[0] !== 0xff || bytesComposicao[1] !== 0xd8) {
+    return responder({ erro: "O formato da imagem enviada está inválido. Nenhuma geração foi solicitada." }, 400);
+  }
 
   // A referência aprovada é pública e fixa; obtê-la antes da reserva evita gastar
   // uma geração caso o arquivo não esteja disponível.
@@ -114,6 +120,20 @@ Deno.serve(async (req) => {
 
   const hash = async (bytes: Uint8Array) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
     .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  if (modoDireto) {
+    const hashMapaDireto = await hash(bytesComposicao);
+    const hashPromptDireto = await hash(new TextEncoder().encode(PROMPT_EDICAO_DIRETA));
+    if (corpo.preparar_teste === true) return responder({
+      pronto: true, prompt_visual: PROMPT_EDICAO_DIRETA, versao_prompt: VERSAO_PROMPT_DIRETO,
+      modelo: "gpt-image-2.5-sunburst", endpoint: "/v1/images/edits",
+      parametros: { moderation: "low", n: 1, size: "1088x1456", quality: "max", output_format: "png" },
+      imagem_1: { papel: "mapa completo já gerado; única imagem enviada", sha256: hashMapaDireto },
+      prompt_sha256: hashPromptDireto, mascara_api: false, mascara_composicao_local: false,
+    });
+    if (corpo.mapa_sha256 !== hashMapaDireto || corpo.prompt_sha256 !== hashPromptDireto) {
+      return responder({ erro: "A imagem ou o prompt mudou desde a preparação. Prepare novamente; nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);
+    }
+  }
   const promptMapa = modoMapaReferencia
     ? construirPromptMapaMedico({ inventario, largura: 1088, altura: 1456, referenciaAnexada: !!referenciaAprovada }) : null;
   if (modoMapaReferencia) {
@@ -146,17 +166,17 @@ Deno.serve(async (req) => {
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2.5-sunburst");
     formulario.append("n", "1");
-    formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytesComposicao], "mapa-manual.jpg", { type: "image/jpeg" }));
+    formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytesComposicao], modoDireto ? "mapa-gerado.png" : "mapa-manual.jpg", { type: modoDireto ? "image/png" : "image/jpeg" }));
     if (referenciaAprovada) {
       formulario.append("image[]", new File([referenciaAprovada], "referencia-aprovada.png", { type: "image/png" }));
     }
-    formulario.append("quality", modoMapaReferencia ? "max" : "medium");
+    formulario.append("quality", modoMapaReferencia || modoDireto ? "max" : "medium");
     // A edição local recebe um recorte quadrado ampliado pelo editor.
-    formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : modoMapaReferencia ? "1088x1456" : "1056x1408");
-    formulario.append("output_format", modoMapaReferencia ? "png" : "webp");
-    if (!modoMapaReferencia) formulario.append("output_compression", "85");
+    formulario.append("size", modoDetalhe || modoRegiao ? "1024x1024" : modoMapaReferencia || modoDireto ? "1088x1456" : "1056x1408");
+    formulario.append("output_format", modoMapaReferencia || modoDireto ? "png" : "webp");
+    if (!modoMapaReferencia && !modoDireto) formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
-    formulario.append("prompt", modoMapaReferencia
+    formulario.append("prompt", modoDireto ? PROMPT_EDICAO_DIRETA : modoMapaReferencia
       ? promptMapa!
       : (modoRegiao ? [
       "Image 1 is the exact crop to edit. Image 2 is the physician-approved reference for the finished appearance, material, relief, lighting and tissue integration. Reproduce the approved rendering style of relevant findings from image 2, while using ONLY image 1 for the type, count, position, size and anatomy in this new case. Do not copy the layout or extra findings from image 2.",
@@ -189,7 +209,7 @@ Deno.serve(async (req) => {
       registrar("resposta_erro", { http_status: diagnostico.http_status, error_type: diagnostico.error_type,
         error_code: diagnostico.error_code, pedido_id: diagnostico.pedido_id, moderation_stage: diagnostico.etapa || null,
         categories: diagnostico.categorias || [] });
-      return responder({ ...diagnostico, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado" }, diagnostico.estado === "bloqueado_provedor" ? 422 : resposta.status);
+      return responder({ ...diagnostico, operacao_id: operacaoId, versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado" }, diagnostico.estado === "bloqueado_provedor" ? 422 : resposta.status);
     }
     const dados = await resposta.json().catch(() => null);
     const imagem = dados?.data?.[0]?.b64_json;
@@ -208,7 +228,9 @@ Deno.serve(async (req) => {
       imagem_saida: numero(dados.usage.output_tokens_details?.image_tokens),
     } : null;
     registrar("imagem_recebida", { http_status: resposta.status, pedido_id: pedidoId, uso });
-    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, http_status: resposta.status, uso, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", aviso: modoMapaReferencia
+    return responder({ imagem_base64: imagem, formato: modoMapaReferencia || modoDireto ? "image/png" : "image/webp", pedido_id: pedidoId, http_status: resposta.status, uso, operacao_id: operacaoId, versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", aviso: modoDireto
+      ? "Edição direta experimental: compare todas as lesões com o mapa enviado antes de aprovar."
+      : modoMapaReferencia
       ? "Mapa completo experimental: confira todas as lesões, a anatomia e as medidas antes de usar."
       : modoRegiao
       ? "Região experimental: confira cada lesão e a anatomia antes de usar o mapa completo."

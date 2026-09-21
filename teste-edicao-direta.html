@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Teste de edição direta · Endomapa</title>
+  <style>
+    body{font:16px/1.5 system-ui,sans-serif;background:#111813;color:#f5f5ee;margin:0;padding:1rem}
+    main{max-width:1050px;margin:auto} a{color:#e9c36c} h1{font-size:1.6rem}
+    section{background:#1d271f;border:1px solid #55624b;border-radius:12px;padding:1rem;margin:1rem 0}
+    button,input{font:inherit} button{display:block;width:100%;padding:.8rem;margin:.7rem 0;border:0;border-radius:8px;background:#dbaf50;color:#161b15;font-weight:700}
+    button:disabled{opacity:.48} input[type=file]{max-width:100%}
+    img{display:block;max-width:100%;height:auto;background:white}
+    .grade{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:1rem}
+    pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto}
+    [hidden]{display:none!important}
+  </style>
+</head>
+<body><main>
+  <a href="experimento-editor">← Voltar ao editor</a>
+  <h1>Teste direto: mapa gerado como única entrada</h1>
+  <p>Selecione o arquivo <strong>download (2).png</strong> que você enviou. Confira a imagem e o prompt. Só o botão “Gerar uma imagem” faz uma chamada paga. Não há segunda referência nem nova tentativa automática.</p>
+  <section>
+    <label>Mapa completo já gerado <input type="file" accept="image/png" data-arquivo /></label>
+    <button type="button" data-preparar>Preparar e conferir · grátis</button>
+    <button type="button" data-gerar disabled>Gerar uma imagem diretamente na API · pago</button>
+    <p data-estado role="status"></p>
+  </section>
+  <section data-preparo hidden>
+    <h2>Entrada e prompt exatos</h2>
+    <div class="grade"><figure><img data-entrada alt="Mapa enviado à API" /><figcaption data-dimensoes></figcaption></figure></div>
+    <p data-configuracao></p>
+    <pre data-prompt></pre>
+  </section>
+  <section data-resultado hidden>
+    <h2>Comparação para revisão médica</h2>
+    <div class="grade">
+      <figure><img data-original alt="Mapa original preservado" /><figcaption>Mapa original enviado</figcaption></figure>
+      <figure><img data-gerada alt="Proposta recebida da API" /><figcaption>Proposta da API · ainda não aprovada</figcaption></figure>
+    </div>
+    <a data-download download="endomapa-edicao-direta-proposta.png">Baixar proposta em PNG</a>
+  </section>
+  <section><h2>Diagnóstico sem segredos</h2><pre data-diagnostico>Ainda não preparado.</pre></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti" crossorigin="anonymous"></script>
+<script src="supabase-config.js"></script>
+<script src="teste-edicao-direta.js?v=1"></script>
+</body></html>
