@@ -267,7 +267,13 @@
   async function traduzirErro(erro) {
     try {
       const corpo = await erro.context?.json();
-      if (corpo?.erro) return corpo.erro;
+      if (corpo?.erro) {
+        const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(corpo.pedido_id || "") && !corpo.erro.includes(corpo.pedido_id)
+          ? ` Pedido OpenAI: ${corpo.pedido_id}.` : "";
+        const operacao = /^[a-f0-9-]{36}$/i.test(corpo.operacao_id || "")
+          ? ` Operação Endomapa: ${corpo.operacao_id}.` : "";
+        return `${corpo.erro}${pedido}${operacao}`;
+      }
     } catch (_erro) {}
     if (erro.name === "FunctionsFetchError" || /Failed to fetch|Failed to send a request|NetworkError|Load failed/i.test(erro.message || "")) {
       return "A conexão foi interrompida antes de receber a imagem. Não foi possível confirmar se a geração terminou no servidor.";
