@@ -30,7 +30,8 @@ export function diagnosticarErroImagem(detalhes, identificadorCabecalho) {
     "A montagem manual permanece no editor. Você pode revisar a descrição ou encaminhar este diagnóstico ao suporte.",
     identificador ? `Identificador do pedido: ${identificador}.` : "A resposta não trouxe um identificador de pedido válido.",
   ].join(" ");
-  return { erro: texto, codigo: "GPT_SEGURANCA", estado: "bloqueado_provedor", pedido_id: identificador, etapa, categorias: informadas };
+  return { erro: texto, codigo: "GPT_SEGURANCA", estado: "bloqueado_provedor", pedido_id: identificador, etapa,
+    categorias: informadas, detalhes_moderacao_recebidos: !!detalheModeracao && typeof detalheModeracao === "object" };
 }
 
 export function classificarErroImagem(detalhes, status, identificadorCabecalho) {

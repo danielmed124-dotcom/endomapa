@@ -1868,6 +1868,7 @@ h1 span {
       "cabecalho cabecalho cabecalho"
       "biblioteca mapa controles"
       "biblioteca acoes controles"
+      "preparo preparo preparo"
       "resultado resultado resultado";
     align-items: start;
     gap: 20px;
@@ -1901,6 +1902,10 @@ h1 span {
   .resultado-editor-ia {
     grid-area: resultado;
     min-width: 0;
+  }
+
+  .resultado-editor-ia[data-preparo-teste] {
+    grid-area: preparo;
   }
 
   .controles-lesao {

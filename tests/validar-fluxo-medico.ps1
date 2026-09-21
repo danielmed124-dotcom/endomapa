@@ -24,10 +24,11 @@ $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {
 }
 try {
   Start-Sleep -Seconds 2
-  foreach ($nome in @('erro-imagem-gpt', 'fluxo-mapa-medico')) {
+  foreach ($nome in @('erro-imagem-gpt', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso')) {
     $arquivoSaida = Join-Path $env:TEMP "endomapa-$nome-dom.html"
     $arquivoErro = Join-Path $env:TEMP "endomapa-$nome-erros.txt"
-    $argumentos = @('--headless=new', '--disable-gpu', '--no-first-run', "--user-data-dir=$env:TEMP\endomapa-fluxo-medico-$nome", '--virtual-time-budget=3000', '--dump-dom', "http://localhost:8766/tests/$nome.html")
+    $rota = if ($nome -eq 'preparo-teste-unico-sucesso') { 'preparo-teste-unico.html#sucesso' } else { "$nome.html" }
+    $argumentos = @('--headless=new', '--disable-gpu', '--no-first-run', "--user-data-dir=$env:TEMP\endomapa-fluxo-medico-$nome", '--virtual-time-budget=5000', '--dump-dom', "http://localhost:8766/tests/$rota")
     $processo = Start-Process -FilePath 'C:\Program Files\Google\Chrome\Application\chrome.exe' -ArgumentList $argumentos -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $arquivoSaida -RedirectStandardError $arquivoErro
     $texto = Get-Content $arquivoSaida -Raw -ErrorAction SilentlyContinue
     if ($processo.ExitCode -ne 0 -or $texto -notmatch '<pre[^>]*>PASSOU:') { throw "Teste $nome falhou. Consulte $arquivoSaida e $arquivoErro." }

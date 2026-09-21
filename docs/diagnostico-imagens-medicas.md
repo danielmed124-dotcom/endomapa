@@ -20,7 +20,7 @@
 2. Supabase: valida JPEG, inventário e referência antes de reservar a geração. Segredos permanecem no servidor: `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `OPENAI_API_KEY`.
 3. OpenAI Images API: recebe os dois arquivos e o prompt. Não existe etapa de modelo de texto neste botão.
 4. Resposta: código estruturado de moderação gera estado `bloqueado_provedor`; autenticação, saldo, frequência, parâmetro e servidor têm mensagens separadas. Resposta 200 sem `b64_json` é tratada como ausência de imagem, não como sucesso.
-   Uma única repetição é permitida apenas quando a OpenAI devolve explicitamente `rate_limit_exceeded` (HTTP 429) ou `service_unavailable` (HTTP 503), respeitando `Retry-After` até dez segundos e pequena variação aleatória. Bloqueio, timeout, erro de rede, saldo e credencial não são repetidos automaticamente. O fluxo usa `fetch` direto, portanto não há retentativa oculta do SDK OpenAI.
+   Para o teste único preparado, não há repetição automática em nenhuma resposta, incluindo HTTP 429, HTTP 503, bloqueio, timeout ou erro de rede. O fluxo usa `fetch` direto, sem SDK OpenAI. O pedido define `n=1`. A contagem `tentativas_envio_imagem=1` indica uma tentativa de envio pelo servidor; em falha de rede ou timeout, não confirma que a OpenAI a recebeu.
 5. Navegador: decodifica a imagem. A proposta é aplicada somente dentro de elipses ao redor das lesões, com transição dentro dessas áreas. Fora delas, os pixels decodificados da montagem original são copiados literalmente. A API não recebe máscara; a máscara aqui é de composição final e não tenta contornar moderação.
 
 O registro do servidor guarda somente: UUID interno, horário UTC (`Z`), endpoint, modelo, versão do prompt, etapa, status, `error.type`, `error.code`, `x-request-id` validado, estágio e categorias de moderação quando informados. Não grava imagens, chave, prompt completo, laudo ou mensagem livre da API. O horário UTC inclui fuso e pode ser convertido para Brasília.
@@ -34,7 +34,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\validar-fluxo-me
 git diff --check
 ```
 
-Os testes locais verificam termos anatômicos, referência anexada, ausência de referência, diagnóstico de moderação com e sem detalhes, distinção de saldo/frequência/autenticação/servidor, não vazamento de mensagem livre, máscara e pixels externos. Eles não chamam a OpenAI. A validação médica e uma geração real continuam pendentes.
+Os testes locais verificam termos anatômicos, referência anexada, ausência de referência, diagnóstico de moderação com e sem detalhes, distinção de saldo/frequência/autenticação/servidor, não vazamento de mensagem livre, máscara e pixels externos. Simulam preparação gratuita, dois cliques rápidos, recusa e sucesso com comparação PNG. Eles não chamam a OpenAI. A validação médica e uma geração real continuam pendentes.
+
+## Teste único no editor
+
+1. Monte somente um caso didático, sem nome ou dados de paciente.
+2. Clique em **Preparar teste da OpenAI · grátis**. Confira as duas imagens, o prompt exato e a máscara local. A referência deve ser `mapa-realista-completo-estudo-v1.png`; hashes do mapa, referência e prompt ficam no diagnóstico.
+3. Clique uma vez em **Executar uma geração preparada · pago**. O botão fica bloqueado após a tentativa, mesmo se houver erro. Se o mapa ou a referência mudar, o servidor recusa antes da chamada paga.
+4. Copie o texto de **Diagnóstico desta operação**. Se houver imagem, salve o PNG da diferença e compare o mapa enviado, a proposta bruta e o resultado protegido. O original de referência é o JPEG enviado, decodificado sem rótulos; a proposta é alinhada às suas dimensões antes da comparação.
+
+O editor não envia máscara à OpenAI. A máscara vermelha controla apenas onde a proposta pode ser aplicada localmente. Fora dela, a comparação exige zero pixels alterados. Dentro dela, o médico precisa revisar posição, forma, tamanho e presença de cada lesão.
 
 ## Revisão de suporte
 

@@ -1,0 +1,74 @@
+<!doctype html><meta charset="utf-8"><title>Preparação sem API paga</title>
+<button data-gerar-realista="gpt" disabled></button>
+<button data-preparar-teste-api>Preparar</button><button data-gerar-mapa-api disabled>Gerar</button>
+<div class="lesao-editavel" data-nome="Endometrioma" data-x="25" data-y="50" data-giro="0" data-tamanho="65" data-eixo-x="100" data-eixo-y="100" data-proporcao="1"></div>
+<p data-estado-mapa-api hidden></p><section data-preparo-teste hidden><img data-entrada-mapa><img data-entrada-referencia><img data-mascara-teste><span data-dimensoes-mapa></span><span data-dimensoes-referencia></span><pre data-prompt-teste></pre><pre data-diagnostico-teste></pre><p data-configuracao-teste></p><div data-relato-suporte hidden><pre data-texto-relato-suporte></pre></div></section>
+<section data-resultado-realista hidden><img data-imagem-original><figure data-resultado-mapa-api hidden><img data-imagem-mapa-api></figure><figure data-resultado-proposta-api hidden><img data-imagem-proposta-api><span data-dimensoes-proposta></span></figure><figure data-resultado-diferenca-api hidden><img data-imagem-diferenca-api><a data-baixar-diferenca-api></a></figure></section>
+<pre id="resultado">PENDENTE</pre>
+<script>
+const canvas = document.createElement('canvas'); canvas.width = 108; canvas.height = 144;
+canvas.getContext('2d').fillRect(20, 40, 20, 20);
+const mapa = canvas.toDataURL('image/jpeg', 0.9);
+window.endomapaCapturarMapaManual = async () => mapa;
+window.ENDOMAPA_SUPABASE = { projectUrl: 'https://mock.supabase.test', publicAnonKey: 'publica' };
+window.supabase = { createClient: () => ({ auth: { getSession: async () => ({ data: { session: { access_token: 'teste' } } }) } }) };
+const fetchOriginal = window.fetch.bind(window);
+let chamadasPagas = 0, preparacoes = 0;
+const simularSucesso = location.hash === '#sucesso';
+window.fetch = async (url, opcoes) => {
+  if (!String(url).includes('mock.supabase.test')) return fetchOriginal(url, opcoes);
+  const corpo = JSON.parse(opcoes.body);
+  if (corpo.preparar_teste) {
+    preparacoes++;
+    const referenciaUrl = new URL('/assets/mapa-base-coronal.png', location.href).href;
+    const bytes = await (await fetchOriginal(referenciaUrl)).arrayBuffer();
+    const hash = [...new Uint8Array(await crypto.subtle.digest('SHA-256', bytes))].map(b => b.toString(16).padStart(2, '0')).join('');
+    return new Response(JSON.stringify({ pronto: true, versao_funcao:'teste-unico-v1', versao_prompt:'mapa-medico-v2',
+      modelo:'gpt-image-2.5-sunburst', endpoint:'/v1/images/edits', parametros:{moderation:'low',n:1,size:'1088x1456',quality:'max',output_format:'png'},
+      imagem_1:{sha256:'mapa'}, imagem_2:{url:referenciaUrl,sha256:hash,largura:1086,altura:1448}, prompt_sha256:'prompt',
+      prompt_visual:'Prompt completo de teste', horario_utc:new Date().toISOString(), operacao_id:'preparo',tentativas_envio_imagem:0 }), {status:200});
+  }
+  chamadasPagas++;
+  if (simularSucesso) {
+    const proposta = document.createElement('canvas'); proposta.width=108; proposta.height=144;
+    proposta.getContext('2d').fillStyle='red'; proposta.getContext('2d').fillRect(0,0,108,144);
+    return new Response(JSON.stringify({ imagem_base64:proposta.toDataURL('image/png').split(',')[1],formato:'image/png',
+      operacao_id:'00000000-0000-4000-8000-000000000001',horario_utc:new Date().toISOString(),
+      pedido_id:'req_mock',tentativas_envio_imagem:1 }),{status:200});
+  }
+  return new Response(JSON.stringify({ erro:'Bloqueio simulado do provedor.', estado:'bloqueado_provedor',
+    operacao_id:'00000000-0000-4000-8000-000000000001', horario_utc:new Date().toISOString(),
+    pedido_id:'req_mock', http_status:400, error_code:'moderation_blocked', etapa:'output', categorias:['sexual'],
+    tentativas_envio_imagem:1 }), {status:422});
+};
+</script>
+<script src="../editor-manual-ia.js"></script>
+<script>
+window.addEventListener('load', async () => {
+  const conferir = (v,m) => { if (!v) throw new Error(m); };
+  try {
+    document.querySelector('[data-preparar-teste-api]').click();
+    for (let i=0;i<100 && document.querySelector('[data-gerar-mapa-api]').disabled;i++) await new Promise(r=>setTimeout(r,50));
+    conferir(preparacoes===1 && chamadasPagas===0, 'Preparação chamou imagem paga');
+    conferir(!document.querySelector('[data-preparo-teste]').hidden, 'Prévia ausente');
+    conferir(document.querySelector('[data-prompt-teste]').textContent==='Prompt completo de teste', 'Prompt ausente');
+    conferir(document.querySelector('[data-mascara-teste]').src.startsWith('data:image/png'), 'Máscara ausente');
+    document.querySelector('[data-gerar-mapa-api]').click();
+    document.querySelector('[data-gerar-mapa-api]').click();
+    await new Promise(r=>setTimeout(r,300));
+    conferir(chamadasPagas===1, 'Mais de uma chamada paga');
+    if (simularSucesso) {
+      for (let i=0;i<100 && document.querySelector('[data-resultado-mapa-api]').hidden;i++) await new Promise(r=>setTimeout(r,50));
+      conferir(!document.querySelector('[data-resultado-mapa-api]').hidden, 'Composição ausente');
+      conferir(document.querySelector('[data-imagem-proposta-api]').src.startsWith('data:image/png'), 'Proposta bruta ausente');
+      conferir(document.querySelector('[data-baixar-diferenca-api]').href.startsWith('data:image/png'), 'Diferença PNG ausente');
+      conferir(document.querySelector('[data-diagnostico-teste]').textContent.includes('"pixels_alterados_fora": 0'), 'Pixels externos alterados');
+    } else {
+      conferir(document.querySelector('[data-resultado-mapa-api]').hidden, 'Imagem anterior exibida como nova');
+      conferir(document.querySelector('[data-diagnostico-teste]').textContent.includes('moderation_blocked'), 'Diagnóstico perdido');
+      conferir(!document.querySelector('[data-relato-suporte]').hidden && document.querySelector('[data-texto-relato-suporte]').textContent.includes('Possível falso positivo'), 'Relato de suporte ausente');
+    }
+    document.querySelector('#resultado').textContent='PASSOU: preparação grátis, prévias, prompt, uma chamada simulada e resultado correto.';
+  } catch(e) { document.querySelector('#resultado').textContent='FALHOU: '+e.message+' / '+document.querySelector('[data-estado-mapa-api]').textContent; }
+});
+</script>

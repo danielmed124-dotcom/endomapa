@@ -17,6 +17,7 @@
   const botaoGerarRegioes = document.querySelector("[data-gerar-regioes]");
   const estadoRegioes = document.querySelector("[data-estado-regioes]");
   const botaoMapaApi = document.querySelector("[data-gerar-mapa-api]");
+  const botaoPrepararTeste = document.querySelector("[data-preparar-teste-api]");
   const estadoMapaApi = document.querySelector("[data-estado-mapa-api]");
   botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
   botaoGerarRegioes?.addEventListener("click", gerarAcabamentoAprovado);
@@ -26,65 +27,192 @@
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
+  let preparacaoTeste = null;
+  let chamadaUnicaIniciada = false;
+  let urlReferenciaAnterior = null;
+  botaoPrepararTeste?.addEventListener("click", prepararTesteApi);
   botaoMapaApi?.addEventListener("click", gerarMapaApi);
 
-  async function gerarMapaApi() {
-    if (botaoMapaApi.disabled) return;
+  function montarInventario(lesoes, imagem) {
+    return lesoes.map((lesao) => {
+      const dados = lesao.dataset;
+      const escala = Number(dados.tamanho) / 100;
+      return {
+        nome: dados.nome, x: Number(dados.x), y: Number(dados.y), giro: Number(dados.giro || 0),
+        largura: 13 * escala * Number(dados.eixoX) / 100,
+        altura: imagem.naturalWidth / imagem.naturalHeight * 13 / Number(dados.proporcao || 1.8) * escala * Number(dados.eixoY) / 100,
+      };
+    });
+  }
+
+  async function chamarFuncaoUmaVez(body, sessao) {
+    const url = `${window.ENDOMAPA_SUPABASE.projectUrl}/functions/v1/finalizar-mapa-manual-gpt`;
+    const resposta = await fetch(url, { method: "POST", headers: {
+      Authorization: `Bearer ${sessao.access_token}`,
+      apikey: window.ENDOMAPA_SUPABASE.publicAnonKey,
+      "Content-Type": "application/json",
+    }, body: JSON.stringify(body) });
+    const dados = await resposta.json().catch(() => null);
+    return { resposta, dados };
+  }
+
+  async function prepararTesteApi() {
+    if (botaoPrepararTeste.disabled || chamadaUnicaIniciada) return;
     const lesoes = [...document.querySelectorAll(".lesao-editavel")];
     if (!lesoes.length) return mostrar(estadoMapaApi, "Adicione pelo menos uma lesão ao mapa.", true);
-    if (window.location.protocol === "file:") return mostrar(estadoMapaApi, "Abra o editor no site do Endomapa para gerar a imagem.", true);
-    const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
-    if (erroSessao || !sessao?.session) return mostrar(estadoMapaApi, "Entre na sua conta do Endomapa antes de gerar a imagem.", true);
+    if (window.location.protocol === "file:") return mostrar(estadoMapaApi, "Abra o editor no site do Endomapa para preparar o teste.", true);
+    botaoPrepararTeste.disabled = true;
     botaoMapaApi.disabled = true;
+    preparacaoTeste = null;
+    document.querySelector("[data-preparo-teste]").hidden = true;
+    document.querySelector("[data-relato-suporte]").hidden = true;
+    mostrar(estadoMapaApi, "Preparando as entradas e o prompt. Nenhuma imagem será gerada ou cobrada.", false);
+    try {
+      const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
+      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa antes de preparar o teste.");
+      const assinatura = assinaturaMapa();
+      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
+      const imagem = await carregarImagem(composicao);
+      const inventario = montarInventario(lesoes, imagem);
+      const { resposta, dados } = await chamarFuncaoUmaVez({ composicao_base64: composicao.split(",")[1],
+        modo_mapa_referencia: true, preparar_teste: true, inventario_lesoes: inventario }, sessao.session);
+      if (!resposta.ok || !dados?.pronto) throw new Error(dados?.erro || "O servidor não concluiu a preparação gratuita.");
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Prepare novamente.");
+      const respostaReferencia = await fetch(dados.imagem_2.url);
+      if (!respostaReferencia.ok) throw new Error("A referência aprovada não pôde ser carregada no navegador.");
+      const bytesReferencia = await respostaReferencia.arrayBuffer();
+      const hashReferencia = [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytesReferencia))]
+        .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+      if (hashReferencia !== dados.imagem_2.sha256) throw new Error("A referência recebida no navegador difere da referência preparada no servidor.");
+      const urlReferencia = URL.createObjectURL(new Blob([bytesReferencia], { type: "image/png" }));
+      const referencia = await carregarImagem(urlReferencia);
+      if (referencia.naturalWidth !== dados.imagem_2.largura || referencia.naturalHeight !== dados.imagem_2.altura) {
+        throw new Error("As dimensões da referência não correspondem às verificadas pelo servidor.");
+      }
+      const { criarPreviaMascara } = await import("./mapa-composicao-protegida.js?v=teste-unico-1");
+      document.querySelector("[data-entrada-mapa]").src = composicao;
+      if (urlReferenciaAnterior) URL.revokeObjectURL(urlReferenciaAnterior);
+      urlReferenciaAnterior = urlReferencia;
+      document.querySelector("[data-entrada-referencia]").src = urlReferencia;
+      document.querySelector("[data-mascara-teste]").src = criarPreviaMascara(inventario, imagem.naturalWidth, imagem.naturalHeight);
+      document.querySelector("[data-dimensoes-mapa]").textContent = `Imagem 1 · mapa didático enviado · ${imagem.naturalWidth} × ${imagem.naturalHeight} px`;
+      document.querySelector("[data-dimensoes-referencia]").textContent = `Imagem 2 · referência aprovada · ${referencia.naturalWidth} × ${referencia.naturalHeight} px`;
+      document.querySelector("[data-prompt-teste]").textContent = dados.prompt_visual;
+      document.querySelector("[data-configuracao-teste]").textContent = `Função ${dados.versao_funcao}; prompt ${dados.versao_prompt}; ${dados.modelo}; ${dados.endpoint}; moderation=${dados.parametros.moderation}; n=${dados.parametros.n}; size=${dados.parametros.size}; quality=${dados.parametros.quality}; output_format=${dados.parametros.output_format}. Tarifas publicadas: US$ 5 por milhão de tokens de texto de entrada, US$ 8 por milhão de tokens de imagem de entrada e US$ 30 por milhão de tokens de imagem de saída. O número de tokens desta edição não é conhecido antes da chamada; isto não é cobrança confirmada.`;
+      document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify({
+        estado: "preparado_sem_geracao", horario_utc: dados.horario_utc, operacao_preparacao: dados.operacao_id,
+        versao_funcao: dados.versao_funcao, versao_prompt: dados.versao_prompt,
+        mapa_sha256: dados.imagem_1.sha256, referencia_sha256: dados.imagem_2.sha256,
+        prompt_sha256: dados.prompt_sha256, tentativas_envio_imagem: dados.tentativas_envio_imagem,
+      }, null, 2);
+      preparacaoTeste = { composicao, inventario, assinatura, ...dados };
+      document.querySelector("[data-preparo-teste]").hidden = false;
+      botaoMapaApi.disabled = false;
+      document.querySelector("[data-preparo-teste]").scrollIntoView({ behavior: "smooth", block: "start" });
+      mostrar(estadoMapaApi, "Preparação concluída sem geração paga. Confira as imagens, a máscara e o prompt antes de executar uma vez.", false);
+    } catch (erro) {
+      mostrar(estadoMapaApi, erro.message || "Não foi possível preparar o teste gratuito.", true);
+    } finally { botaoPrepararTeste.disabled = false; }
+  }
+
+  async function gerarMapaApi() {
+    if (botaoMapaApi.disabled || chamadaUnicaIniciada || !preparacaoTeste) return;
+    if (preparacaoTeste.assinatura !== assinaturaMapa()) {
+      botaoMapaApi.disabled = true;
+      return mostrar(estadoMapaApi, "O mapa mudou depois da preparação. Prepare novamente antes de gerar.", true);
+    }
+    chamadaUnicaIniciada = true;
+    botaoMapaApi.disabled = true;
+    botaoPrepararTeste.disabled = true;
+    const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
+    if (erroSessao || !sessao?.session) return mostrar(estadoMapaApi, "A sessão terminou. Nenhuma geração foi solicitada.", true);
     document.querySelector("[data-resultado-mapa-api]").hidden = true;
     document.querySelector("[data-imagem-mapa-api]").removeAttribute("src");
-    const assinatura = assinaturaMapa();
-    mostrar(estadoMapaApi, "Gerando o mapa inteiro em qualidade máxima. Esta chamada é paga e pode levar alguns minutos; nenhuma repetição será feita automaticamente.", false);
+    document.querySelector("[data-resultado-proposta-api]").hidden = true;
+    document.querySelector("[data-resultado-diferenca-api]").hidden = true;
+    mostrar(estadoMapaApi, "Uma solicitação paga está em andamento. Não haverá nova chamada automática, mesmo se ocorrer timeout.", false);
+    const preparo = preparacaoTeste;
+    let tentativaIniciada = false;
+    let diagnosticoAtual = null;
+    let etapaCliente = "envio";
     try {
-      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
-      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Gere novamente para preservar as posições.");
-      const imagem = await carregarImagem(composicao);
-      const inventario = lesoes.map((lesao) => {
-        const dados = lesao.dataset;
-        const escala = Number(dados.tamanho) / 100;
-        return {
-          nome: dados.nome,
-          x: Number(dados.x), y: Number(dados.y),
-          giro: Number(dados.giro || 0),
-          largura: 13 * escala * Number(dados.eixoX) / 100,
-          altura: imagem.naturalWidth / imagem.naturalHeight * 13 / Number(dados.proporcao || 1.8) * escala * Number(dados.eixoY) / 100,
-        };
-      });
-      const { data, error } = await cliente.functions.invoke("finalizar-mapa-manual-gpt", {
-        body: { composicao_base64: composicao.split(",")[1], modo_mapa_referencia: true, inventario_lesoes: inventario },
-      });
-      if (error) throw new Error(await traduzirErro(error));
-      if (!data?.imagem_base64) throw new Error("A OpenAI não devolveu uma imagem. Sua montagem permanece no editor.");
-      const recebida = `data:${data.formato || "image/png"};base64,${data.imagem_base64}`;
+      tentativaIniciada = true;
+      const { resposta, dados } = await chamarFuncaoUmaVez({
+        composicao_base64: preparo.composicao.split(",")[1], modo_mapa_referencia: true,
+        inventario_lesoes: preparo.inventario, mapa_sha256: preparo.imagem_1.sha256,
+        referencia_sha256: preparo.imagem_2.sha256, prompt_sha256: preparo.prompt_sha256,
+      }, sessao.session);
+      const diagnostico = { estado: dados?.estado || (resposta.ok ? "resposta_recebida" : "falha_tecnica"),
+        horario_utc: dados?.horario_utc || new Date().toISOString(), operacao_id: dados?.operacao_id || null,
+        pedido_openai: dados?.pedido_id || null, modelo: preparo.modelo, endpoint: preparo.endpoint,
+        parametros: preparo.parametros, versao_prompt: dados?.versao_prompt || preparo.versao_prompt,
+        versao_funcao: dados?.versao_funcao || null, http_status_openai: dados?.http_status || null,
+        error_type: dados?.error_type || null, error_code: dados?.error_code || null,
+        tentativas_envio_imagem: dados?.tentativas_envio_imagem ?? "não confirmado",
+        uso_informado_pela_api: dados?.uso || null,
+      };
+      if (dados?.detalhes_moderacao_recebidos) diagnostico.moderation_details = {
+        moderation_stage: dados.etapa || "unknown", categories: dados.categorias || [],
+      };
+      if (diagnostico.estado === "bloqueado_provedor") {
+        document.querySelector("[data-texto-relato-suporte]").textContent = [
+          "Possível falso positivo em ilustração anatômica didática; classificação não confirmada como erro.",
+          `Horário UTC: ${diagnostico.horario_utc}`,
+          `Operação Endomapa: ${diagnostico.operacao_id || "não informado"}`,
+          `Pedido OpenAI: ${diagnostico.pedido_openai || "não informado"}`,
+          `Modelo: ${diagnostico.modelo}; endpoint: ${diagnostico.endpoint}; prompt: ${diagnostico.versao_prompt}`,
+          `HTTP OpenAI: ${diagnostico.http_status_openai || "não informado"}; código: ${diagnostico.error_code || "não informado"}`,
+          diagnostico.moderation_details ? `Detalhes de moderação: ${JSON.stringify(diagnostico.moderation_details)}` : "Detalhes de moderação: não retornados",
+          `Tentativas de envio ao serviço de imagens: ${diagnostico.tentativas_envio_imagem}`,
+        ].join("\n");
+        document.querySelector("[data-relato-suporte]").hidden = false;
+      }
+      diagnosticoAtual = diagnostico;
+      document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify(diagnostico, null, 2);
+      if (!resposta.ok) throw new Error(dados?.erro || "Falha técnica sem diagnóstico retornado. Não repita a operação.");
+      if (!dados?.imagem_base64) { diagnostico.estado = "resposta_sem_imagem"; throw new Error("O serviço respondeu sem imagem utilizável. Nenhuma nova chamada será feita."); }
+      const recebida = `data:${dados.formato || "image/png"};base64,${dados.imagem_base64}`;
+      etapaCliente = "decodificacao";
       await carregarImagem(recebida);
-      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. O resultado não foi aplicado; gere novamente com a montagem atual.");
-      const { comporMapaProtegido } = await import("./mapa-composicao-protegida.js");
-      const protegida = await comporMapaProtegido(composicao, recebida, inventario);
-      if (!protegida.pixelsAlterados) throw new Error("A OpenAI respondeu, mas a área das lesões não mudou. Sua montagem permanece preservada.");
-      const final = await window.endomapaAdicionarRotulos(protegida.imagem);
-      original.src = await window.endomapaCapturarMapaManual();
-      document.querySelector("[data-imagem-mapa-api]").src = final;
+      if (preparo.assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada ao mapa atual.");
+      etapaCliente = "composicao";
+      const { comporMapaProtegido } = await import("./mapa-composicao-protegida.js?v=teste-unico-1");
+      const protegida = await comporMapaProtegido(preparo.composicao, recebida, preparo.inventario);
+      original.src = preparo.composicao;
+      document.querySelector("[data-imagem-mapa-api]").src = protegida.imagem;
+      document.querySelector("[data-imagem-proposta-api]").src = recebida;
+      document.querySelector("[data-dimensoes-proposta]").textContent = protegida.dimensoesGeradas;
+      document.querySelector("[data-imagem-diferenca-api]").src = protegida.imagemDiferenca;
+      document.querySelector("[data-baixar-diferenca-api]").href = protegida.imagemDiferenca;
       document.querySelector("[data-resultado-mapa-api]").hidden = false;
+      document.querySelector("[data-resultado-proposta-api]").hidden = false;
+      document.querySelector("[data-resultado-diferenca-api]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
       const avisos = [];
-      try {
-        const comparacao = await compararImagens(composicao, recebida);
-        if (comparacao.arquivosIdenticos || comparacao.diferencaVisual < 0.5) avisos.push("A imagem é igual ou muito parecida com a montagem; não use sem revisar.");
-        const ausentes = await conferirLesoesVisiveis(composicao, protegida.imagem);
+      if (!protegida.pixelsAlterados) avisos.push("A proposta não alterou a área das lesões.");
+      if (protegida.alteradosFora) avisos.push("Foram detectados pixels alterados fora da máscara.");
+      try { const ausentes = await conferirLesoesVisiveis(preparo.composicao, protegida.imagem);
         if (ausentes.length) avisos.push(`Possível ausência de: ${ausentes.join(", ")}.`);
-      } catch (_erro) { avisos.push("A conferência automática não pôde ser concluída."); }
-      const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(data.pedido_id || "") ? ` Pedido OpenAI: ${data.pedido_id}.` : "";
-      mostrar(estadoMapaApi, `${avisos.join(" ") || "Mapa recebido com acabamento aplicado nas áreas das lesões."} Os pixels fora dessas áreas foram preservados. Confira cada lesão, a anatomia e as medidas antes de usar.${pedido}`, avisos.length > 0);
+      } catch (_erro) { avisos.push("A conferência de presença das lesões não foi concluída."); }
+      diagnostico.estado = avisos.length ? "revisao_necessaria" : "imagem_recebida_revisao_medica";
+      diagnostico.comparacao = { raster_original: "JPEG enviado, decodificado sem rótulos",
+        dimensoes_originais: protegida.dimensoesOriginais, dimensoes_proposta: protegida.dimensoesGeradas,
+        alinhamento: "proposta redimensionada ao raster original antes da comparação",
+        pixels_alterados_dentro: protegida.alteradosDentro, pixels_alterados_fora: protegida.alteradosFora,
+        pixels_proposta_bruta_dentro: protegida.mudancaBrutaDentro };
+      document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify(diagnostico, null, 2);
+      mostrar(estadoMapaApi, `${avisos.join(" ") || "Imagem recebida para revisão."} Fora da máscara: ${protegida.alteradosFora} pixels alterados; dentro: ${protegida.alteradosDentro}. Confira posição, forma e tamanho de cada lesão. Nenhuma outra geração será feita.`, avisos.length > 0);
     } catch (erro) {
-      mostrar(estadoMapaApi, await traduzirErro(erro), true);
-    } finally {
-      botaoMapaApi.disabled = false;
+      if (diagnosticoAtual && diagnosticoAtual.estado === "resposta_recebida") {
+        diagnosticoAtual.estado = etapaCliente === "decodificacao" ? "imagem_recebida_falha_decodificacao" : "imagem_recebida_falha_composicao";
+      }
+      if (diagnosticoAtual) document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify(diagnosticoAtual, null, 2);
+      if (tentativaIniciada && !document.querySelector("[data-diagnostico-teste]").textContent.includes('"operacao_id"')) {
+        document.querySelector("[data-diagnostico-teste]").textContent = JSON.stringify({ estado: "resposta_nao_recebida", horario_utc: new Date().toISOString(), tentativas_no_navegador: 1,
+          recebimento_pela_openai: "desconhecido", orientacao: "Não repetir automaticamente; conferir uso e registros do servidor." }, null, 2);
+      }
+      mostrar(estadoMapaApi, `${erro.message || "A resposta não foi recebida."} A montagem manual permanece no editor. Nenhuma nova chamada será feita automaticamente.`, true);
     }
   }
 

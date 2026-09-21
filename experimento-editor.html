@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17201a" />
     <title>Editor manual | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=previa-mioma-1" />
+    <link rel="stylesheet" href="styles.css?v=teste-unico-1" />
   </head>
   <body>
     <main class="editor-manual">
@@ -172,11 +172,26 @@
       <div class="acoes editor-manual__acoes">
         <button class="botao" type="button" data-gerar-regioes>Gerar mapa com acabamento aprovado · grátis</button>
         <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
-        <button class="botao" type="button" data-gerar-mapa-api>Gerar mapa completo realista com OpenAI · pago</button>
+        <button class="botao botao--secundario" type="button" data-preparar-teste-api>Preparar teste da OpenAI · grátis</button>
+        <button class="botao" type="button" data-gerar-mapa-api disabled>Executar uma geração preparada · pago</button>
         <p class="mensagem-formulario" data-estado-mapa-api role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao ditado</a>
       </div>
+      <section class="resultado-editor-ia" data-preparo-teste hidden aria-labelledby="titulo-preparo-teste">
+        <h2 class="secao-dados__titulo" id="titulo-preparo-teste">Confira antes da chamada paga</h2>
+        <p class="texto-apoio" data-configuracao-teste></p>
+        <div class="resultado-editor-ia__grade">
+          <figure class="mapa-visual"><img data-entrada-mapa alt="Imagem 1: mapa didático exato que será enviado" /><figcaption data-dimensoes-mapa>Imagem 1 · mapa atual</figcaption></figure>
+          <figure class="mapa-visual"><img data-entrada-referencia alt="Imagem 2: referência de acabamento aprovada" /><figcaption data-dimensoes-referencia>Imagem 2 · referência aprovada</figcaption></figure>
+          <figure class="mapa-visual"><img data-mascara-teste alt="Regiões onde o aplicativo poderá aplicar a proposta gerada" /><figcaption>Máscara local de composição · vermelho = região autorizada. Nenhuma máscara é enviada à OpenAI.</figcaption></figure>
+        </div>
+        <h3>Prompt visual exato desta preparação</h3>
+        <pre data-prompt-teste style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:24rem;overflow:auto"></pre>
+        <h3>Diagnóstico desta operação</h3>
+        <pre data-diagnostico-teste style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
+        <div data-relato-suporte hidden><h3>Relato mínimo para suporte · não enviado automaticamente</h3><pre data-texto-relato-suporte style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></div>
+      </section>
       <section class="resultado-editor-ia" data-resultado-realista hidden aria-labelledby="titulo-resultado-realista">
         <h2 class="secao-dados__titulo" id="titulo-resultado-realista">Comparação</h2>
         <p class="texto-apoio">A montagem manual permanece preservada. Confira se a IA mudou posição, forma, anatomia ou medidas.</p>
@@ -199,8 +214,10 @@
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
-            <figcaption>Mapa completo OpenAI · revisão médica necessária</figcaption>
+            <figcaption>Resultado após composição protegida · revisão médica necessária</figcaption>
           </figure>
+          <figure class="mapa-visual" data-resultado-proposta-api hidden><img data-imagem-proposta-api alt="Proposta bruta recebida da API" /><figcaption>Proposta original recebida da API · <span data-dimensoes-proposta></span></figcaption></figure>
+          <figure class="mapa-visual" data-resultado-diferenca-api hidden><img data-imagem-diferenca-api alt="Diferença de pixels após a composição" /><figcaption>Diferença em vermelho · <a data-baixar-diferenca-api download="endomapa-diferenca.png">baixar PNG</a></figcaption></figure>
           <figure class="mapa-visual" data-resultado-gemini-detalhe hidden>
             <img data-imagem-gemini-detalhe alt="Mapa com uma lesão refinada localmente pelo Gemini" />
             <figcaption>Teste local Gemini · ainda não aprovado</figcaption>
@@ -234,6 +251,6 @@
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=acabamento-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=diagnostico-3"></script>
+    <script src="editor-manual-ia.js?v=teste-unico-1"></script>
   </body>
 </html>

@@ -7,6 +7,8 @@ const ORIGENS = new Set([
   "https://experimento-editor-manual.endomapa.pages.dev",
 ]);
 const LIMITE_MS = 140_000;
+const VERSAO_FUNCAO = "teste-unico-v1";
+const URL_REFERENCIA = "https://endomapa.pages.dev/output/estudos-realismo/mapa-realista-completo-estudo-v1.png";
 const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -23,12 +25,16 @@ function responderComOrigem(corpo: Record<string, unknown>, status = 200, origem
 
 Deno.serve(async (req) => {
   const operacaoId = crypto.randomUUID();
+  let tentativasEnvioImagem = 0;
   const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({
     operacao_id: operacaoId, horario_utc: new Date().toISOString(), endpoint: "/v1/images/edits",
     modelo: "gpt-image-2.5-sunburst", versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", etapa, ...dados,
   }));
   const origem = req.headers.get("Origin");
-  const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem(corpo, status, origem);
+  const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem({
+    ...corpo, operacao_id: operacaoId, horario_utc: new Date().toISOString(),
+    versao_funcao: VERSAO_FUNCAO, tentativas_envio_imagem: tentativasEnvioImagem,
+  }, status, origem);
   if (req.method === "OPTIONS") return origem && ORIGENS.has(origem) ? new Response("ok", { headers: cabecalhos(origem) }) : responder({ erro: "Origem não autorizada." }, 403);
   if (req.method !== "POST") return responder({ erro: "Método não permitido." }, 405);
   if (!origem || !ORIGENS.has(origem)) return responder({ erro: "Esta chamada não veio do Endomapa." }, 403);
@@ -94,7 +100,7 @@ Deno.serve(async (req) => {
   let referenciaAprovada: Uint8Array | null = null;
   if (modoRegiao || modoMapaReferencia) {
     try {
-      const respostaReferencia = await fetch("https://endomapa.pages.dev/output/estudos-realismo/mapa-realista-completo-estudo-v1.png");
+      const respostaReferencia = await fetch(URL_REFERENCIA);
       if (!respostaReferencia.ok) return responder({ erro: "A referência visual aprovada não está disponível. Nenhuma geração foi solicitada." }, 503);
       const arquivoReferencia = await respostaReferencia.arrayBuffer();
       if (arquivoReferencia.byteLength < 100_000 || arquivoReferencia.byteLength > 5_000_000) {
@@ -103,6 +109,30 @@ Deno.serve(async (req) => {
       referenciaAprovada = new Uint8Array(arquivoReferencia);
     } catch (_erro) {
       return responder({ erro: "Não foi possível obter a referência aprovada. Nenhuma geração foi solicitada." }, 503);
+    }
+  }
+
+  const hash = async (bytes: Uint8Array) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)))
+    .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const promptMapa = modoMapaReferencia
+    ? construirPromptMapaMedico({ inventario, largura: 1088, altura: 1456, referenciaAnexada: !!referenciaAprovada }) : null;
+  if (modoMapaReferencia) {
+    const [hashMapa, hashReferencia, hashPrompt] = await Promise.all([
+      hash(bytesComposicao), hash(referenciaAprovada!), hash(new TextEncoder().encode(promptMapa!)),
+    ]);
+    if (corpo.preparar_teste === true) {
+      return responder({ pronto: true, prompt_visual: promptMapa, versao_prompt: VERSAO_PROMPT_MAPA,
+        modelo: "gpt-image-2.5-sunburst", endpoint: "/v1/images/edits",
+        parametros: { moderation: "low", n: 1, size: "1088x1456", quality: "max", output_format: "png" },
+        imagem_1: { papel: "mapa-base didático", sha256: hashMapa },
+        imagem_2: { papel: "referência de acabamento", url: URL_REFERENCIA, sha256: hashReferencia,
+          largura: (referenciaAprovada![16] << 24) | (referenciaAprovada![17] << 16) | (referenciaAprovada![18] << 8) | referenciaAprovada![19],
+          altura: (referenciaAprovada![20] << 24) | (referenciaAprovada![21] << 16) | (referenciaAprovada![22] << 8) | referenciaAprovada![23] },
+        prompt_sha256: hashPrompt, mascara_api: false, mascara_composicao_local: true,
+      });
+    }
+    if (corpo.mapa_sha256 !== hashMapa || corpo.referencia_sha256 !== hashReferencia || corpo.prompt_sha256 !== hashPrompt) {
+      return responder({ erro: "O mapa, a referência ou o prompt mudou desde a preparação. Prepare novamente; nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);
     }
   }
 
@@ -115,6 +145,7 @@ Deno.serve(async (req) => {
   try {
     const formulario = new FormData();
     formulario.append("model", "gpt-image-2.5-sunburst");
+    formulario.append("n", "1");
     formulario.append(modoRegiao || modoMapaReferencia ? "image[]" : "image", new File([bytesComposicao], "mapa-manual.jpg", { type: "image/jpeg" }));
     if (referenciaAprovada) {
       formulario.append("image[]", new File([referenciaAprovada], "referencia-aprovada.png", { type: "image/png" }));
@@ -126,7 +157,7 @@ Deno.serve(async (req) => {
     if (!modoMapaReferencia) formulario.append("output_compression", "85");
     formulario.append("moderation", "low");
     formulario.append("prompt", modoMapaReferencia
-      ? construirPromptMapaMedico({ inventario, largura: 1088, altura: 1456, referenciaAnexada: !!referenciaAprovada })
+      ? promptMapa!
       : (modoRegiao ? [
       "Image 1 is the exact crop to edit. Image 2 is the physician-approved reference for the finished appearance, material, relief, lighting and tissue integration. Reproduce the approved rendering style of relevant findings from image 2, while using ONLY image 1 for the type, count, position, size and anatomy in this new case. Do not copy the layout or extra findings from image 2.",
       "This is a close crop of a non-sexual gynecology medical-atlas illustration showing only internal pelvic organs. Repaint the EXISTING findings and the adjacent organ tissue together as a coherent anatomical illustration. Make the integration visibly different from pasted graphics: continuous surface texture, matching light, organic depth and contact shadows. Change the findings themselves, not just the overall tone.",
@@ -147,26 +178,13 @@ Deno.serve(async (req) => {
       "O resultado é uma prévia experimental que exige comparação e aprovação médica.",
     ]).join(" "));
 
-    let resposta: Response;
-    let detalhesErro: Record<string, unknown> | null = null;
-    // Apenas recusa explícita por frequência/indisponibilidade permite uma nova
-    // tentativa. Timeout e falha de rede têm estado incerto e não são repetidos.
-    for (let tentativa = 1; ; tentativa++) {
-      registrar("pedido_enviado", { tentativa });
-      resposta = await fetch("https://api.openai.com/v1/images/edits", {
-        method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
-      });
-      if (resposta.ok) break;
-      detalhesErro = await resposta.json().catch(() => null);
-      const codigoErro = (detalhesErro as { error?: { code?: string } } | null)?.error?.code;
-      const transitório = (resposta.status === 429 && codigoErro === "rate_limit_exceeded") ||
-        (resposta.status === 503 && codigoErro === "service_unavailable");
-      if (!transitório || tentativa >= 2) break;
-      const segundos = Number(resposta.headers.get("retry-after"));
-      const espera = Number.isFinite(segundos) && segundos > 0 ? Math.min(segundos * 1000, 10_000) : 1000 * tentativa;
-      await new Promise((resolver) => setTimeout(resolver, espera + Math.floor(Math.random() * 300)));
-    }
+    tentativasEnvioImagem = 1;
+    registrar("pedido_enviado", { tentativa: 1 });
+    const resposta = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST", signal: controlador.signal, headers: { Authorization: `Bearer ${chave}` }, body: formulario,
+    });
     if (!resposta.ok) {
+      const detalhesErro = await resposta.json().catch(() => null);
       const diagnostico = classificarErroImagem(detalhesErro, resposta.status, resposta.headers.get("x-request-id"));
       registrar("resposta_erro", { http_status: diagnostico.http_status, error_type: diagnostico.error_type,
         error_code: diagnostico.error_code, pedido_id: diagnostico.pedido_id, moderation_stage: diagnostico.etapa || null,
@@ -178,12 +196,19 @@ Deno.serve(async (req) => {
     if (typeof imagem !== "string" || !imagem) {
       const idResposta = resposta.headers.get("x-request-id");
       registrar("resposta_sem_imagem", { http_status: resposta.status, pedido_id: /^req_[a-zA-Z0-9_-]{1,180}$/.test(idResposta || "") ? idResposta : null });
-      return responder({ erro: "A OpenAI respondeu, mas não devolveu uma imagem final utilizável.", estado: "revisao_necessaria", operacao_id: operacaoId }, 502);
+      return responder({ erro: "A OpenAI respondeu, mas não devolveu uma imagem final utilizável.", estado: "revisao_necessaria", http_status: resposta.status, operacao_id: operacaoId }, 502);
     }
     const identificador = resposta.headers.get("x-request-id");
     const pedidoId = identificador && /^req_[a-zA-Z0-9_-]{1,180}$/.test(identificador) ? identificador : null;
-    registrar("imagem_recebida", { http_status: resposta.status, pedido_id: pedidoId });
-    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", aviso: modoMapaReferencia
+    const numero = (valor: unknown) => typeof valor === "number" && Number.isFinite(valor) && valor >= 0 ? valor : null;
+    const uso = dados?.usage ? {
+      total_tokens: numero(dados.usage.total_tokens),
+      texto_entrada: numero(dados.usage.input_tokens_details?.text_tokens),
+      imagem_entrada: numero(dados.usage.input_tokens_details?.image_tokens),
+      imagem_saida: numero(dados.usage.output_tokens_details?.image_tokens),
+    } : null;
+    registrar("imagem_recebida", { http_status: resposta.status, pedido_id: pedidoId, uso });
+    return responder({ imagem_base64: imagem, formato: modoMapaReferencia ? "image/png" : "image/webp", pedido_id: pedidoId, http_status: resposta.status, uso, operacao_id: operacaoId, versao_prompt: modoMapaReferencia ? VERSAO_PROMPT_MAPA : "legado", aviso: modoMapaReferencia
       ? "Mapa completo experimental: confira todas as lesões, a anatomia e as medidas antes de usar."
       : modoRegiao
       ? "Região experimental: confira cada lesão e a anatomia antes de usar o mapa completo."
