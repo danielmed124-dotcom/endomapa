@@ -171,10 +171,11 @@
 
       <div class="acoes editor-manual__acoes">
         <button class="botao" type="button" data-gerar-regioes>Gerar mapa com acabamento aprovado · grátis</button>
+        <button class="botao" type="button" data-gerar-final-realista disabled>Gerar mapa final realista a partir deste mapa · pago</button>
+        <p class="mensagem-formulario" data-estado-final-realista role="status" hidden></p>
         <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-preparar-teste-api>Preparar teste da OpenAI · grátis</button>
         <button class="botao" type="button" data-gerar-mapa-api disabled>Executar uma geração preparada · pago</button>
-        <a class="link-voltar" href="teste-edicao-direta.html">Testar edição direta com o mapa gerado · uma chamada paga</a>
         <p class="mensagem-formulario" data-estado-mapa-api role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao ditado</a>
@@ -212,6 +213,10 @@
           <figure class="mapa-visual" data-resultado-regioes hidden>
             <img data-imagem-regioes alt="Mapa completo com regiões integradas experimentalmente" />
             <figcaption data-legenda-regioes>Mapa com acabamento aprovado · revisão médica necessária</figcaption>
+          </figure>
+          <figure class="mapa-visual" data-resultado-final-realista hidden>
+            <img data-imagem-final-realista alt="Proposta de mapa final realista criada a partir do mapa com lesões de referência" />
+            <figcaption>Mapa final realista · proposta da API para revisão médica</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
@@ -252,6 +257,6 @@
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=acabamento-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=revisao-lesoes-1"></script>
+    <script src="editor-manual-ia.js?v=mapa-final-referencias-1"></script>
   </body>
 </html>

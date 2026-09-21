@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8"><title>Botão do mapa final</title>
+<button data-gerar-realista="gpt" disabled></button>
+<button data-gerar-regioes>Montar grátis</button><button data-gerar-final-realista disabled>Gerar final</button>
+<div class="lesao-editavel" data-nome="Cisto" data-x="25" data-y="50" data-giro="0" data-tamanho="65" data-eixo-x="100" data-eixo-y="100" data-proporcao="1"></div>
+<p data-estado-regioes hidden></p><p data-estado-final-realista hidden></p>
+<section data-resultado-realista hidden><img data-imagem-original>
+  <figure data-resultado-regioes hidden><img data-imagem-regioes><figcaption data-legenda-regioes></figcaption></figure>
+  <figure data-resultado-final-realista hidden><img data-imagem-final-realista></figure>
+</section>
+<pre id="resultado">PENDENTE</pre>
+<script>
+const c=document.createElement('canvas');c.width=1086;c.height=1448;
+c.getContext('2d').fillStyle='#bc8172';c.getContext('2d').fillRect(0,0,c.width,c.height);
+const png=c.toDataURL('image/png');
+window.endomapaCapturarMapaManual=async()=>png;
+window.endomapaAdicionarRotulos=async(imagem)=>imagem;
+window.EndomapaAcabamentoAprovado={montar:async()=>({imagem:png,semExemplo:['Cisto']})};
+window.ENDOMAPA_SUPABASE={projectUrl:'https://mock.supabase.test',publicAnonKey:'publica'};
+window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'teste'}}})}})};
+let preparacoes=0,pagas=0;
+window.fetch=async(_url,opcoes)=>{
+  const corpo=JSON.parse(opcoes.body);
+  if(corpo.preparar_teste){
+    preparacoes++;
+    return new Response(JSON.stringify({pronto:true,imagem_1:{sha256:'mapa'},prompt_sha256:'prompt',
+      prompt_visual:'Edição do mapa completo sem segunda imagem',versao_prompt:'mapa-direto-v1'}),{status:200});
+  }
+  pagas++;
+  if(corpo.modo_edicao_direta!==true||corpo.mapa_sha256!=='mapa'||corpo.prompt_sha256!=='prompt') throw Error('Payload errado');
+  return new Response(JSON.stringify({imagem_base64:png.split(',')[1],operacao_id:'operacao-mock',pedido_id:'req_mock'}),{status:200});
+};
+</script>
+<script src="../editor-manual-ia.js"></script>
+<script>
+window.addEventListener('load',async()=>{
+  try{
+    document.querySelector('[data-gerar-regioes]').click();
+    for(let i=0;i<100&&document.querySelector('[data-gerar-final-realista]').disabled;i++) await new Promise(r=>setTimeout(r,30));
+    if(document.querySelector('[data-gerar-final-realista]').disabled) throw Error('Botão não habilitou após montagem gratuita');
+    if(pagas!==0) throw Error('Montagem gratuita chamou API paga');
+    document.querySelector('[data-gerar-final-realista]').click();
+    document.querySelector('[data-gerar-final-realista]').click();
+    for(let i=0;i<100&&document.querySelector('[data-resultado-final-realista]').hidden;i++) await new Promise(r=>setTimeout(r,30));
+    if(preparacoes!==1||pagas!==1) throw Error('Quantidade de chamadas incorreta: '+preparacoes+'/'+pagas);
+    if(document.querySelector('[data-resultado-final-realista]').hidden) throw Error('Resultado não exibido');
+    if(!document.querySelector('[data-imagem-regioes]').src.startsWith('data:image/png')) throw Error('Mapa gratuito perdido');
+    document.querySelector('#resultado').textContent='PASSOU: mapa gratuito preservado; uma chamada paga simulada; resultado exibido.';
+  }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.message+' / '+document.querySelector('[data-estado-final-realista]').textContent;}
+});
+</script>
