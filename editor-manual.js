@@ -55,6 +55,7 @@
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   window.addEventListener("resize", atualizarTodasAsLinhas);
   window.endomapaCapturarMapaManual = capturarMapa;
+  window.endomapaCapturarIntegracaoManual = capturarIntegracaoManual;
   window.endomapaAdicionarRotulos = async function (imagem) {
     const base = await carregarImagem(imagem);
     const canvas = document.createElement("canvas");
@@ -299,72 +300,159 @@
   function mostrar(texto) { mensagem.textContent = texto; }
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
 
+  function fotografarLesoes() {
+    // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
+    return Array.from(camada.querySelectorAll(".lesao-editavel"), function (lesao) {
+      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src };
+    });
+  }
+
   async function capturarMapa(opcoes = {}) {
+    const lesoes = fotografarLesoes();
+    const { canvas } = await renderizarMontagem(lesoes, opcoes);
+    if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
+    return opcoes.formato === "image/png"
+      ? canvas.toDataURL("image/png")
+      : canvas.toDataURL("image/jpeg", 0.9);
+  }
+
+  async function capturarIntegracaoManual() {
+    const lesoes = fotografarLesoes();
+    const { canvas, mascaras } = await renderizarMontagem(lesoes, {}, true);
+    return {
+      imagem: canvas.toDataURL("image/png"),
+      largura: canvas.width,
+      altura: canvas.height,
+      lesoes: mascaras,
+    };
+  }
+
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false) {
     const base = await carregarImagem("assets/mapa-base-coronal.png");
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
-
-    for (const lesao of opcoes.semLesoes ? [] : camada.querySelectorAll(".lesao-editavel")) {
-      const imagem = await carregarImagem(lesao.querySelector("img").src);
-      const x = canvas.width * Number(lesao.dataset.x) / 100;
-      const y = canvas.height * Number(lesao.dataset.y) / 100;
-      const tamanhoGeral = Number(lesao.dataset.tamanho) / 100;
-      const largura = canvas.width * 0.13 * tamanhoGeral * Number(lesao.dataset.eixoX) / 100;
-      const altura = canvas.width * 0.13 / Number(lesao.dataset.proporcao || 1.8) * tamanhoGeral * Number(lesao.dataset.eixoY) / 100;
-      contexto.save();
-      contexto.translate(x, y);
-      contexto.rotate(Number(lesao.dataset.giro) * Math.PI / 180);
-      if (lesao.dataset.semRecorte !== "true") {
-        contexto.beginPath();
-        contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
-        contexto.clip();
-      }
-      if (opcoes.miomaIntegradoId === lesao.dataset.id && lesao.dataset.nome.startsWith("Mioma")) {
-        // A sombra é isolada em outra camada para preservar até os pixels translúcidos do mioma.
-        const margem = Math.ceil(Math.max(20, largura * 0.35));
-        const sombra = document.createElement("canvas");
-        sombra.width = Math.ceil(largura + 2 * margem);
-        sombra.height = Math.ceil(altura + 2 * margem);
-        const contextoSombra = sombra.getContext("2d");
-        contextoSombra.shadowColor = "rgba(69, 27, 24, 0.72)";
-        contextoSombra.shadowBlur = Math.max(7, largura * 0.14);
-        contextoSombra.shadowOffsetX = Math.max(1, largura * 0.015);
-        contextoSombra.shadowOffsetY = Math.max(2, altura * 0.06);
-        contextoSombra.drawImage(imagem, margem, margem, largura, altura);
-        const mascara = document.createElement("canvas");
-        mascara.width = sombra.width;
-        mascara.height = sombra.height;
-        const contextoMascara = mascara.getContext("2d");
-        contextoMascara.drawImage(imagem, margem, margem, largura, altura);
-        const pixelsSombra = contextoSombra.getImageData(0, 0, sombra.width, sombra.height);
-        const pixelsMascara = contextoMascara.getImageData(0, 0, sombra.width, sombra.height).data;
-        for (let indice = 3; indice < pixelsSombra.data.length; indice += 4) {
-          if (pixelsMascara[indice] > 0) pixelsSombra.data[indice] = 0;
-        }
-        contextoSombra.putImageData(pixelsSombra, 0, 0);
-        contexto.drawImage(sombra, -largura / 2 - margem, -altura / 2 - margem);
-      }
-      contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
-      contexto.restore();
+    const mascaras = [];
+    // Uma única tela reutilizada mantém a rasterização nas coordenadas absolutas
+    // originais. O resultado guarda somente os recortes alfa, nunca a anatomia.
+    const telaMascara = incluirMascaras && lesoes.length ? document.createElement("canvas") : null;
+    if (telaMascara) {
+      telaMascara.width = canvas.width;
+      telaMascara.height = canvas.height;
     }
-
-    if (!opcoes.semRotulos) desenharRotulos(contexto, canvas);
-    return opcoes.formato === "image/png"
-      ? canvas.toDataURL("image/png")
-      : canvas.toDataURL("image/jpeg", 0.9);
+    const contextoMascara = telaMascara?.getContext("2d", { willReadFrequently: true });
+    for (const lesao of opcoes.semLesoes ? [] : lesoes) {
+      const imagem = await carregarImagem(lesao.src);
+      const geometria = geometriaDaLesao(lesao, canvas.width, canvas.height);
+      desenharLesao(contexto, imagem, lesao, geometria, opcoes);
+      if (contextoMascara) {
+        contextoMascara.clearRect(0, 0, canvas.width, canvas.height);
+        desenharLesao(contextoMascara, imagem, lesao, geometria);
+        mascaras.push(recortarAlfa(contextoMascara, geometria, canvas.width, canvas.height));
+      }
+    }
+    return { canvas, mascaras };
   }
 
-  function desenharRotulos(contexto, canvas) {
+  function geometriaDaLesao(lesao, larguraMapa, alturaMapa) {
+    const tamanhoGeral = Number(lesao.dataset.tamanho) / 100;
+    return {
+      x: larguraMapa * Number(lesao.dataset.x) / 100,
+      y: alturaMapa * Number(lesao.dataset.y) / 100,
+      largura: larguraMapa * 0.13 * tamanhoGeral * Number(lesao.dataset.eixoX) / 100,
+      altura: larguraMapa * 0.13 / Number(lesao.dataset.proporcao || 1.8) * tamanhoGeral * Number(lesao.dataset.eixoY) / 100,
+      giro: Number(lesao.dataset.giro) * Math.PI / 180,
+    };
+  }
+
+  function desenharLesao(contexto, imagem, lesao, geometria, opcoes = {}) {
+    const { x, y, largura, altura, giro } = geometria;
+    contexto.save();
+    contexto.translate(x, y);
+    contexto.rotate(giro);
+    if (lesao.dataset.semRecorte !== "true") {
+      contexto.beginPath();
+      contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
+      contexto.clip();
+    }
+    if (opcoes.miomaIntegradoId === lesao.dataset.id && lesao.dataset.nome.startsWith("Mioma")) {
+      // A sombra é isolada em outra camada para preservar até os pixels translúcidos do mioma.
+      const margem = Math.ceil(Math.max(20, largura * 0.35));
+      const sombra = document.createElement("canvas");
+      sombra.width = Math.ceil(largura + 2 * margem);
+      sombra.height = Math.ceil(altura + 2 * margem);
+      const contextoSombra = sombra.getContext("2d");
+      contextoSombra.shadowColor = "rgba(69, 27, 24, 0.72)";
+      contextoSombra.shadowBlur = Math.max(7, largura * 0.14);
+      contextoSombra.shadowOffsetX = Math.max(1, largura * 0.015);
+      contextoSombra.shadowOffsetY = Math.max(2, altura * 0.06);
+      contextoSombra.drawImage(imagem, margem, margem, largura, altura);
+      const mascara = document.createElement("canvas");
+      mascara.width = sombra.width;
+      mascara.height = sombra.height;
+      const contextoMascara = mascara.getContext("2d");
+      contextoMascara.drawImage(imagem, margem, margem, largura, altura);
+      const pixelsSombra = contextoSombra.getImageData(0, 0, sombra.width, sombra.height);
+      const pixelsMascara = contextoMascara.getImageData(0, 0, sombra.width, sombra.height).data;
+      for (let indice = 3; indice < pixelsSombra.data.length; indice += 4) {
+        if (pixelsMascara[indice] > 0) pixelsSombra.data[indice] = 0;
+      }
+      contextoSombra.putImageData(pixelsSombra, 0, 0);
+      contexto.drawImage(sombra, -largura / 2 - margem, -altura / 2 - margem);
+    }
+    contexto.drawImage(imagem, -largura / 2, -altura / 2, largura, altura);
+    contexto.restore();
+  }
+
+  function recortarAlfa(contexto, geometria, larguraMapa, alturaMapa) {
+    const { x, y, largura, altura, giro } = geometria;
+    const raioX = (Math.abs(Math.cos(giro) * largura) + Math.abs(Math.sin(giro) * altura)) / 2;
+    const raioY = (Math.abs(Math.sin(giro) * largura) + Math.abs(Math.cos(giro) * altura)) / 2;
+    // A margem inclui os pixels de suavização de borda antes do recorte exato.
+    const esquerda = limitar(Math.floor(x - raioX) - 2, 0, larguraMapa);
+    const topo = limitar(Math.floor(y - raioY) - 2, 0, alturaMapa);
+    const direita = limitar(Math.ceil(x + raioX) + 2, 0, larguraMapa);
+    const fundo = limitar(Math.ceil(y + raioY) + 2, 0, alturaMapa);
+    const larguraRecorte = direita - esquerda;
+    const alturaRecorte = fundo - topo;
+    const vazia = () => ({ x: 0, y: 0, largura: 0, altura: 0, alfa: new Uint8ClampedArray(0) });
+    if (larguraRecorte <= 0 || alturaRecorte <= 0) return vazia();
+    const pixels = contexto.getImageData(esquerda, topo, larguraRecorte, alturaRecorte).data;
+    let inicioX = larguraRecorte;
+    let inicioY = alturaRecorte;
+    let fimX = -1;
+    let fimY = -1;
+    for (let py = 0; py < alturaRecorte; py++) {
+      for (let px = 0; px < larguraRecorte; px++) {
+        if (!pixels[(py * larguraRecorte + px) * 4 + 3]) continue;
+        inicioX = Math.min(inicioX, px);
+        inicioY = Math.min(inicioY, py);
+        fimX = Math.max(fimX, px);
+        fimY = Math.max(fimY, py);
+      }
+    }
+    if (fimX < 0) return vazia();
+    const larguraAlfa = fimX - inicioX + 1;
+    const alturaAlfa = fimY - inicioY + 1;
+    const alfa = new Uint8ClampedArray(larguraAlfa * alturaAlfa);
+    for (let py = 0; py < alturaAlfa; py++) {
+      for (let px = 0; px < larguraAlfa; px++) {
+        alfa[py * larguraAlfa + px] = pixels[((inicioY + py) * larguraRecorte + inicioX + px) * 4 + 3];
+      }
+    }
+    return { x: esquerda + inicioX, y: topo + inicioY, largura: larguraAlfa, altura: alturaAlfa, alfa };
+  }
+
+  function desenharRotulos(contexto, canvas, lesoes = camada.querySelectorAll(".lesao-editavel")) {
     contexto.strokeStyle = "#000";
     contexto.fillStyle = "#000";
     contexto.lineWidth = Math.max(1.5, canvas.width / 700);
     contexto.font = `700 ${Math.max(15, canvas.width / 58)}px Arial`;
     contexto.textAlign = "center";
     contexto.textBaseline = "middle";
-    for (const lesao of camada.querySelectorAll(".lesao-editavel")) {
+    for (const lesao of lesoes) {
       const linhas = linhasDoRotulo(lesao);
       if (!linhas.length) continue;
       const inicioX = canvas.width * Number(lesao.dataset.x) / 100;

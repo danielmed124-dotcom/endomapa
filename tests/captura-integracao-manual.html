@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'">
+<base href="../">
+<title>Verificação da captura para integração manual</title>
+<pre id="resultado">Executando</pre>
+<div data-camada-editor></div>
+<div data-controles-lesao></div>
+<span data-mensagem-editor></span>
+<input data-controle-giro><input data-controle-tamanho>
+<input data-controle-eixo-x><input data-controle-eixo-y>
+<input data-controle-nome-lesao>
+<button data-remover-lesao></button><button data-limpar-mapa></button>
+<script src="editor-manual.js"></script>
+<script>
+(async function () {
+  const resultado = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const carregar = (src) => new Promise((resolver, rejeitar) => {
+    const imagem = new Image();
+    imagem.onload = () => resolver(imagem);
+    imagem.onerror = () => rejeitar(new Error('Imagem do teste não carregou'));
+    imagem.src = src;
+  });
+  const tela = (largura, altura) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = largura;
+    canvas.height = altura;
+    return canvas;
+  };
+  try {
+    const camada = document.querySelector('[data-camada-editor]');
+    const base = await carregar('assets/mapa-base-coronal.png');
+    const largura = base.naturalWidth;
+    const altura = base.naturalHeight;
+    const fonte = tela(64, 48);
+    const tinta = fonte.getContext('2d');
+    tinta.fillStyle = 'rgba(222, 19, 110, 0.45)';
+    tinta.fillRect(5, 4, 50, 36);
+    tinta.clearRect(18, 13, 13, 16);
+    tinta.fillStyle = '#781919';
+    tinta.fillRect(2, 19, 59, 3);
+    tinta.fillStyle = 'rgba(20, 120, 30, 0.04)';
+    tinta.fillRect(60, 1, 3, 2);
+    const fontePng = fonte.toDataURL('image/png');
+    const imagemFonte = await carregar(fontePng);
+    const opaca = tela(32, 32);
+    opaca.getContext('2d').fillRect(0, 0, 32, 32);
+    const opacaPng = opaca.toDataURL('image/png');
+    const imagemOpaca = await carregar(opacaPng);
+    const transparentePng = tela(32, 32).toDataURL('image/png');
+    const imagemTransparente = await carregar(transparentePng);
+
+    const casos = [
+      { x: 243.25, y: 417.625, largura: 163.5, altura: 92.75, giro: 37, livre: true, imagem: imagemFonte, src: fontePng },
+      { x: 538.75, y: 632.125, largura: 157.25, altura: 103.5, giro: -28, livre: false, imagem: imagemOpaca, src: opacaPng },
+      { x: 280.25, y: 422.625, largura: 105.5, altura: 66.75, giro: -19, livre: true, imagem: imagemFonte, src: fontePng },
+      { x: 1.25, y: 90.5, largura: 93.5, altura: 125.25, giro: 64, livre: true, imagem: imagemFonte, src: fontePng },
+      { x: largura - 2.5, y: altura - 3.25, largura: 94.75, altura: 109.25, giro: -49, livre: false, imagem: imagemOpaca, src: opacaPng },
+      { x: -200, y: -300, largura: 55, altura: 80, giro: 0, livre: true, imagem: imagemFonte, src: fontePng },
+      { x: 800, y: 1200, largura: 60, altura: 90, giro: 12, livre: true, imagem: imagemTransparente, src: transparentePng },
+    ];
+    casos.forEach((caso, indice) => {
+      const elemento = document.createElement('button');
+      elemento.className = 'lesao-editavel';
+      Object.assign(elemento.dataset, {
+        id: String(indice + 1), nome: 'Forma sintética', nomeNoMapa: 'Não incluir nos dados locais',
+        x: String(caso.x * 100 / largura), y: String(caso.y * 100 / altura),
+        tamanho: '100', proporcao: '1', eixoX: String(caso.largura * 100 / (largura * 0.13)),
+        eixoY: String(caso.altura * 100 / (largura * 0.13)), giro: String(caso.giro),
+        semRecorte: String(caso.livre), medidaX: '50', medidaY: '50', medida1: '2',
+      });
+      const imagem = document.createElement('img');
+      imagem.src = caso.src;
+      elemento.append(imagem);
+      camada.append(elemento);
+    });
+    const estadoOriginal = camada.innerHTML;
+    const pngNormal = await window.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    const captura = await window.endomapaCapturarIntegracaoManual();
+    verificar(captura.imagem === pngNormal, 'Captura de integração precisa coincidir exatamente com a captura manual PNG');
+    verificar(captura.largura === largura && captura.altura === altura, 'Dimensões originais');
+    verificar(captura.lesoes.length === casos.length, 'Uma máscara por lesão, incluindo as vazias');
+    verificar(camada.innerHTML === estadoOriginal, 'Capturar não pode alterar a montagem');
+    verificar(Object.keys(captura).sort().join() === 'altura,imagem,largura,lesoes', 'Contrato da captura sem metadados extras');
+
+    const referencia = tela(largura, altura);
+    const contexto = referencia.getContext('2d', { willReadFrequently: true });
+    const uniao = new Uint8Array(largura * altura);
+    let pixelsTranslucidos = 0;
+    let pixelsSobrepostos = 0;
+    let pixelsVazados = 0;
+    for (let indice = 0; indice < casos.length; indice++) {
+      const caso = casos[indice];
+      const mascara = captura.lesoes[indice];
+      verificar(Object.keys(mascara).sort().join() === 'alfa,altura,largura,x,y', 'Máscaras contêm somente geometria e alfa');
+      verificar(mascara.alfa instanceof Uint8ClampedArray, 'Alfa deve ser uma matriz de bytes');
+      verificar(mascara.alfa.length === mascara.largura * mascara.altura, 'Recorte alfa tem o tamanho declarado');
+      verificar([mascara.x, mascara.y, mascara.largura, mascara.altura].every(Number.isInteger), 'Recortes devem usar pixels inteiros');
+      verificar(mascara.x >= 0 && mascara.y >= 0 && mascara.x + mascara.largura <= largura && mascara.y + mascara.altura <= altura, 'Recortes respeitam as bordas do mapa');
+      contexto.clearRect(0, 0, largura, altura);
+      contexto.save();
+      contexto.translate(caso.x, caso.y);
+      contexto.rotate(caso.giro * Math.PI / 180);
+      if (!caso.livre) {
+        contexto.beginPath();
+        contexto.ellipse(0, 0, caso.largura / 2, caso.altura / 2, 0, 0, Math.PI * 2);
+        contexto.clip();
+      }
+      contexto.drawImage(caso.imagem, -caso.largura / 2, -caso.altura / 2, caso.largura, caso.altura);
+      contexto.restore();
+      const esperado = contexto.getImageData(0, 0, largura, altura).data;
+      for (let y = 0; y < altura; y++) {
+        for (let x = 0; x < largura; x++) {
+          const dentro = x >= mascara.x && y >= mascara.y && x < mascara.x + mascara.largura && y < mascara.y + mascara.altura;
+          const alfa = dentro ? mascara.alfa[(y - mascara.y) * mascara.largura + x - mascara.x] : 0;
+          const alfaEsperado = esperado[(y * largura + x) * 4 + 3];
+          if (alfa !== alfaEsperado) throw new Error(`Máscara ${indice + 1} desalinhada no pixel ${x}, ${y}: ${alfa} / ${alfaEsperado}`);
+          if (alfa > 0 && alfa < 255) pixelsTranslucidos++;
+          if (dentro && alfa === 0) pixelsVazados++;
+          if (alfa) {
+            if (uniao[y * largura + x]) pixelsSobrepostos++;
+            uniao[y * largura + x] = 1;
+          }
+        }
+      }
+    }
+    verificar(pixelsTranslucidos > 100 && pixelsSobrepostos > 100 && pixelsVazados > 100, 'Teste deve exercitar transparência, superposição e vazados');
+    verificar(captura.lesoes[3].x === 0, 'Truncagem da borda esquerda');
+    verificar(captura.lesoes[4].x + captura.lesoes[4].largura === largura, 'Truncagem da borda direita');
+    verificar(captura.lesoes[4].y + captura.lesoes[4].altura === altura, 'Truncagem da borda inferior');
+    verificar(captura.lesoes[5].alfa.length === 0 && captura.lesoes[6].alfa.length === 0, 'Lesões fora da tela ou transparentes não inventam suporte');
+
+    const pendente = window.endomapaCapturarIntegracaoManual();
+    camada.firstElementChild.dataset.x = '80';
+    camada.firstElementChild.querySelector('img').src = opacaPng;
+    camada.lastElementChild.remove();
+    const atomica = await pendente;
+    verificar(atomica.imagem === pngNormal && atomica.lesoes.length === casos.length, 'Imagem e máscaras devem conservar o mesmo instante, mesmo com mudança do editor durante a espera');
+    verificar(atomica.lesoes.every((mascara, indice) => {
+      const anterior = captura.lesoes[indice];
+      return mascara.x === anterior.x && mascara.y === anterior.y && mascara.largura === anterior.largura && mascara.altura === anterior.altura
+        && mascara.alfa.every((alfa, pixel) => alfa === anterior.alfa[pixel]);
+    }), 'A alteração posterior do editor não modifica nenhuma máscara capturada');
+    camada.replaceChildren();
+    const vazia = await window.endomapaCapturarIntegracaoManual();
+    const pngVazio = await window.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    verificar(vazia.lesoes.length === 0 && vazia.imagem === pngVazio, 'Mapa sem lesões conserva a anatomia e não cria máscaras');
+    resultado.textContent = 'PASSOU: PNG original idêntico, máscaras locais alinhadas, escala, rotação, recorte elíptico, transparência, vazados, superposição, bordas, captura atômica e mapa vazio; nenhuma API.';
+  } catch (erro) {
+    resultado.textContent = 'FALHOU: ' + erro.message;
+  }
+})();
+</script>
+</html>

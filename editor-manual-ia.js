@@ -293,22 +293,27 @@
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
       if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa. Nenhuma geração foi solicitada.");
 
-      // Envia as lesões montadas pelo médico, sem aplicar o acabamento dos estudos.
-      // Nomes e medidas são desenhados pelo editor, sem pedir à IA para recriá-los.
-      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true, formato: "image/png" });
+      // A proteção usa a mesma captura que será enviada. A máscara permanece
+      // no navegador; a API recebe apenas a montagem, sem imagem de referência.
+      const { prepararIntegracaoContato, integrarContato } = await import("./mapa-integracao-contato.js?v=contato-1");
+      if (!window.endomapaCapturarIntegracaoManual) throw new Error("A proteção das lesões não carregou. Salve sua montagem antes de atualizar a página. Nenhuma geração foi solicitada.");
+      const captura = await window.endomapaCapturarIntegracaoManual();
+      const protecao = await prepararIntegracaoContato(captura);
+      const composicao = captura.imagem;
       const montagemOriginal = await window.endomapaAdicionarRotulos(composicao);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
       const base64 = composicao.split(",")[1];
-      const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, preparar_teste: true, composicao_base64: base64 }, sessao.session, "finalizar-mapa-manual-gemini");
+      const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, versao_integracao: "contato-v1", preparar_teste: true, composicao_base64: base64 }, sessao.session, "finalizar-mapa-manual-gemini");
       if (!preflight.resposta.ok || !preflight.dados?.pronto) throw new Error(preflight.dados?.erro || "Não foi possível preparar a chamada. Nenhuma geração foi solicitada.");
+      if (preflight.dados.versao_integracao !== "contato-v1") throw new Error("O servidor ainda não confirmou a integração com o desenho preservado. Nenhuma geração foi solicitada.");
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou antes do envio. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
       resultado.hidden = false;
-      mostrar(estadoFinalRealista, "O Gemini está gerando o mapa realista a partir da sua montagem. Aguarde para editar novamente; esta geração é paga.", false);
+      mostrar(estadoFinalRealista, "O Gemini está preparando a integração de luz e sombra. O desenho das lesões será preservado. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
-      const { resposta, dados } = await chamarFuncaoUmaVez({ modo_edicao_direta: true, composicao_base64: base64,
+      const { resposta, dados } = await chamarFuncaoUmaVez({ modo_edicao_direta: true, versao_integracao: "contato-v1", composicao_base64: base64,
         mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session, "finalizar-mapa-manual-gemini");
       const suporte = dados?.pedido_id ? ` Pedido Gemini: ${dados.pedido_id}.` : "";
       const operacao = dados?.operacao_id ? ` Operação Endomapa: ${dados.operacao_id}.` : "";
@@ -317,16 +322,17 @@
       const formato = dados.formato || "image/png";
       if (!["image/png", "image/jpeg", "image/webp"].includes(formato)) throw new Error("O Gemini retornou um formato de imagem não suportado." + operacao + suporte);
       const recebida = `data:${formato};base64,${dados.imagem_base64}`;
-      await carregarImagem(recebida);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada à montagem atual." + operacao);
-      const imagemFinal = await window.endomapaAdicionarRotulos(recebida);
+      const integracao = await integrarContato(protecao, recebida);
+      if (!integracao.pixelsAlterados) throw new Error("A resposta do Gemini não produziu um acabamento de contato aproveitável. Nenhuma nova versão foi apresentada." + operacao + suporte);
+      const imagemFinal = await window.endomapaAdicionarRotulos(integracao.imagem);
       await carregarImagem(imagemFinal);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação do resultado. A proposta não foi aplicada à montagem atual." + operacao);
       document.querySelector("[data-imagem-final-realista]").src = imagemFinal;
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estadoFinalRealista, "Proposta do Gemini pronta para revisão. Compare as lesões e a anatomia com sua montagem manual. Um novo clique solicita outra geração paga.", false);
+      mostrar(estadoFinalRealista, "Integração com Gemini pronta. O desenho original das lesões foi mantido; o acabamento ficou limitado à luz e à sombra junto às bordas. Confira o mapa completo antes de usar. Um novo clique solicita outra geração paga.", false);
     } catch (erro) {
       const aviso = envioPagoIniciado
         ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."

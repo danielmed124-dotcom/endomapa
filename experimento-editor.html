@@ -170,7 +170,7 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
-        <p class="texto-apoio">Monte as lesões no mapa e clique para gerar uma versão realista com Gemini. Cada geração é paga; confira as lesões e a anatomia antes de usar o resultado.</p>
+        <p class="texto-apoio">Monte as lesões e clique uma vez para integrar luz e sombra junto às bordas, mantendo o desenho original. Cada geração com Gemini é paga. Confira o mapa completo antes de usar.</p>
         <button class="botao" type="button" data-gerar-final-realista>Gerar mapa realista com Gemini · pago</button>
         <p class="mensagem-formulario" data-estado-final-realista role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
@@ -221,8 +221,8 @@
             <figcaption data-legenda-regioes>Mapa com acabamento aprovado · revisão médica necessária</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-final-realista hidden>
-            <img data-imagem-final-realista alt="Proposta do Gemini a partir da montagem manual para revisão médica" />
-            <figcaption>Proposta do Gemini · confira as lesões e a anatomia</figcaption>
+            <img data-imagem-final-realista alt="Montagem com desenho original das lesões e integração de luz e sombra para revisão médica" />
+            <figcaption>Integração com Gemini · desenho das lesões preservado</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
@@ -261,8 +261,8 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="editor-manual.js?v=manual-direto-1"></script>
+    <script src="editor-manual.js?v=manual-contato-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=manual-gemini-1"></script>
+    <script src="editor-manual-ia.js?v=manual-gemini-contato-1"></script>
   </body>
 </html>

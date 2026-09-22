@@ -43,7 +43,7 @@ async function chamar(corpo: Record<string, unknown>) {
   const resposta = await estado.handler(new Request("https://endomapa-teste.invalid/funcao", {
     method: "POST",
     headers: { Origin: "https://endomapa.pages.dev", Authorization: "Bearer sessao-sintetica", "Content-Type": "application/json" },
-    body: JSON.stringify({ modo_edicao_direta: true, composicao_base64: PNG, ...corpo }),
+    body: JSON.stringify({ modo_edicao_direta: true, versao_integracao: "contato-v1", composicao_base64: PNG, ...corpo }),
   }));
   return { status: resposta.status, dados: await resposta.json() };
 }
@@ -56,7 +56,8 @@ function conferirMetadados(dados: Record<string, unknown>, tentativas: number) {
   verificar(typeof dados.operacao_id === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(dados.operacao_id), "Identificador de operação ausente");
   verificar(typeof dados.horario_utc === "string" && /Z$/.test(dados.horario_utc) && !Number.isNaN(Date.parse(dados.horario_utc)), "Horário UTC ausente");
   igual(dados.tentativas_envio_imagem, tentativas, "Quantidade de envios");
-  igual(dados.versao_funcao, "gemini-direto-v1", "Versão da função");
+  igual(dados.versao_funcao, "gemini-contato-v2", "Versão da função");
+  igual(dados.versao_integracao, "contato-v1", "Versão de compatibilidade da integração local");
   igual(dados.versao_prompt, VERSAO_PROMPT_DIRETO, "Versão do prompt");
   igual(dados.modelo, "gemini-3.1-flash-lite-image", "Modelo configurado");
   igual(dados.endpoint, ENDPOINT_GEMINI, "Endpoint configurado");
@@ -77,11 +78,32 @@ teste("preparação preserva o prompt e não reserva cota nem chama Gemini", asy
   igual(status, 200, "Status da preparação");
   igual(dados.pronto, true, "Preparação concluída");
   igual(dados.prompt_visual, PROMPT_EDICAO_DIRETA, "Prompt intacto");
+  igual(dados.mascara_api, false, "Nenhuma máscara é enviada ao Gemini");
+  igual(dados.mascara_composicao_local, true, "Composição protegida pertence ao editor local");
   verificar(/^[a-f0-9]{64}$/.test(dados.prompt_sha256), "Hash do prompt ausente");
   verificar(/^[a-f0-9]{64}$/.test(dados.imagem_1.sha256), "Hash da montagem ausente");
   igual(estado.reservas, 0, "Reservas na preparação");
   igual(estado.pedidos.length, 0, "Chamadas na preparação");
   conferirMetadados(dados, 0);
+});
+
+teste("editor antigo é recusado na preparação e no envio antes de cota ou chamada", async () => {
+  const hashes = await preparar();
+  for (const versao of [undefined, "contato-desatualizado"]) {
+    for (const prepararTeste of [true, false]) {
+      const { status, dados } = await chamar({ ...hashes, preparar_teste: prepararTeste, versao_integracao: versao });
+      igual(status, 409, "Versão ausente ou incompatível");
+      igual(dados.estado, "editor_desatualizado", "Estado do editor antigo");
+      verificar(dados.erro.includes("Salve a montagem manual antes"), "Aviso precisa orientar salvar a montagem antes de atualizar");
+      verificar(!dados.pronto && !("prompt_visual" in dados), "Editor antigo não pode concluir a preparação");
+      verificar(!("imagem_base64" in dados) && !("imagem_url" in dados), "Editor antigo não pode receber imagem");
+      conferirMetadados(dados, 0);
+    }
+  }
+  const antigaComImagemInvalida = await chamar({ versao_integracao: undefined, composicao_base64: "curta" });
+  igual(antigaComImagemInvalida.status, 409, "Compatibilidade deve ser conferida antes de validar e calcular hashes da imagem");
+  igual(estado.reservas, 0, "Nenhuma reserva para editor antigo");
+  igual(estado.pedidos.length, 0, "Nenhuma chamada para editor antigo");
 });
 
 teste("imagem inválida e modos incompatíveis são recusados antes de cota ou chamada", async () => {
@@ -133,6 +155,7 @@ teste("uma geração envia somente o PNG e o prompt original com o modelo config
   conferirMetadados(dados, 1);
   igual(estado.registros.map(item => item.etapa), ["pedido_enviado", "imagem_recebida"], "Etapas registradas");
   verificar(estado.registros.every(item => item.operacao_id === dados.operacao_id), "Logs não correspondem à operação");
+  verificar(estado.registros.every(item => item.versao_integracao === "contato-v1"), "Logs precisam registrar a compatibilidade da composição local");
 });
 
 teste("bloqueio estruturado impede usar imagem presente na mesma resposta", async () => {

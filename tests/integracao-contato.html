@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'none'">
+<title>Preservação do desenho na integração de contato, sem API</title>
+<pre id="resultado">PENDENTE</pre>
+<script type="module">
+import { prepararIntegracaoContato, integrarContato } from '../mapa-integracao-contato.js';
+
+const conferir = (valor, mensagem) => { if (!valor) throw new Error(mensagem); };
+const concluido = [];
+// Este teste usa apenas imagens criadas no navegador. Uma chamada de rede seria erro.
+window.fetch = async () => { throw new Error('O teste tentou acessar a rede.'); };
+
+function tela(largura, altura) {
+  const canvas = document.createElement('canvas');
+  canvas.width = largura;
+  canvas.height = altura;
+  return canvas;
+}
+
+function distanciaSegmento(x, y, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (y - a[1]) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(x - a[0] - t * dx, y - a[1] - t * dy);
+}
+
+// Oráculo geométrico do teste, independente da máscara criada pelo compositor.
+function distanciaPoligono(x, y, vertices) {
+  let interior = false, distancia = Infinity;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const a = vertices[j], b = vertices[i];
+    if ((a[1] > y) !== (b[1] > y) && x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]) interior = !interior;
+    distancia = Math.min(distancia, distanciaSegmento(x, y, a, b));
+  }
+  return interior || distancia < 0.001 ? 0 : distancia;
+}
+
+function lesaoRetangular(x, y, largura, altura) {
+  const alfa = new Uint8ClampedArray(largura * altura);
+  // Os quatro cantos quase transparentes pertencem ao desenho. Entre os focos há vazio.
+  alfa[0] = alfa[largura - 1] = alfa[(altura - 1) * largura] = alfa[largura * altura - 1] = 1;
+  for (let py = 0; py < altura; py++) for (let px = 0; px < largura; px++) {
+    const d1 = Math.hypot(px - largura * 0.25, py - altura * 0.45);
+    const d2 = Math.hypot(px - largura * 0.75, py - altura * 0.55);
+    const d = Math.min(d1, d2);
+    if (d < Math.min(largura, altura) * 0.17) alfa[py * largura + px] = 255;
+    else if (d < Math.min(largura, altura) * 0.21) alfa[py * largura + px] = 80;
+  }
+  return { x, y, largura, altura, alfa,
+    vertices: [[x, y], [x + largura - 1, y], [x + largura - 1, y + altura - 1], [x, y + altura - 1]] };
+}
+
+function lesaoDiagonal(x, y) {
+  const largura = 61, altura = 71;
+  const alfa = new Uint8ClampedArray(largura * altura);
+  const pontos = [[30, 0], [60, 35], [30, 70], [0, 35]];
+  for (const [px, py] of pontos) alfa[py * largura + px] = 32;
+  for (let py = 0; py < altura; py++) for (let px = 0; px < largura; px++) {
+    if (Math.hypot(px - 30, py - 20) < 8 || Math.hypot(px - 30, py - 50) < 8) alfa[py * largura + px] = 220;
+  }
+  return { x, y, largura, altura, alfa, vertices: pontos.map(([px, py]) => [x + px, y + py]) };
+}
+
+function criarCaso(largura, altura, lesoes) {
+  const canvas = tela(largura, altura), contexto = canvas.getContext('2d');
+  const pixels = contexto.createImageData(largura, altura);
+  for (let y = 0; y < altura; y++) for (let x = 0; x < largura; x++) {
+    const i = (y * largura + x) * 4;
+    // Textura e cores preexistentes permitem detectar substituição ou alisamento da base.
+    pixels.data[i] = 165 + x % 17;
+    pixels.data[i + 1] = 125 + y % 19;
+    pixels.data[i + 2] = 95 + (x + y) % 11;
+    pixels.data[i + 3] = x < 5 && y < 5 ? 180 : 255;
+  }
+  for (const lesao of lesoes) for (let y = 0; y < lesao.altura; y++) for (let x = 0; x < lesao.largura; x++) {
+    const alfa = lesao.alfa[y * lesao.largura + x] / 255;
+    const i = ((lesao.y + y) * largura + lesao.x + x) * 4;
+    for (let c = 0; c < 3; c++) pixels.data[i + c] = Math.round(pixels.data[i + c] * (1 - alfa) + [90, 37, 32][c] * alfa);
+  }
+  contexto.putImageData(pixels, 0, 0);
+  return { canvas, lesoes, captura: { imagem: canvas.toDataURL('image/png'), largura, altura,
+    lesoes: lesoes.map(({ vertices, ...lesao }) => lesao) } };
+}
+
+async function decodificar(src) {
+  const imagem = await new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('A imagem local do teste não pôde ser aberta.'));
+    img.src = src;
+  });
+  const canvas = tela(imagem.naturalWidth, imagem.naturalHeight), contexto = canvas.getContext('2d');
+  contexto.drawImage(imagem, 0, 0);
+  return { largura: canvas.width, altura: canvas.height, pixels: contexto.getImageData(0, 0, canvas.width, canvas.height).data };
+}
+
+function criarRespostaHostil(caso, { contato = true, global = true } = {}) {
+  const { largura, altura } = caso.captura;
+  const canvas = tela(largura, altura), contexto = canvas.getContext('2d');
+  contexto.drawImage(caso.canvas, 0, 0);
+  const pixels = contexto.getImageData(0, 0, largura, altura);
+  for (let y = 0; y < altura; y++) for (let x = 0; x < largura; x++) {
+    const i = (y * largura + x) * 4;
+    const distancia = Math.min(...caso.lesoes.map((lesao) => distanciaPoligono(x, y, lesao.vertices)));
+    if (global) for (let c = 0; c < 3; c++) pixels.data[i + c] = Math.round(pixels.data[i + c] * 0.96);
+    if (distancia === 0) {
+      // A IA inventou outra aparência no interior. Nada disso pode chegar à saída.
+      pixels.data[i] = 15; pixels.data[i + 1] = 245; pixels.data[i + 2] = 70;
+    } else if (contato && distancia <= 8) {
+      for (let c = 0; c < 3; c++) pixels.data[i + c] = Math.round(pixels.data[i + c] * 0.7);
+    }
+    // Uma lesão nova e uma mudança extensa em anatomia distante também são descartadas.
+    if (x > largura * 0.75 && y > altura * 0.75) {
+      pixels.data[i] = 240; pixels.data[i + 1] = 20; pixels.data[i + 2] = 25;
+    }
+    if (x < largura * 0.2 && y > altura * 0.8) {
+      pixels.data[i] = 30; pixels.data[i + 1] = 60; pixels.data[i + 2] = 200;
+    }
+  }
+  contexto.putImageData(pixels, 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+async function conferirPreservacao(caso, resultado, exigeMudanca) {
+  const original = await decodificar(caso.captura.imagem), final = await decodificar(resultado.imagem);
+  conferir(final.largura === original.largura && final.altura === original.altura, 'O resultado mudou as dimensões originais.');
+  let alterados = 0, protegidos = 0, transparentesProtegidos = 0;
+  for (let y = 0; y < original.altura; y++) for (let x = 0; x < original.largura; x++) {
+    const i = (y * original.largura + x) * 4;
+    const distancia = Math.min(...caso.lesoes.map((lesao) => distanciaPoligono(x, y, lesao.vertices)));
+    const ocupaDesenho = caso.lesoes.some((lesao) => x >= lesao.x && y >= lesao.y && x < lesao.x + lesao.largura && y < lesao.y + lesao.altura && lesao.alfa[(y - lesao.y) * lesao.largura + x - lesao.x] > 0);
+    const protegido = ocupaDesenho || distancia === 0 || distancia > 6;
+    let mudou = false;
+    for (let c = 0; c < 4; c++) {
+      const diferenca = Math.abs(final.pixels[i + c] - original.pixels[i + c]);
+      if (protegido || c === 3) conferir(diferenca === 0, `Pixel protegido foi alterado em ${x},${y}, canal ${c}.`);
+      else conferir(diferenca <= 18, `A integração excedeu a variação suave de cor em ${x},${y}.`);
+      if (diferenca) mudou = true;
+    }
+    if (mudou) alterados++;
+    if (protegido) protegidos++;
+    if (distancia === 0 && !ocupaDesenho) transparentesProtegidos++;
+  }
+  conferir(protegidos > 0 && transparentesProtegidos > 0, 'O cenário não exercitou os espaços entre focos.');
+  conferir(resultado.pixelsAlterados === alterados, 'O contador de pixels alterados não corresponde ao PNG final.');
+  if (exigeMudanca) conferir(alterados > 0, 'A sombra de contato aproveitável não produziu nenhuma integração.');
+  return alterados;
+}
+
+async function deveRecusar(acao, mensagem) {
+  let recusou = false;
+  try { await acao(); } catch (_) { recusou = true; }
+  conferir(recusou, mensagem);
+}
+
+try {
+  // Resolução real do mapa; a resposta hostil é completamente diferente em várias áreas.
+  const grande = criarCaso(1086, 1448, [lesaoRetangular(480, 480, 81, 61)]);
+  const alfaAntes = new Uint8ClampedArray(grande.captura.lesoes[0].alfa);
+  const preparacaoGrande = await prepararIntegracaoContato(grande.captura);
+  const resultadoGrande = await integrarContato(preparacaoGrande, criarRespostaHostil(grande));
+  await conferirPreservacao(grande, resultadoGrande, true);
+  conferir(grande.captura.lesoes[0].alfa.every((valor, i) => valor === alfaAntes[i]), 'A preparação modificou a máscara original.');
+  concluido.push('resolução real, desenho, transparência, espaços, anatomia e limite de contato');
+
+  // Dois desenhos sobrepostos: a faixa de um jamais pode apagar o outro.
+  const sobrepostos = criarCaso(320, 280, [lesaoRetangular(95, 85, 51, 45), lesaoDiagonal(120, 95)]);
+  const preparacaoSobrepostos = await prepararIntegracaoContato(sobrepostos.captura);
+  await conferirPreservacao(sobrepostos, await integrarContato(preparacaoSobrepostos, criarRespostaHostil(sobrepostos)), false);
+  concluido.push('máscara diagonal e união de desenhos sobrepostos');
+
+  const pequeno = criarCaso(240, 200, [lesaoRetangular(90, 70, 31, 31)]);
+  const preparacaoPequena = await prepararIntegracaoContato(pequeno.captura);
+  const identica = await integrarContato(preparacaoPequena, pequeno.captura.imagem);
+  conferir(await conferirPreservacao(pequeno, identica, false) === 0, 'Uma resposta idêntica recebeu acabamento inventado.');
+  const soInvencoes = await integrarContato(preparacaoPequena, criarRespostaHostil(pequeno, { contato: false, global: false }));
+  conferir(await conferirPreservacao(pequeno, soInvencoes, false) === 0, 'Alterações sem contato útil foram aplicadas à montagem.');
+  concluido.push('resposta idêntica e invenções sem acabamento útil não alteram a montagem');
+
+  await deveRecusar(() => prepararIntegracaoContato({ ...pequeno.captura, largura: 241 }), 'A captura com dimensões incompatíveis foi aceita.');
+  await deveRecusar(() => prepararIntegracaoContato({ ...pequeno.captura, lesoes: [] }), 'A captura sem máscaras foi aceita.');
+  await deveRecusar(() => prepararIntegracaoContato({ ...pequeno.captura, lesoes: [{ ...pequeno.captura.lesoes[0], alfa: undefined }] }), 'Uma lesão sem alfa foi aceita.');
+  await deveRecusar(() => prepararIntegracaoContato({ ...pequeno.captura, lesoes: [{ ...pequeno.captura.lesoes[0], alfa: new Uint8ClampedArray(3) }] }), 'Uma máscara com tamanho incorreto foi aceita.');
+  await deveRecusar(() => prepararIntegracaoContato({ ...pequeno.captura, lesoes: [{ ...pequeno.captura.lesoes[0], x: NaN }] }), 'Uma máscara com posição inválida foi aceita.');
+  await deveRecusar(() => integrarContato(preparacaoPequena, 'data:image/png;base64,aW52YWxpZG8='), 'Uma resposta sem imagem válida foi aceita.');
+  concluido.push('dimensões, máscaras e imagem inválidas recusadas');
+
+  document.querySelector('#resultado').textContent = 'PASSOU: ' + concluido.join('; ') + '. Nenhuma chamada de API.';
+} catch (erro) {
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message + (concluido.length ? ' Concluídos: ' + concluido.join('; ') : '');
+}
+</script>
+</html>

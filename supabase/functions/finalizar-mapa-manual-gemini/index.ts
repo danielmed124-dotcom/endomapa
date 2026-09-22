@@ -9,7 +9,8 @@ const ORIGENS = new Set([
 const LIMITE_MS = 120_000;
 const MODELO = "gemini-3.1-flash-lite-image";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
-const VERSAO_FUNCAO = "gemini-direto-v1";
+const VERSAO_FUNCAO = "gemini-contato-v2";
+const VERSAO_INTEGRACAO = "contato-v1";
 const CONFIGURACAO_DIRETA = {
   responseModalities: ["IMAGE"],
   imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
@@ -55,6 +56,7 @@ Deno.serve(async (req) => {
   const origem = req.headers.get("Origin");
   const metadados = () => ({ operacao_id: operacaoId, horario_utc: new Date().toISOString(),
     versao_funcao: VERSAO_FUNCAO, versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : "legado",
+    ...(modoDireto ? { versao_integracao: VERSAO_INTEGRACAO } : {}),
     modelo: MODELO, endpoint: ENDPOINT, tentativas_envio_imagem: tentativasEnvioImagem });
   const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem({ ...corpo, ...metadados() }, status, origem);
   const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({ ...metadados(), etapa, ...dados }));
@@ -75,6 +77,12 @@ Deno.serve(async (req) => {
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
   modoDireto = corpo.modo_edicao_direta === true;
+  // Compatibilidade com a composição protegida do editor: não é validação clínica
+  // nem uma máscara enviada ao provedor. Abas antigas param antes de reservar cota.
+  if (modoDireto && corpo.versao_integracao !== VERSAO_INTEGRACAO) {
+    return responder({ estado: "editor_desatualizado",
+      erro: "Esta aba está com uma versão antiga do editor. Salve a montagem manual antes de atualizar a página ou abrir uma nova aba. Nenhuma geração foi solicitada." }, 409);
+  }
   if (modoDireto && (corpo.modo_detalhe === true || corpo.consultar_diagnostico === true || corpo.modo_regiao === true || corpo.modo_mapa_referencia === true)) {
     return responder({ erro: "Escolha somente um modo de edição. Nenhuma geração foi solicitada." }, 400);
   }
@@ -122,7 +130,7 @@ Deno.serve(async (req) => {
     if (corpo.preparar_teste === true) return responder({
       pronto: true, prompt_visual: PROMPT_EDICAO_DIRETA, prompt_sha256: hashesDiretos.prompt_sha256,
       parametros: CONFIGURACAO_DIRETA, imagem_1: { papel: "montagem manual sem rótulos; única imagem enviada", sha256: hashesDiretos.mapa_sha256 },
-      mascara_api: false, mascara_composicao_local: false,
+      mascara_api: false, mascara_composicao_local: true,
     });
     if (corpo.mapa_sha256 !== hashesDiretos.mapa_sha256 || corpo.prompt_sha256 !== hashesDiretos.prompt_sha256) {
       return responder({ erro: "A imagem ou o prompt mudou desde a preparação. Nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);

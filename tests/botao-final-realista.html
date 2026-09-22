@@ -19,8 +19,20 @@
 </div>
 <pre id="resultado">PENDENTE</pre>
 <script>
+window.addEventListener('error', (evento) => {
+  const relato = 'Erro de JavaScript: ' + evento.message + ' (' + evento.filename + ':' + evento.lineno + ')';
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + relato;
+  const cenario = new URLSearchParams(location.search).get('cenario');
+  if (cenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario, ok: false, relato }, '*');
+});
+window.addEventListener('unhandledrejection', (evento) => {
+  const relato = 'Promessa rejeitada: ' + (evento.reason?.message || String(evento.reason));
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + relato;
+  const cenario = new URLSearchParams(location.search).get('cenario');
+  if (cenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario, ok: false, relato }, '*');
+});
 const nomeCenario = new URLSearchParams(location.search).get('cenario');
-const cenarios = ['sucesso', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'sem_imagem', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
+const cenarios = ['sucesso', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'servidor_antigo', 'sem_imagem', 'sem_acabamento', 'mascara_invalida', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
 const buscar = (seletor) => document.querySelector(seletor);
 const exigir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -32,13 +44,23 @@ async function esperar(condicao, mensagem) {
   }
 }
 
-function criarImagem(cor, rotulado = false, formato = 'image/png') {
+function criarImagem(cor, rotulado = false, formato = 'image/png', sombra = false) {
   const tela = document.createElement('canvas');
   tela.width = 1086;
   tela.height = 1448;
   const contexto = tela.getContext('2d');
   contexto.fillStyle = '#fff';
   contexto.fillRect(0, 0, tela.width, tela.height);
+  if (sombra) {
+    contexto.strokeStyle = '#a98f81';
+    contexto.lineWidth = 16;
+    contexto.beginPath();
+    contexto.ellipse(272, 724, 65, 48, 0, 0, Math.PI * 2);
+    contexto.stroke();
+    // Achado inventado pelo provedor: jamais deve entrar no resultado.
+    contexto.fillStyle = '#301212';
+    contexto.fillRect(690, 490, 30, 100);
+  }
   contexto.fillStyle = cor;
   contexto.beginPath();
   contexto.ellipse(272, 724, 65, 48, 0, 0, Math.PI * 2);
@@ -51,12 +73,50 @@ function criarImagem(cor, rotulado = false, formato = 'image/png') {
   return tela.toDataURL(formato);
 }
 
+function criarMascara() {
+  const tela = document.createElement('canvas');
+  tela.width = 134;
+  tela.height = 100;
+  const contexto = tela.getContext('2d');
+  contexto.fillStyle = '#fff';
+  contexto.beginPath();
+  contexto.ellipse(67, 50, 65, 48, 0, 0, Math.PI * 2);
+  contexto.fill();
+  const rgba = contexto.getImageData(0, 0, tela.width, tela.height).data;
+  const alfa = new Uint8ClampedArray(tela.width * tela.height);
+  for (let i = 0; i < alfa.length; i++) alfa[i] = rgba[i * 4 + 3];
+  return { x: 205, y: 674, largura: tela.width, altura: tela.height, alfa };
+}
+
+async function telaDaImagem(fonte) {
+  const imagem = await new Promise((resolver, rejeitar) => {
+    const recurso = new Image();
+    recurso.onload = () => resolver(recurso);
+    recurso.onerror = () => rejeitar(new Error('Não foi possível abrir a imagem sintética para conferir os pixels'));
+    recurso.src = fonte;
+  });
+  const tela = document.createElement('canvas');
+  tela.width = imagem.naturalWidth;
+  tela.height = imagem.naturalHeight;
+  tela.getContext('2d').drawImage(imagem, 0, 0);
+  return tela;
+}
+
+async function adicionarRotulo(fonte) {
+  const tela = await telaDaImagem(fonte);
+  const contexto = tela.getContext('2d');
+  contexto.fillStyle = '#000';
+  contexto.font = '22px Arial';
+  contexto.fillText('Cisto direito · 25 mm', 360, 724);
+  return tela.toDataURL('image/png');
+}
+
 const formatoProposta = nomeCenario === 'jpeg' ? 'image/jpeg' : 'image/png';
 const captura = criarImagem('#bc8172');
-const proposta = criarImagem('#986565', false, formatoProposta);
+const proposta = nomeCenario === 'sem_acabamento' ? captura : criarImagem('#56171d', false, formatoProposta, true);
 const capturaRotulada = criarImagem('#bc8172', true);
-const propostaRotulada = criarImagem('#986565', true);
 const outroMapa = criarImagem('#467787', true);
+const mascara = criarMascara();
 const chamadas = { preparacoes: 0, pagas: 0, acabamento: 0, capturas: [], rotulos: [], corpos: [], falhas: [], alternativas: [] };
 let experimentoPendente = false;
 let concluirExperimento;
@@ -71,18 +131,22 @@ const dadosOriginais = buscar('.lesao-editavel') ? JSON.stringify({ ...buscar('.
 
 window.endomapaCapturarMapaManual = async (opcoes = {}) => {
   if (experimentoPendente) return opcoes.semLesoes ? captura : outroMapa;
-  chamadas.capturas.push(opcoes);
-  exigir(opcoes.semRotulos === true, 'A captura deve omitir os rótulos enviados à IA');
-  exigir(opcoes.formato === 'image/png', 'A captura deve solicitar PNG');
-  exigir(!opcoes.semLesoes && !opcoes.miomaIntegradoId, 'A captura alterou as lesões da montagem atual');
-  return captura;
+  throw new Error('O fluxo direto usou captura sem a proteção do desenho das lesões');
+};
+window.endomapaCapturarIntegracaoManual = async () => {
+  chamadas.capturas.push({ integracao: true });
+  return {
+    imagem: captura, largura: 1086, altura: 1448,
+    lesoes: [{ ...mascara, alfa: nomeCenario === 'mascara_invalida' ? new Uint8ClampedArray(2) : new Uint8ClampedArray(mascara.alfa) }],
+  };
 };
 window.endomapaAdicionarRotulos = async (imagem) => {
   if (experimentoPendente && imagem === outroMapa) return outroMapa;
   chamadas.rotulos.push(imagem);
   if (imagem === captura) return capturaRotulada;
-  if (imagem === proposta) return propostaRotulada;
-  throw new Error('Foram reaplicados rótulos a uma imagem diferente da captura ou da proposta');
+  exigir(imagem !== proposta, 'O aplicativo reaplicou os rótulos diretamente à imagem não protegida do Gemini');
+  exigir(imagem.startsWith('data:image/png;base64,'), 'A composição final deve preservar o mapa em PNG');
+  return adicionarRotulo(imagem);
 };
 window.EndomapaAcabamentoAprovado = {
   montar: async () => {
@@ -113,14 +177,17 @@ window.fetch = async (url, opcoes) => {
     const corpo = JSON.parse(opcoes.body);
     chamadas.corpos.push(corpo);
     exigir(corpo.modo_edicao_direta === true, 'Não usou edição direta');
+    exigir(corpo.versao_integracao === 'contato-v1', 'Não informou ao servidor a versão da proteção de contato');
     exigir(corpo.composicao_base64 === captura.split(',')[1], 'A imagem enviada difere da montagem capturada');
     exigir(!corpo.modo_mapa_referencia && !corpo.modo_regiao, 'Enviou outro modo de geração');
+    exigir(Object.keys(corpo).every((chave) => ['modo_edicao_direta', 'versao_integracao', 'preparar_teste', 'composicao_base64', 'mapa_sha256', 'prompt_sha256'].includes(chave)), 'Enviou referência ou outro parâmetro inesperado ao provedor');
     if (corpo.preparar_teste === true) {
       chamadas.preparacoes++;
       await pausa(20);
       if (nomeCenario === 'erro_preparo') return responder({ erro: 'Falha simulada na preparação do Gemini' }, 503);
+      if (nomeCenario === 'servidor_antigo') return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
       if (nomeCenario === 'muda_preparo') buscar('.lesao-editavel').dataset.x = '60';
-      return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
+      return responder({ pronto: true, versao_integracao: 'contato-v1', imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
     }
     chamadas.pagas++;
     exigir(buscar('[data-imagem-original]').src === capturaRotulada && !buscar('[data-resultado-realista]').hidden, 'A montagem original deve estar disponível antes do envio pago');
@@ -142,6 +209,32 @@ window.fetch = async (url, opcoes) => {
 </script>
 <script src="../editor-manual-ia.js"></script>
 <script>
+async function conferirIntegracaoPreservada() {
+  const semRotulos = chamadas.rotulos[chamadas.rotulos.length - 1];
+  exigir(semRotulos !== captura && semRotulos !== proposta, 'O resultado deve ser a integração protegida, sem reapresentar a entrada nem copiar a proposta integral');
+  const [base, final] = await Promise.all([telaDaImagem(captura), telaDaImagem(semRotulos)]);
+  exigir(final.width === base.width && final.height === base.height, 'A integração mudou as dimensões originais');
+  const antes = base.getContext('2d').getImageData(0, 0, base.width, base.height).data;
+  const depois = final.getContext('2d').getImageData(0, 0, final.width, final.height).data;
+  let alterados = 0;
+  for (let y = 0; y < base.height; y++) {
+    for (let x = 0; x < base.width; x++) {
+      const indice = (y * base.width + x) * 4;
+      const mudou = antes[indice] !== depois[indice] || antes[indice + 1] !== depois[indice + 1] || antes[indice + 2] !== depois[indice + 2] || antes[indice + 3] !== depois[indice + 3];
+      if (!mudou) continue;
+      alterados++;
+      const mx = x - mascara.x;
+      const my = y - mascara.y;
+      if (mx >= 0 && mx < mascara.largura && my >= 0 && my < mascara.altura) {
+        exigir(mascara.alfa[my * mascara.largura + mx] === 0, 'Alterou um pixel do desenho original, inclusive uma borda translúcida');
+      }
+      exigir(x >= mascara.x - 4 && x < mascara.x + mascara.largura + 4 && y >= mascara.y - 4 && y < mascara.y + mascara.altura + 4, 'Copiou achado novo ou mudou a anatomia distante da faixa de contato');
+    }
+  }
+  exigir(alterados > 0, 'O fluxo exibiu sucesso sem aplicar acabamento útil');
+  exigir(buscar('[data-imagem-final-realista]').src === await adicionarRotulo(semRotulos), 'A imagem protegida não recebeu os nomes e as medidas originais');
+}
+
 async function executarCenario() {
   exigir(cenarios.includes(nomeCenario), 'Cenário desconhecido: ' + nomeCenario);
   const botao = buscar('[data-gerar-final-realista]');
@@ -190,8 +283,8 @@ async function executarCenario() {
     exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade incorreta de preparações ou gerações');
     exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-final-realista]').hidden, 'Resultado não exibido');
     exigir(buscar('[data-imagem-original]').src === capturaRotulada, 'A comparação não mostra a captura original com rótulos');
-    exigir(buscar('[data-imagem-final-realista]').src === propostaRotulada, 'A proposta não recebeu seus rótulos');
-    exigir(chamadas.rotulos.includes(captura) && chamadas.rotulos.includes(proposta), 'Faltou reaplicar nomes e medidas às duas imagens');
+    exigir(chamadas.rotulos.includes(captura), 'Faltou reaplicar nomes e medidas à montagem original');
+    await conferirIntegracaoPreservada();
     exigir(!estado.classList.contains('mensagem-formulario--erro'), 'Sucesso apresentado como falha');
     exigir(estado.textContent.includes('Gemini'), 'O resultado não identifica o provedor usado');
   } else {
@@ -199,14 +292,22 @@ async function executarCenario() {
     if (nomeCenario === 'vazio' || nomeCenario === 'sem_login') {
       exigir(chamadas.corpos.length === 0, 'Mapa vazio ou sem login acionou o servidor');
       exigir(chamadas.capturas.length === 0, 'Mapa vazio ou sem login iniciou a captura');
+    } else if (nomeCenario === 'mascara_invalida') {
+      exigir(chamadas.capturas.length === 1, 'A proteção inválida deveria ser detectada na captura');
+      exigir(chamadas.preparacoes === 0 && chamadas.pagas === 0, 'Enviou solicitação com a proteção das lesões inválida');
+      exigir(/proteção|máscara/i.test(estado.textContent), 'Não explicou por que a captura foi recusada antes da geração');
     } else if (nomeCenario === 'muda_preparo') {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após mudança no preparo');
       exigir(buscar('.lesao-editavel').dataset.x === '60', 'Desfez a alteração do médico durante o preparo');
-    } else if (nomeCenario === 'erro_preparo') {
+    } else if (['erro_preparo', 'servidor_antigo'].includes(nomeCenario)) {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após erro na preparação');
     } else {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'Quantidade inesperada de chamadas na falha');
       if (nomeCenario === 'muda_geracao') exigir(buscar('.lesao-editavel').dataset.medida1 === '30', 'Desfez a medida alterada pelo médico');
+      if (nomeCenario === 'sem_acabamento') {
+        exigir(/acabamento/i.test(estado.textContent), 'Não avisou que o Gemini não forneceu acabamento aproveitável');
+        exigir(!chamadas.rotulos.some((imagem) => imagem !== captura), 'Preparou um resultado novo sem acabamento aproveitável');
+      }
     }
   }
 
@@ -243,7 +344,13 @@ async function executarTodos() {
       };
       const prazo = setTimeout(() => {
         window.removeEventListener('message', receber);
-        rejeitar(new Error('O cenário não respondeu: ' + nome));
+        const documento = quadro.contentDocument;
+        const detalhe = documento ? JSON.stringify({
+          carregamento: documento.readyState,
+          resultado: documento.querySelector('#resultado')?.textContent,
+          estado: documento.querySelector('[data-estado-final-realista]')?.textContent,
+        }) : 'Documento indisponível';
+        rejeitar(new Error('O cenário não respondeu: ' + nome + ' / ' + detalhe));
       }, 6000);
       window.addEventListener('message', receber);
     });
