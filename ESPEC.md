@@ -32,6 +32,8 @@ Atualização de 18/09/2026: por solicitação de Daniel, o editor manual e todo
 
 Atualização de 21/09/2026: no editor manual, o médico monta as lesões e usa o botão **Gerar mapa realista · pago**, que envia a própria montagem diretamente à API de imagens. A etapa de acabamento gratuito deixa de ser necessária. O sistema recoloca os nomes e as medidas, exibe a montagem original e a proposta para revisão e só solicita outra geração mediante novo clique explícito. Os experimentos anteriores ficam recolhidos.
 
+Atualização posterior de 21/09/2026: por escolha explícita de Daniel, o botão principal passa a **Gerar mapa realista com Gemini · pago**, usando a integração Gemini já configurada. A preparação e a edição recebem a mesma captura PNG sem rótulos. O texto didático do pedido é mantido; não há redução dos filtros, troca automática de provedor ou repetição automática. A resposta é uma proposta para revisão médica, e uma falha preserva a montagem manual. O incidente anterior da OpenAI continua separado e não resolvido.
+
 - Cadastro ou identificação de pacientes.
 - Histórico de exames.
 - Integração com sistemas de laudos.

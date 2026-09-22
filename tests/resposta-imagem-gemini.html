@@ -1,0 +1,73 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; connect-src 'none'">
+<title>Respostas de imagem Gemini sem chamadas externas</title>
+<pre id="resultado">PENDENTE</pre>
+<script type="module">
+import { interpretarRespostaGemini } from '../supabase/functions/_shared/resposta-imagem-gemini.js';
+const conferir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+const pixel = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jF1kAAAAASUVORK5CYII=';
+const parteImagem = () => ({inlineData:{mimeType:'image/png',data:pixel}});
+const resposta = (finishReason = 'STOP', parts = [parteImagem()]) => ({
+  responseId:'resposta_local-123',candidates:[{finishReason,content:{parts}}],
+});
+try {
+  const sucesso = interpretarRespostaGemini(resposta(), 200);
+  conferir(sucesso.estado === 'concluido' && sucesso.status === 200 && sucesso.erro === null, 'Imagem final não aceita');
+  conferir(sucesso.imagem.data === pixel && sucesso.imagem.mime_type === 'image/png', 'Imagem final modificada');
+  for (const motivo of ['SAFETY','IMAGE_SAFETY','PROHIBITED_CONTENT','IMAGE_PROHIBITED_CONTENT','BLOCKLIST','SPII','RECITATION','IMAGE_RECITATION','ESCALATION']) {
+    const bloqueada = interpretarRespostaGemini(resposta(motivo), 200);
+    conferir(bloqueada.estado === 'bloqueado_provedor' && bloqueada.status === 422 && bloqueada.imagem === null, 'Imagem aproveitada apesar de ' + motivo);
+    conferir(!bloqueada.erro.includes('sexual'), 'Categoria sexual inferida sem campo estruturado');
+  }
+  for (const motivo of ['SAFETY','OTHER','BLOCKLIST','PROHIBITED_CONTENT','IMAGE_SAFETY','MOTIVO_NOVO']) {
+    const entrada = resposta(); entrada.promptFeedback = {blockReason:motivo};
+    conferir(interpretarRespostaGemini(entrada, 200).estado === 'bloqueado_provedor', 'Bloqueio do prompt ignorado');
+  }
+  for (const motivo of ['MAX_TOKENS','NO_IMAGE','IMAGE_OTHER','LANGUAGE','MOTIVO_NOVO',undefined]) {
+    const incompleta = resposta(); incompleta.candidates[0].finishReason = motivo;
+    conferir(interpretarRespostaGemini(incompleta, 200).imagem === null, 'Imagem incompleta aceita');
+  }
+  const pensamento = {...parteImagem(), thought:true};
+  conferir(interpretarRespostaGemini(resposta('STOP',[pensamento]),200).imagem === null, 'Pensamento usado como imagem');
+  conferir(interpretarRespostaGemini(resposta('STOP',[pensamento,parteImagem()]),200).imagem?.data === pixel, 'Imagem final após pensamento ignorada');
+  const aninhada = resposta('STOP',[{ferramenta:{resultado:parteImagem()}}]);
+  conferir(interpretarRespostaGemini(aninhada,200).imagem === null, 'Busca recursiva aceitou imagem arbitrária');
+  const outroCandidato = resposta('STOP',[{text:'Sem imagem'}]);
+  outroCandidato.candidates.push(resposta().candidates[0]);
+  conferir(interpretarRespostaGemini(outroCandidato,200).imagem === null, 'Outro candidato foi usado como substituição');
+  const classificacoes = resposta();
+  classificacoes.candidates[0].safetyRatings = [{category:'HARM_CATEGORY_SEXUALLY_EXPLICIT', probability:'HIGH', blocked:true, texto:'segredo_local'}];
+  const classificada = interpretarRespostaGemini(classificacoes,200);
+  conferir(classificada.estado === 'bloqueado_provedor' && classificada.diagnostico.safety_ratings[0].category === 'HARM_CATEGORY_SEXUALLY_EXPLICIT', 'Classificação estruturada perdida');
+  const malformada = resposta();
+  malformada.responseId = 'https://segredo_local.invalid/token';
+  malformada.candidates[0].finishMessage = 'segredo_local';
+  malformada.candidates[0].safetyRatings = [{category:'segredo_local', probability:'HIGH'}, {category:'HARM_CATEGORY_HARASSMENT',probability:'segredo_local',blocked:'sim'}];
+  malformada.usageMetadata = {promptTokenCount:123,totalTokenCount:321,candidatesTokenCount:-1,thoughtsTokenCount:NaN,cachedContentTokenCount:'44',extra:'segredo_local'};
+  const sanitizada = interpretarRespostaGemini(malformada,200);
+  conferir(!JSON.stringify(sanitizada.diagnostico).includes('segredo_local'), 'Texto livre entrou no diagnóstico');
+  conferir(sanitizada.diagnostico.pedido_id === null && Object.keys(sanitizada.diagnostico.uso).length === 2, 'Identificador ou uso malformados aceitos');
+  for (const [http,tipo,estado,status] of [[429,'RESOURCE_EXHAUSTED','falha_tecnica',429],[401,'UNAUTHENTICATED','falha_tecnica',502],[403,'PERMISSION_DENIED','falha_tecnica',502],[404,'NOT_FOUND','falha_tecnica',502],[400,'INVALID_ARGUMENT','entrada_invalida',400],[500,'INTERNAL','falha_tecnica',502]]) {
+    const dados = resposta(); dados.error = {code:http,status:tipo,message:'segredo_local',details:[{token:'segredo_local'}]};
+    const falha = interpretarRespostaGemini(dados,http);
+    conferir(falha.estado === estado && falha.status === status && falha.imagem === null, 'Erro HTTP interpretado como sucesso');
+    conferir(falha.diagnostico.error_code === http && falha.diagnostico.error_type === tipo && !JSON.stringify(falha).includes('segredo_local'), 'Código estruturado perdido ou segredo exposto');
+  }
+  const formatos = [
+    {mimeType:'image/svg+xml',data:pixel},
+    {mimeType:'image/png',data:'não é base64'},
+    {mimeType:'image/png',data:'AAAA'},
+    {mimeType:'image/jpeg',data:pixel},
+    {mimeType:'image/png',data:'A'.repeat(28 * 1024 * 1024)},
+  ];
+  for (const inlineData of formatos) conferir(interpretarRespostaGemini(resposta('STOP',[{inlineData}]),200).imagem === null,'Imagem inválida, divergente ou excessiva aceita');
+  for (const dados of [null,undefined,{}, {candidates:[]}, resposta('STOP',[{text:'Resposta somente textual'}])]) {
+    const vazio = interpretarRespostaGemini(dados,200);
+    conferir(vazio.estado === 'revisao_necessaria' && vazio.imagem === null, 'Ausência de imagem não preservada');
+  }
+  document.querySelector('#resultado').textContent = 'PASSOU: imagem final, bloqueios, conteúdo incompleto, pensamentos, origem restrita, diagnóstico sanitizado, erros HTTP, formatos e tamanho. Nenhuma chamada externa.';
+} catch (erro) {
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message;
+}
+</script>

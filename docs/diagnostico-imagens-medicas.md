@@ -1,5 +1,9 @@
 # Diagnóstico do fluxo de imagens médicas — 20/09/2026
 
+## Mudança posterior para Gemini — 21/09/2026
+
+Por solicitação explícita de Daniel, o botão principal agora utiliza a função `finalizar-mapa-manual-gemini`. A descrição da preparação, dos parâmetros e dos testes está em [edicao-manual-gemini.md](edicao-manual-gemini.md). As seções abaixo registram a implementação anterior da OpenAI; não comprovam os parâmetros efetivos de um pedido Gemini. O incidente da OpenAI permanece não resolvido e seu pacote privado não foi alterado por esta mudança.
+
 ## Fluxo manual direto — atualização de 21/09/2026
 
 Por solicitação de Daniel, o fluxo principal do editor agora é montar as lesões manualmente e clicar em **Gerar mapa realista · pago**. A captura é PNG, com as lesões atuais e sem rótulos. O navegador faz a preparação gratuita automaticamente e envia os mesmos bytes e hashes ao modo `modo_edicao_direta` da função `finalizar-mapa-manual-gpt`, que já existe no servidor. Não é necessário gerar antes o acabamento gratuito.

@@ -21,8 +21,10 @@
   const botaoMapaApi = document.querySelector("[data-gerar-mapa-api]");
   const botaoPrepararTeste = document.querySelector("[data-preparar-teste-api]");
   const estadoMapaApi = document.querySelector("[data-estado-mapa-api]");
-  botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
-  botaoGerarRegioes?.addEventListener("click", gerarAcabamentoAprovado);
+  let geracaoFinalIniciada = false;
+  let experimentosEmAndamento = 0;
+  botaoPreviaMioma?.addEventListener("click", () => executarExperimento(gerarPreviaMioma));
+  botaoGerarRegioes?.addEventListener("click", () => executarExperimento(gerarAcabamentoAprovado));
   if (!window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
   const cliente = window.supabase.createClient(
@@ -30,12 +32,21 @@
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
   let preparacaoTeste = null;
-  let geracaoFinalIniciada = false;
   let chamadaUnicaIniciada = false;
   let urlReferenciaAnterior = null;
-  botaoPrepararTeste?.addEventListener("click", prepararTesteApi);
-  botaoMapaApi?.addEventListener("click", gerarMapaApi);
+  botaoPrepararTeste?.addEventListener("click", () => executarExperimento(prepararTesteApi));
+  botaoMapaApi?.addEventListener("click", () => executarExperimento(gerarMapaApi));
   botaoFinalRealista?.addEventListener("click", gerarFinalRealista);
+
+  async function executarExperimento(acao) {
+    if (geracaoFinalIniciada) return;
+    experimentosEmAndamento++;
+    try {
+      return await acao();
+    } finally {
+      experimentosEmAndamento--;
+    }
+  }
 
   function montarInventario(lesoes, imagem) {
     return lesoes.map((lesao) => {
@@ -49,8 +60,8 @@
     });
   }
 
-  async function chamarFuncaoUmaVez(body, sessao) {
-    const url = `${window.ENDOMAPA_SUPABASE.projectUrl}/functions/v1/finalizar-mapa-manual-gpt`;
+  async function chamarFuncaoUmaVez(body, sessao, funcao = "finalizar-mapa-manual-gpt") {
+    const url = `${window.ENDOMAPA_SUPABASE.projectUrl}/functions/v1/${funcao}`;
     const resposta = await fetch(url, { method: "POST", headers: {
       Authorization: `Bearer ${sessao.access_token}`,
       apikey: window.ENDOMAPA_SUPABASE.publicAnonKey,
@@ -254,13 +265,16 @@
 
   async function gerarFinalRealista() {
     if (geracaoFinalIniciada || botaoFinalRealista.disabled) return;
+    if (experimentosEmAndamento || Object.values(gerando).some(Boolean)) {
+      return mostrar(estadoFinalRealista, "Aguarde o experimento em andamento terminar e clique novamente para gerar com Gemini. Nenhuma geração nova foi solicitada.", true);
+    }
     if (!document.querySelector(".lesao-editavel")) {
       return mostrar(estadoFinalRealista, "Adicione pelo menos uma lesão ao mapa antes de gerar a versão realista.", true);
     }
     geracaoFinalIniciada = true;
     botaoFinalRealista.disabled = true;
     botaoFinalRealista.setAttribute("aria-busy", "true");
-    botaoFinalRealista.textContent = "Gerando mapa realista…";
+    botaoFinalRealista.textContent = "Gerando com Gemini…";
     const alternarControles = document.querySelector("[data-alternar-controles]");
     if (alternarControles?.getAttribute("aria-expanded") === "true") alternarControles.click();
     const areasEdicao = [...document.querySelectorAll(".biblioteca-lesoes, .editor-manual__area, [data-controles-lesao], .editor-manual__experimentos")]
@@ -271,7 +285,10 @@
     if (botaoLimpar) botaoLimpar.disabled = true;
     const assinatura = assinaturaMapa();
     let envioPagoIniciado = false;
-    mostrar(estadoFinalRealista, "Preparando a sua montagem manual para gerar o mapa realista…", false);
+    resultado.querySelectorAll("[data-resultado-final-realista], [data-resultado-regioes], [data-resultado-gpt], [data-resultado-gemini], [data-resultado-mapa-api], [data-resultado-proposta-api], [data-resultado-diferenca-api], [data-resultado-gemini-detalhe], [data-resultado-mioma], [data-resultado-gpt-referencias], [data-comparacao-mioma-ampliada]")
+      .forEach((painel) => { painel.hidden = true; });
+    document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
+    mostrar(estadoFinalRealista, "Preparando a sua montagem manual para gerar o mapa realista com Gemini…", false);
     try {
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
       if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa. Nenhuma geração foi solicitada.");
@@ -282,25 +299,24 @@
       const montagemOriginal = await window.endomapaAdicionarRotulos(composicao);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
       const base64 = composicao.split(",")[1];
-      const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, preparar_teste: true, composicao_base64: base64 }, sessao.session);
+      const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, preparar_teste: true, composicao_base64: base64 }, sessao.session, "finalizar-mapa-manual-gemini");
       if (!preflight.resposta.ok || !preflight.dados?.pronto) throw new Error(preflight.dados?.erro || "Não foi possível preparar a chamada. Nenhuma geração foi solicitada.");
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou antes do envio. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
-      resultado.querySelectorAll("[data-resultado-final-realista], [data-resultado-regioes], [data-resultado-gpt], [data-resultado-gemini], [data-resultado-mapa-api], [data-resultado-proposta-api], [data-resultado-diferenca-api], [data-resultado-gemini-detalhe], [data-resultado-mioma], [data-resultado-gpt-referencias], [data-comparacao-mioma-ampliada]")
-        .forEach((painel) => { painel.hidden = true; });
-      document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
       resultado.hidden = false;
-      mostrar(estadoFinalRealista, "Gerando o mapa realista a partir da sua montagem. Aguarde para editar novamente; esta geração é paga.", false);
+      mostrar(estadoFinalRealista, "O Gemini está gerando o mapa realista a partir da sua montagem. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
       const { resposta, dados } = await chamarFuncaoUmaVez({ modo_edicao_direta: true, composicao_base64: base64,
-        mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session);
-      const suporte = dados?.pedido_id ? ` Pedido OpenAI: ${dados.pedido_id}.` : "";
+        mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session, "finalizar-mapa-manual-gemini");
+      const suporte = dados?.pedido_id ? ` Pedido Gemini: ${dados.pedido_id}.` : "";
       const operacao = dados?.operacao_id ? ` Operação Endomapa: ${dados.operacao_id}.` : "";
       if (!resposta.ok) throw new Error((dados?.erro || "Falha técnica na geração.") + operacao + suporte);
-      if (!dados?.imagem_base64) throw new Error("A OpenAI respondeu sem imagem utilizável." + operacao + suporte);
-      const recebida = `data:image/png;base64,${dados.imagem_base64}`;
+      if (!dados?.imagem_base64) throw new Error("O Gemini respondeu sem imagem utilizável." + operacao + suporte);
+      const formato = dados.formato || "image/png";
+      if (!["image/png", "image/jpeg", "image/webp"].includes(formato)) throw new Error("O Gemini retornou um formato de imagem não suportado." + operacao + suporte);
+      const recebida = `data:${formato};base64,${dados.imagem_base64}`;
       await carregarImagem(recebida);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada à montagem atual." + operacao);
       const imagemFinal = await window.endomapaAdicionarRotulos(recebida);
@@ -310,7 +326,7 @@
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estadoFinalRealista, "Mapa realista pronto para revisão. Compare as lesões e a anatomia com sua montagem manual. Um novo clique solicita outra geração paga.", false);
+      mostrar(estadoFinalRealista, "Proposta do Gemini pronta para revisão. Compare as lesões e a anatomia com sua montagem manual. Um novo clique solicita outra geração paga.", false);
     } catch (erro) {
       const aviso = envioPagoIniciado
         ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."
@@ -322,7 +338,7 @@
       geracaoFinalIniciada = false;
       botaoFinalRealista.disabled = false;
       botaoFinalRealista.removeAttribute("aria-busy");
-      botaoFinalRealista.textContent = "Gerar mapa realista · pago";
+      botaoFinalRealista.textContent = "Gerar mapa realista com Gemini · pago";
     }
   }
 
@@ -335,8 +351,8 @@
   const botaoConexao = document.querySelector("[data-verificar-conexao-gpt]");
   const botaoDetalhe = document.querySelector("[data-gerar-detalhe-gemini]");
   botaoConexao?.addEventListener("click", verificarConexaoGPT);
-  botaoDetalhe?.addEventListener("click", gerarDetalhe);
-  botoes.forEach((botao) => botao.addEventListener("click", () => gerar(botao.dataset.gerarRealista, botao)));
+  botaoDetalhe?.addEventListener("click", () => executarExperimento(gerarDetalhe));
+  botoes.forEach((botao) => botao.addEventListener("click", () => executarExperimento(() => gerar(botao.dataset.gerarRealista, botao))));
 
   async function verificarConexaoGPT() {
     if (botaoConexao.disabled) return;

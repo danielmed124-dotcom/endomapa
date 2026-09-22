@@ -1,4 +1,4 @@
-param([string[]]$Testes = @('erro-imagem-gpt', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso', 'botao-final-realista', 'editor-manual-nomes'))
+param([string[]]$Testes = @('erro-imagem-gpt', 'resposta-imagem-gemini', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso', 'botao-final-realista', 'editor-manual-nomes'))
 $ErrorActionPreference = 'Stop'
 $raiz = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {

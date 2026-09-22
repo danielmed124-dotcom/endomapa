@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'self'">
-<title>Teste do mapa final direto, sem chamadas reais</title>
+<title>Teste do mapa final com Gemini, sem chamadas reais</title>
 <div id="cenario">
   <button data-gerar-realista="gpt" disabled></button>
   <button data-gerar-regioes>Montar grátis</button>
@@ -20,7 +20,7 @@
 <pre id="resultado">PENDENTE</pre>
 <script>
 const nomeCenario = new URLSearchParams(location.search).get('cenario');
-const cenarios = ['sucesso', 'clique_duplicado', 'erro', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
+const cenarios = ['sucesso', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'sem_imagem', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
 const buscar = (seletor) => document.querySelector(seletor);
 const exigir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -32,7 +32,7 @@ async function esperar(condicao, mensagem) {
   }
 }
 
-function criarPng(cor, rotulado = false) {
+function criarImagem(cor, rotulado = false, formato = 'image/png') {
   const tela = document.createElement('canvas');
   tela.width = 1086;
   tela.height = 1448;
@@ -48,21 +48,29 @@ function criarPng(cor, rotulado = false) {
     contexto.font = '22px Arial';
     contexto.fillText('Cisto direito · 25 mm', 360, 724);
   }
-  return tela.toDataURL('image/png');
+  return tela.toDataURL(formato);
 }
 
-const captura = criarPng('#bc8172');
-const proposta = criarPng('#986565');
-const capturaRotulada = criarPng('#bc8172', true);
-const propostaRotulada = criarPng('#986565', true);
-const outroMapa = criarPng('#467787', true);
-const chamadas = { preparacoes: 0, pagas: 0, acabamento: 0, capturas: [], rotulos: [], corpos: [], falhas: [] };
+const formatoProposta = nomeCenario === 'jpeg' ? 'image/jpeg' : 'image/png';
+const captura = criarImagem('#bc8172');
+const proposta = criarImagem('#986565', false, formatoProposta);
+const capturaRotulada = criarImagem('#bc8172', true);
+const propostaRotulada = criarImagem('#986565', true);
+const outroMapa = criarImagem('#467787', true);
+const chamadas = { preparacoes: 0, pagas: 0, acabamento: 0, capturas: [], rotulos: [], corpos: [], falhas: [], alternativas: [] };
+let experimentoPendente = false;
+let concluirExperimento;
 buscar('[data-mapa-manual-teste]').src = capturaRotulada;
 buscar('[data-imagem-regioes]').src = outroMapa;
+if (nomeCenario && nomeCenario !== 'vazio') {
+  buscar('[data-imagem-final-realista]').src = outroMapa;
+  buscar('[data-resultado-final-realista]').hidden = false;
+}
 if (nomeCenario === 'vazio') buscar('.lesao-editavel').remove();
 const dadosOriginais = buscar('.lesao-editavel') ? JSON.stringify({ ...buscar('.lesao-editavel').dataset }) : null;
 
 window.endomapaCapturarMapaManual = async (opcoes = {}) => {
+  if (experimentoPendente) return opcoes.semLesoes ? captura : outroMapa;
   chamadas.capturas.push(opcoes);
   exigir(opcoes.semRotulos === true, 'A captura deve omitir os rótulos enviados à IA');
   exigir(opcoes.formato === 'image/png', 'A captura deve solicitar PNG');
@@ -70,6 +78,7 @@ window.endomapaCapturarMapaManual = async (opcoes = {}) => {
   return captura;
 };
 window.endomapaAdicionarRotulos = async (imagem) => {
+  if (experimentoPendente && imagem === outroMapa) return outroMapa;
   chamadas.rotulos.push(imagem);
   if (imagem === captura) return capturaRotulada;
   if (imagem === proposta) return propostaRotulada;
@@ -78,23 +87,29 @@ window.endomapaAdicionarRotulos = async (imagem) => {
 window.EndomapaAcabamentoAprovado = {
   montar: async () => {
     chamadas.acabamento++;
+    if (experimentoPendente) return new Promise((resolver) => { concluirExperimento = resolver; });
     throw new Error('O fluxo direto dependeu do acabamento gratuito');
   },
 };
 window.ENDOMAPA_SUPABASE = { projectUrl: 'https://mock.supabase.test', publicAnonKey: 'publica' };
 window.supabase = { createClient: () => ({ auth: { getSession: async () => ({
   data: { session: nomeCenario === 'sem_login' ? null : { access_token: 'sessao-simulada' } }, error: null,
-}) } }) };
+}) }, functions: { invoke: async (funcao) => {
+  chamadas.alternativas.push(funcao);
+  throw new Error('O fluxo direto tentou outra chamada ou recuperar uma imagem antiga');
+} } }) };
 const responder = (dados, status = 200) => new Response(JSON.stringify(dados), {
   status, headers: { 'Content-Type': 'application/json' },
 });
 window.fetch = async (url, opcoes) => {
   // Não existe alternativa para rede real: toda solicitação é simulada ou falha.
   try {
-    exigir(url === 'https://mock.supabase.test/functions/v1/finalizar-mapa-manual-gpt', 'Endereço inesperado');
+    exigir(url === 'https://mock.supabase.test/functions/v1/finalizar-mapa-manual-gemini', 'Endereço inesperado; o fluxo direto deve usar somente Gemini');
     exigir(opcoes.method === 'POST', 'Método inesperado');
     exigir(buscar('.editor-manual__area').inert && buscar('[data-limpar-mapa]').disabled, 'Edição manual deve aguardar o fim da geração');
     exigir(opcoes.headers.Authorization === 'Bearer sessao-simulada', 'Login não enviado');
+    exigir(buscar('[data-resultado-final-realista]').hidden && !buscar('[data-imagem-final-realista]').getAttribute('src'), 'Uma proposta anterior ficou visível durante a solicitação');
+    if (nomeCenario === 'experimento_pendente') buscar('[data-gerar-regioes]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     const corpo = JSON.parse(opcoes.body);
     chamadas.corpos.push(corpo);
     exigir(corpo.modo_edicao_direta === true, 'Não usou edição direta');
@@ -103,17 +118,22 @@ window.fetch = async (url, opcoes) => {
     if (corpo.preparar_teste === true) {
       chamadas.preparacoes++;
       await pausa(20);
+      if (nomeCenario === 'erro_preparo') return responder({ erro: 'Falha simulada na preparação do Gemini' }, 503);
       if (nomeCenario === 'muda_preparo') buscar('.lesao-editavel').dataset.x = '60';
       return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
     }
     chamadas.pagas++;
+    exigir(buscar('[data-imagem-original]').src === capturaRotulada && !buscar('[data-resultado-realista]').hidden, 'A montagem original deve estar disponível antes do envio pago');
     exigir(corpo.mapa_sha256 === 'hash-mapa-simulado' && corpo.prompt_sha256 === 'hash-prompt-simulado', 'Preparação não vinculada à geração');
     await pausa(20);
+    if (nomeCenario === 'erro_rede') return Promise.reject(new TypeError('Falha de rede simulada'));
+    if (nomeCenario === 'bloqueio') return responder({ erro: 'O Gemini bloqueou esta solicitação.', estado: 'bloqueado_provedor', operacao_id: 'operacao-teste' }, 422);
+    if (nomeCenario === 'sem_imagem') return responder({ operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
     if (nomeCenario === 'muda_geracao') buscar('.lesao-editavel').dataset.medida1 = '30';
     if (nomeCenario === 'erro' || (nomeCenario === 'nova_tentativa' && chamadas.pagas === 1)) {
       return responder({ erro: 'Falha simulada do serviço de imagens', operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' }, 502);
     }
-    return responder({ imagem_base64: proposta.split(',')[1], formato: 'image/png', operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
+    return responder({ imagem_base64: proposta.split(',')[1], formato: formatoProposta, operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
   } catch (erro) {
     chamadas.falhas.push(erro.message);
     throw erro;
@@ -142,6 +162,20 @@ async function executarCenario() {
     exigir(estado.classList.contains('mensagem-formulario--erro'), 'Falha sem aviso visível');
   };
 
+  if (nomeCenario === 'experimento_pendente') {
+    experimentoPendente = true;
+    buscar('[data-gerar-regioes]').click();
+    await esperar(() => typeof concluirExperimento === 'function', 'O experimento anterior não ficou pendente');
+    await clicar();
+    exigir(estado.textContent.startsWith('Aguarde'), 'O botão não avisou sobre o experimento em andamento');
+    exigir(chamadas.corpos.length === 0 && chamadas.capturas.length === 0, 'Gemini iniciou enquanto o experimento ainda podia alterar a comparação');
+    concluirExperimento({ imagem: outroMapa, semExemplo: [] });
+    await esperar(() => !buscar('[data-gerar-regioes]').disabled, 'O experimento não terminou');
+    experimentoPendente = false;
+    exigir(buscar('[data-imagem-original]').src === outroMapa, 'O experimento simulado não atualizou a comparação ao terminar');
+    await pausa(100);
+    exigir(chamadas.corpos.length === 0, 'Gemini iniciou automaticamente após terminar o experimento');
+  }
   await clicar(nomeCenario === 'clique_duplicado');
   if (nomeCenario === 'nova_tentativa') {
     conferirSemProposta();
@@ -151,7 +185,7 @@ async function executarCenario() {
     await clicar();
   }
 
-  if (['sucesso', 'clique_duplicado', 'nova_tentativa'].includes(nomeCenario)) {
+  if (['sucesso', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'nova_tentativa'].includes(nomeCenario)) {
     const total = nomeCenario === 'nova_tentativa' ? 2 : 1;
     exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade incorreta de preparações ou gerações');
     exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-final-realista]').hidden, 'Resultado não exibido');
@@ -159,6 +193,7 @@ async function executarCenario() {
     exigir(buscar('[data-imagem-final-realista]').src === propostaRotulada, 'A proposta não recebeu seus rótulos');
     exigir(chamadas.rotulos.includes(captura) && chamadas.rotulos.includes(proposta), 'Faltou reaplicar nomes e medidas às duas imagens');
     exigir(!estado.classList.contains('mensagem-formulario--erro'), 'Sucesso apresentado como falha');
+    exigir(estado.textContent.includes('Gemini'), 'O resultado não identifica o provedor usado');
   } else {
     conferirSemProposta();
     if (nomeCenario === 'vazio' || nomeCenario === 'sem_login') {
@@ -167,6 +202,8 @@ async function executarCenario() {
     } else if (nomeCenario === 'muda_preparo') {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após mudança no preparo');
       exigir(buscar('.lesao-editavel').dataset.x === '60', 'Desfez a alteração do médico durante o preparo');
+    } else if (nomeCenario === 'erro_preparo') {
+      exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após erro na preparação');
     } else {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'Quantidade inesperada de chamadas na falha');
       if (nomeCenario === 'muda_geracao') exigir(buscar('.lesao-editavel').dataset.medida1 === '30', 'Desfez a medida alterada pelo médico');
@@ -177,13 +214,16 @@ async function executarCenario() {
   await pausa(100);
   exigir(chamadas.corpos.length === totalChamadas, 'Houve repetição automática');
   exigir(chamadas.falhas.length === 0, chamadas.falhas.join('; '));
-  exigir(chamadas.acabamento === 0, 'Usou o acabamento gratuito no fluxo direto');
+  exigir(chamadas.alternativas.length === 0, 'Tentou outra chamada, provedor ou recuperar resultado antigo');
+  exigir(chamadas.acabamento === (nomeCenario === 'experimento_pendente' ? 1 : 0), 'Iniciou acabamento durante o fluxo direto');
   exigir(buscar('[data-mapa-manual-teste]').src === capturaRotulada, 'Substituiu o mapa manual');
   exigir(buscar('[data-imagem-regioes]').src === outroMapa, 'Substituiu outro resultado já montado');
   if (dadosOriginais && !nomeCenario.startsWith('muda_')) {
     exigir(JSON.stringify({ ...buscar('.lesao-editavel').dataset }) === dadosOriginais, 'Alterou os dados das lesões');
   }
   exigir(!botao.disabled, 'O botão não ficou disponível para uma nova ação explícita');
+  if (nomeCenario !== 'vazio') exigir(botao.textContent === 'Gerar mapa realista com Gemini · pago', 'O botão não informa o provedor e o custo');
+  exigir(!estado.textContent.includes('OpenAI'), 'A mensagem do fluxo principal atribui a resposta ao provedor anterior');
   exigir(!buscar('.editor-manual__area').inert && !buscar('[data-limpar-mapa]').disabled, 'Edição manual não foi liberada ao terminar');
   return nomeCenario + ': ' + chamadas.preparacoes + ' preparação(ões), ' + chamadas.pagas + ' geração(ões) simulada(s)';
 }

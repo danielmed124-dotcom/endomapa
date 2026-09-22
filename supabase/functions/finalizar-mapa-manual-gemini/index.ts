@@ -1,10 +1,20 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-mapa.js";
+import { interpretarRespostaGemini } from "../_shared/resposta-imagem-gemini.js";
 
 const ORIGENS = new Set([
   "https://endomapa.pages.dev",
   "https://experimento-editor-manual.endomapa.pages.dev",
 ]);
 const LIMITE_MS = 120_000;
+const MODELO = "gemini-3.1-flash-lite-image";
+const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
+const VERSAO_FUNCAO = "gemini-direto-v1";
+const CONFIGURACAO_DIRETA = {
+  responseModalities: ["IMAGE"],
+  imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
+  thinkingConfig: { thinkingLevel: "minimal" },
+};
 const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -39,11 +49,18 @@ function encontrarImagem(valor: unknown): { data: string; mime_type: string } | 
 }
 
 Deno.serve(async (req) => {
+  const operacaoId = crypto.randomUUID();
+  let tentativasEnvioImagem = 0;
+  let modoDireto = false;
   const origem = req.headers.get("Origin");
-  const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem(corpo, status, origem);
+  const metadados = () => ({ operacao_id: operacaoId, horario_utc: new Date().toISOString(),
+    versao_funcao: VERSAO_FUNCAO, versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : "legado",
+    modelo: MODELO, endpoint: ENDPOINT, tentativas_envio_imagem: tentativasEnvioImagem });
+  const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem({ ...corpo, ...metadados() }, status, origem);
+  const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({ ...metadados(), etapa, ...dados }));
   if (req.method === "OPTIONS") return origem && ORIGENS.has(origem) ? new Response("ok", { headers: cabecalhos(origem) }) : responder({ erro: "Origem não autorizada." }, 403);
-  if (req.method !== "POST") return responder({ erro: "Método não permitido." }, 405, origem);
-  if (!origem || !ORIGENS.has(origem)) return responder({ erro: "Esta chamada não veio do Endomapa." }, 403, origem);
+  if (req.method !== "POST") return responder({ erro: "Método não permitido." }, 405);
+  if (!origem || !ORIGENS.has(origem)) return responder({ erro: "Esta chamada não veio do Endomapa." }, 403);
   const autorizacao = req.headers.get("Authorization");
   if (!autorizacao?.startsWith("Bearer ")) return responder({ erro: "Entre no Endomapa antes de gerar a imagem." }, 401);
   const url = Deno.env.get("SUPABASE_URL");
@@ -57,6 +74,11 @@ Deno.serve(async (req) => {
   const administrador = createClient(url, serviceRole, { auth: { persistSession: false, autoRefreshToken: false } });
   let corpo: Record<string, unknown>;
   try { corpo = await req.json(); } catch (_erro) { return responder({ erro: "A composição não chegou corretamente." }, 400); }
+  modoDireto = corpo.modo_edicao_direta === true;
+  if (modoDireto && (corpo.modo_detalhe === true || corpo.consultar_diagnostico === true || corpo.modo_regiao === true || corpo.modo_mapa_referencia === true)) {
+    return responder({ erro: "Escolha somente um modo de edição. Nenhuma geração foi solicitada." }, 400);
+  }
+  if (corpo.preparar_teste === true && !modoDireto) return responder({ erro: "A preparação gratuita requer o modo de edição direta." }, 400);
   if (corpo.consultar_diagnostico === true) {
     const { data: diagnostico } = await administrador
       .from("diagnostico_geracao_gemini")
@@ -83,17 +105,45 @@ Deno.serve(async (req) => {
   if (typeof composicao !== "string" || composicao.length < 1000 || composicao.length > 7_000_000) {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
-  const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem").single();
+  let hashesDiretos: { mapa_sha256: string; prompt_sha256: string } | null = null;
+  if (modoDireto) {
+    if (!/^[A-Za-z0-9+/]+={0,2}$/.test(composicao) || composicao.length % 4 !== 0) {
+      return responder({ erro: "A imagem enviada está inválida. Nenhuma geração foi solicitada." }, 400);
+    }
+    let bytes: Uint8Array;
+    try { bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0)); }
+    catch (_erro) { return responder({ erro: "A imagem enviada não pôde ser lida. Nenhuma geração foi solicitada." }, 400); }
+    if (bytes.length <= 24 || ![137,80,78,71,13,10,26,10].every((byte, indice) => bytes[indice] === byte)) {
+      return responder({ erro: "A edição direta requer o PNG da montagem manual. Nenhuma geração foi solicitada." }, 400);
+    }
+    const hash = async (entrada: Uint8Array) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", entrada)))
+      .map((byte) => byte.toString(16).padStart(2, "0")).join("");
+    hashesDiretos = { mapa_sha256: await hash(bytes), prompt_sha256: await hash(new TextEncoder().encode(PROMPT_EDICAO_DIRETA)) };
+    if (corpo.preparar_teste === true) return responder({
+      pronto: true, prompt_visual: PROMPT_EDICAO_DIRETA, prompt_sha256: hashesDiretos.prompt_sha256,
+      parametros: CONFIGURACAO_DIRETA, imagem_1: { papel: "montagem manual sem rótulos; única imagem enviada", sha256: hashesDiretos.mapa_sha256 },
+      mascara_api: false, mascara_composicao_local: false,
+    });
+    if (corpo.mapa_sha256 !== hashesDiretos.mapa_sha256 || corpo.prompt_sha256 !== hashesDiretos.prompt_sha256) {
+      return responder({ erro: "A imagem ou o prompt mudou desde a preparação. Nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);
+    }
+  }
+  const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem")
+    .single<{ permitido: boolean; motivo: string | null }>();
   if (erroReserva || !reserva) return responder({ erro: "Não foi possível conferir o limite de imagens." }, 500);
   if (!reserva.permitido) return responder({ erro: reserva.motivo === "limite_atingido" ? "O limite diário de imagens foi atingido." : "A geração paga não foi liberada para esta conta." }, 429);
 
   const controlador = new AbortController();
   const temporizador = setTimeout(() => controlador.abort(), LIMITE_MS);
-  const registrarEtapa = (etapa: string) => administrador
-    .from("diagnostico_geracao_gemini")
-    .upsert({ user_id: usuario.user.id, etapa, atualizado_em: new Date().toISOString() });
+  const registrarEtapa = async (etapa: string) => {
+    // O modo direto devolve somente a resposta desta operação, sem reutilizar
+    // a imagem anterior armazenada por conta nos experimentos antigos.
+    if (modoDireto) return;
+    await administrador.from("diagnostico_geracao_gemini")
+      .upsert({ user_id: usuario.user.id, etapa, atualizado_em: new Date().toISOString() });
+  };
   try {
-    const instrucao = (modoDetalhe ? [
+    const instrucao = modoDireto ? PROMPT_EDICAO_DIRETA : (modoDetalhe ? [
       "Close quadrado de uma ilustração científica de órgãos pélvicos internos, para revisão por médico radiologista.",
       "Refine VISIVELMENTE a lesão no centro e sua união com o tecido ao redor: crie relevo orgânico, sombra de contato e continuidade de luz e textura. A borda deve parecer parte do órgão, sem aspecto de adesivo colado.",
       "Mantenha a mesma lesão, posição, lado, tamanho, contorno clínico, parede, conteúdo e número de focos. Não crie, apague, una nem desloque achados.",
@@ -109,15 +159,17 @@ Deno.serve(async (req) => {
       "O resultado é apenas uma prévia experimental para comparação médica obrigatória.",
     ]).join(" ");
     await registrarEtapa("pedido_enviado_ao_gemini");
-    const resposta = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent", {
+    tentativasEnvioImagem = 1;
+    if (modoDireto) registrar("pedido_enviado", { tentativa: 1, ...hashesDiretos, parametros: CONFIGURACAO_DIRETA });
+    const resposta = await fetch(ENDPOINT, {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [
-          { inlineData: { mimeType: "image/jpeg", data: composicao } },
+          { inlineData: { mimeType: modoDireto ? "image/png" : "image/jpeg", data: composicao } },
           { text: instrucao },
         ] }],
-        generationConfig: {
+        generationConfig: modoDireto ? CONFIGURACAO_DIRETA : {
           responseModalities: ["IMAGE"],
           imageConfig: { aspectRatio: modoDetalhe ? "1:1" : "3:4", imageSize: "1K" },
           thinkingConfig: { thinkingLevel: "minimal" },
@@ -125,6 +177,14 @@ Deno.serve(async (req) => {
       }),
     });
     await registrarEtapa("resposta_recebida_do_gemini");
+    if (modoDireto) {
+      const dados = await resposta.json().catch(() => null);
+      const { imagem, diagnostico, erro, estado, status } = interpretarRespostaGemini(dados, resposta.status);
+      registrar(imagem ? "imagem_recebida" : "resposta_erro", diagnostico);
+      if (!imagem) return responder({ ...diagnostico, erro, estado }, status);
+      return responder({ ...diagnostico, imagem_base64: imagem.data, formato: imagem.mime_type, estado,
+        aviso: "Proposta Gemini para comparação. Confira anatomia, quantidade, posição e medidas de cada lesão antes de usar." });
+    }
     if (!resposta.ok) {
       const detalhes = await resposta.json().catch(() => null);
       const mensagem = typeof detalhes?.error?.message === "string" ? detalhes.error.message : "";
@@ -154,6 +214,13 @@ Deno.serve(async (req) => {
     await registrarEtapa("concluida");
     return responder({ imagem_url: endereco.signedUrl, aviso: "Prévia experimental: compare anatomia, posições, formas, linhas e medidas antes de aceitar." });
   } catch (erro) {
+    if (modoDireto) {
+      const timeout = erro instanceof DOMException && erro.name === "AbortError";
+      registrar("falha_tecnica", { classe: timeout ? "timeout" : "rede_ou_processamento" });
+      return responder({ estado: "falha_tecnica", erro: timeout
+        ? "O Gemini demorou mais de dois minutos. O estado da geração é desconhecido; confira o uso antes de repetir. A montagem manual foi preservada."
+        : "Não foi possível concluir a edição com Gemini. A montagem manual foi preservada; não houve nova tentativa automática." }, timeout ? 504 : 502);
+    }
     if (erro instanceof DOMException && erro.name === "AbortError") return responder({ erro: "O Gemini demorou mais de dois minutos." }, 504);
     return responder({ erro: "Não foi possível gerar a versão realista." }, 502);
   } finally { clearTimeout(temporizador); }
