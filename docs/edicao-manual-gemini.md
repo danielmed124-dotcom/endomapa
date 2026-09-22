@@ -4,7 +4,9 @@
 
 Daniel solicitou explicitamente usar a API Gemini já configurada. O botão principal é **Gerar mapa realista com Gemini · pago**. Ele usa a montagem manual existente e apresenta a original com rótulos ao lado da proposta para revisão. A montagem editável não é substituída pela proposta.
 
-O texto fixo `mapa-direto-v1` em `supabase/functions/_shared/prompt-edicao-direta-mapa.js` é reutilizado sem reformulação. A mudança de provedor não confirma que a imagem será aceita nem que o acabamento preservará a anatomia; o médico deve comparar os resultados. Não foram configurados filtros mais permissivos, nomes anatômicos ocultados ou provedores alternativos automáticos.
+Na publicação inicial, o Gemini reutilizava o texto `mapa-direto-v1`. Após comparar os resultados, Daniel solicitou modificar o prompt e manter somente a montagem manual como entrada, sem imagem de referência. A revisão atual é `gemini-local-v2`, em `supabase/functions/_shared/prompt-edicao-direta-gemini.js`. O texto orienta acabamento localizado, integração de bordas, preservação do conteúdo das lesões e proteção expressa do intestino, incluindo os detalhes amarelados originais. Não fixa a quantidade de lesões do exemplo, pois cada montagem pode conter elementos diferentes.
+
+A preservação descrita no prompt é uma instrução ao modelo, sem garantia de identidade dos pixels. Não foi adicionada máscara ou composição protegida por código nesta revisão. O médico deve comparar o resultado com a montagem. O prompt da OpenAI, o modelo Gemini, os filtros, os parâmetros da API e a quantidade de imagens enviadas permanecem os mesmos.
 
 ## Função e configuração
 
@@ -46,9 +48,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\validar-fluxo-me
 
 Os testes não comprovam qualidade visual, fidelidade clínica, saldo disponível ou sucesso de uma geração real.
 
+Na revisão de prompt, o teste da função importa o novo texto e verifica que a preparação devolve esse texto e que a chamada simulada contém exatamente um PNG e o mesmo prompt, sem referência adicional. Não é necessário atualizar a aba do editor para obter o novo texto: cada clique prepara o pedido novamente no servidor. A versão efetiva do prompt é registrada pela função.
+
 Os testes da função em [tests/servidor-gemini-offline](../tests/servidor-gemini-offline/LEIA-ME.md) substituem autenticação, reserva de limite e chamada ao Gemini por objetos locais. O Deno é executado com acesso a rede e variáveis de ambiente proibido.
 
-Verificação desta alteração: sete páginas de testes no Chrome passaram, incluindo 14 cenários do botão principal e a espera por experimento em andamento; oito testes da função passaram no Deno sem acesso externo. A compilação também passou com as definições reais do Supabase. Nenhuma geração real foi executada. A função foi publicada e sua versão Supabase **12**, estado `ACTIVE`, foi confirmada antes da atualização da interface.
+Verificação da troca inicial de provedor: sete páginas de testes no Chrome passaram, incluindo 14 cenários do botão principal e a espera por experimento em andamento; oito testes da função passaram no Deno sem acesso externo. A compilação também passou com as definições reais do Supabase. Nenhuma geração real foi executada. A função foi publicada e sua versão Supabase **12**, estado `ACTIVE`, foi confirmada antes da atualização da interface.
+
+Verificação do novo prompt `gemini-local-v2`: compilação e oito testes da função passaram, preservando uma única imagem de entrada. Publicação Supabase **13**, estado `ACTIVE`, confirmada por consulta de metadados. A fonte publicada foi baixada em pasta separada e os hashes SHA-256 da função, do prompt e do interpretador de resposta coincidiram com os arquivos locais. Nenhuma chamada de geração foi executada para essa verificação.
 
 ## Ordem de publicação
 

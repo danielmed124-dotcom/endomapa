@@ -1,6 +1,6 @@
 import { ENDPOINT_GEMINI, estado, reiniciar } from "./ambiente.ts";
 import "../../supabase/functions/finalizar-mapa-manual-gemini/index.ts";
-import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../../supabase/functions/_shared/prompt-edicao-direta-mapa.js";
+import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../../supabase/functions/_shared/prompt-edicao-direta-gemini.js";
 
 function igual(atual: unknown, esperado: unknown, mensagem: string) {
   if (JSON.stringify(atual) !== JSON.stringify(esperado)) {

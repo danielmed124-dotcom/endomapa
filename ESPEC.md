@@ -34,6 +34,8 @@ Atualização de 21/09/2026: no editor manual, o médico monta as lesões e usa 
 
 Atualização posterior de 21/09/2026: por escolha explícita de Daniel, o botão principal passa a **Gerar mapa realista com Gemini · pago**, usando a integração Gemini já configurada. A preparação e a edição recebem a mesma captura PNG sem rótulos. O texto didático do pedido é mantido; não há redução dos filtros, troca automática de provedor ou repetição automática. A resposta é uma proposta para revisão médica, e uma falha preserva a montagem manual. O incidente anterior da OpenAI continua separado e não resolvido.
 
+Revisão seguinte do prompt Gemini: Daniel solicitou acabamento mais integrado às lesões e preservação expressa do intestino, usando somente a montagem manual, sem imagem de referência. O prompt `gemini-local-v2` limita o acabamento às lesões e a uma faixa mínima de contato, preservando contornos, conteúdo, focos e detalhes amarelados da anatomia original. Trata-se de orientação ao modelo; essa mudança de texto não implementa proteção dos pixels por código.
+
 - Cadastro ou identificação de pacientes.
 - Histórico de exames.
 - Integração com sistemas de laudos.

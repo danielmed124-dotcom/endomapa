@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-mapa.js";
+import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-gemini.js";
 import { interpretarRespostaGemini } from "../_shared/resposta-imagem-gemini.js";
 
 const ORIGENS = new Set([
