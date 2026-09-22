@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <meta charset="utf-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'">
 <base href="../">
 <title>Verificação da captura para integração manual</title>
 <pre id="resultado">Executando</pre>
@@ -13,7 +13,8 @@
 <input data-controle-nome-lesao>
 <button data-remover-lesao></button><button data-limpar-mapa></button>
 <script src="editor-manual.js"></script>
-<script>
+<script type="module">
+import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refinamento.js';
 (async function () {
   const resultado = document.querySelector('#resultado');
   const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
@@ -84,6 +85,20 @@
     verificar(captura.lesoes.length === casos.length, 'Uma máscara por lesão, incluindo as vazias');
     verificar(camada.innerHTML === estadoOriginal, 'Capturar não pode alterar a montagem');
     verificar(Object.keys(captura).sort().join() === 'altura,imagem,largura,lesoes', 'Contrato da captura sem metadados extras');
+    const comInventario = await window.endomapaCapturarIntegracaoManual({ comInventario: true });
+    verificar(comInventario.imagem === pngNormal, 'Incluir inventário não pode alterar os pixels');
+    verificar(Object.keys(comInventario.inventario).sort().join() === 'altura_mapa,largura_mapa,lesoes', 'Inventário contém somente dimensões e elementos');
+    verificar(comInventario.inventario.largura_mapa === largura && comInventario.inventario.altura_mapa === altura, 'Inventário usa as dimensões reais do mapa');
+    const arredondar = (valor) => Number(valor.toFixed(4));
+    comInventario.inventario.lesoes.forEach((lesao, indice) => {
+      const caso = casos[indice];
+      verificar(Object.keys(lesao).sort().join() === 'altura,giro,id,largura,modelo,recorte,x,y', 'Lista exclui nome livre, medidas, URLs e dados extras');
+      verificar(lesao.id === `L${indice + 1}` && lesao.modelo === '', 'IDs seguem a ordem das máscaras e fonte desconhecida não ganha nome inventado');
+      verificar(lesao.x === arredondar(caso.x * 100 / largura) && lesao.y === arredondar(caso.y * 100 / altura), 'Centro normalizado em quatro casas');
+      verificar(lesao.largura === arredondar(caso.largura * 100 / largura) && lesao.altura === arredondar(caso.altura * 100 / altura), 'Dimensões normalizadas antes da rotação, com eixos do mapa corretos');
+      verificar(lesao.giro === caso.giro && lesao.recorte === (caso.livre ? 'alfa' : 'elipse'), 'Rotação em graus e tipo de recorte reais');
+    });
+    verificar(!JSON.stringify(comInventario.inventario).includes('Não incluir'), 'Texto livre do usuário nunca entra no inventário');
 
     const referencia = tela(largura, altura);
     const contexto = referencia.getContext('2d', { willReadFrequently: true });
@@ -132,12 +147,13 @@
     verificar(captura.lesoes[4].y + captura.lesoes[4].altura === altura, 'Truncagem da borda inferior');
     verificar(captura.lesoes[5].alfa.length === 0 && captura.lesoes[6].alfa.length === 0, 'Lesões fora da tela ou transparentes não inventam suporte');
 
-    const pendente = window.endomapaCapturarIntegracaoManual();
+    const pendente = window.endomapaCapturarIntegracaoManual({ comInventario: true });
     camada.firstElementChild.dataset.x = '80';
     camada.firstElementChild.querySelector('img').src = opacaPng;
     camada.lastElementChild.remove();
     const atomica = await pendente;
     verificar(atomica.imagem === pngNormal && atomica.lesoes.length === casos.length, 'Imagem e máscaras devem conservar o mesmo instante, mesmo com mudança do editor durante a espera');
+    verificar(JSON.stringify(atomica.inventario) === JSON.stringify(comInventario.inventario), 'Inventário também conserva o mesmo instante da imagem e das máscaras');
     verificar(atomica.lesoes.every((mascara, indice) => {
       const anterior = captura.lesoes[indice];
       return mascara.x === anterior.x && mascara.y === anterior.y && mascara.largura === anterior.largura && mascara.altura === anterior.altura
@@ -147,7 +163,42 @@
     const vazia = await window.endomapaCapturarIntegracaoManual();
     const pngVazio = await window.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
     verificar(vazia.lesoes.length === 0 && vazia.imagem === pngVazio, 'Mapa sem lesões conserva a anatomia e não cria máscaras');
-    resultado.textContent = 'PASSOU: PNG original idêntico, máscaras locais alinhadas, escala, rotação, recorte elíptico, transparência, vazados, superposição, bordas, captura atômica e mapa vazio; nenhuma API.';
+
+    // Somente o HTML estático da própria origem: nenhuma função ou API é chamada.
+    const respostaEditor = await fetch(new URL('experimento-editor.html', document.baseURI));
+    verificar(respostaEditor.ok, 'Página real do editor deve estar disponível para conferir a biblioteca');
+    const paginaEditor = new DOMParser().parseFromString(await respostaEditor.text(), 'text/html');
+    const botoes = [...paginaEditor.querySelectorAll('[data-modelo]')];
+    verificar(botoes.length === 18, 'Exercitar os 18 elementos reais da biblioteca');
+    const modelos = botoes.map((botao) => /^assets\/lesoes\/([a-z0-9-]+)\.png$/.exec(botao.dataset.modelo)?.[1]);
+    verificar(modelos.every(Boolean) && new Set(modelos).size === modelos.length, 'Os caminhos da biblioteca identificam modelos únicos');
+    verificar(Object.keys(CATALOGO_REFINAMENTO).sort().join() === modelos.slice().sort().join(), 'Catálogo deve cobrir exatamente a biblioteca real');
+    botoes.forEach((botao, indice) => {
+      const item = CATALOGO_REFINAMENTO[modelos[indice]];
+      verificar(item.nome === botao.dataset.nome && typeof item.tipo_visual === 'string' && item.tipo_visual.length > 20 && typeof item.preservar === 'string' && item.preservar.length > 20, 'Catálogo contém nome da biblioteca e descrições visuais explícitas');
+      verificar(item.editavel === !modelos[indice].startsWith('diu-'), 'DIUs são preservados; as 16 lesões são elegíveis para acabamento');
+      const elemento = document.createElement('button');
+      elemento.className = 'lesao-editavel';
+      Object.assign(elemento.dataset, {
+        id: `interno-${indice}`, nome: 'Dado livre que não deve ser enviado', nomeNoMapa: 'Paciente fictício do teste',
+        x: String(15 + (indice % 5) * 16), y: String(18 + Math.floor(indice / 5) * 19), tamanho: '40',
+        proporcao: botao.dataset.proporcao, eixoX: '100', eixoY: '100', giro: String(indice * 7),
+        semRecorte: botao.dataset.semRecorte,
+      });
+      const imagem = document.createElement('img');
+      imagem.src = `${botao.dataset.modelo}?versao=teste-local#ignorar`;
+      elemento.append(imagem);
+      camada.append(elemento);
+    });
+    const bibliotecaCapturada = await window.endomapaCapturarIntegracaoManual({ comInventario: true });
+    verificar(bibliotecaCapturada.inventario.lesoes.length === 18 && bibliotecaCapturada.lesoes.length === 18, 'Figuras reais produzem uma entrada e uma máscara na mesma ordem');
+    bibliotecaCapturada.inventario.lesoes.forEach((lesao, indice) => {
+      verificar(lesao.id === `L${indice + 1}` && lesao.modelo === modelos[indice], 'Nome do modelo vem somente do caminho da imagem; consulta e fragmento são removidos');
+      verificar(bibliotecaCapturada.lesoes[indice].alfa.some((alfa) => alfa > 0), 'Cada PNG real produz uma máscara não vazia');
+    });
+    const serializado = JSON.stringify(bibliotecaCapturada.inventario);
+    verificar(!/Paciente|Dado livre|https?:|versao|ignorar|interno-/.test(serializado), 'Inventário final não contém textos livres, URLs, consultas, fragmentos ou IDs internos');
+    resultado.textContent = 'PASSOU: PNG original idêntico, máscaras locais alinhadas, escala, rotação, recorte elíptico, transparência, vazados, superposição, bordas, captura e inventário atômicos, mapa vazio, catálogo dos 18 PNGs reais, DIUs preservados e ausência de texto livre; nenhuma API.';
   } catch (erro) {
     resultado.textContent = 'FALHOU: ' + erro.message;
   }

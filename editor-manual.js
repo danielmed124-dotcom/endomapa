@@ -316,15 +316,47 @@
       : canvas.toDataURL("image/jpeg", 0.9);
   }
 
-  async function capturarIntegracaoManual() {
+  async function capturarIntegracaoManual(opcoes = {}) {
     const lesoes = fotografarLesoes();
     const { canvas, mascaras } = await renderizarMontagem(lesoes, {}, true);
-    return {
+    const captura = {
       imagem: canvas.toDataURL("image/png"),
       largura: canvas.width,
       altura: canvas.height,
       lesoes: mascaras,
     };
+    if (opcoes.comInventario) {
+      captura.inventario = {
+        largura_mapa: canvas.width,
+        altura_mapa: canvas.height,
+        lesoes: lesoes.map(function (lesao, indice) {
+          const geometria = geometriaDaLesao(lesao, canvas.width, canvas.height);
+          const quatroCasas = (numero) => Number(numero.toFixed(4));
+          return {
+            id: `L${indice + 1}`,
+            modelo: identificarModeloDaBiblioteca(lesao.src),
+            x: quatroCasas(geometria.x * 100 / canvas.width),
+            y: quatroCasas(geometria.y * 100 / canvas.height),
+            largura: quatroCasas(geometria.largura * 100 / canvas.width),
+            altura: quatroCasas(geometria.altura * 100 / canvas.height),
+            giro: quatroCasas(Number(lesao.dataset.giro)),
+            recorte: lesao.dataset.semRecorte === "true" ? "alfa" : "elipse",
+          };
+        }),
+      };
+    }
+    return captura;
+  }
+
+  function identificarModeloDaBiblioteca(src) {
+    try {
+      const endereco = new URL(src, document.baseURI);
+      if (endereco.origin !== window.location.origin) return "";
+      const trecho = /^\/assets\/lesoes\/([a-z0-9-]+)\.png$/.exec(endereco.pathname);
+      return trecho ? trecho[1] : "";
+    } catch (_) {
+      return "";
+    }
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false) {

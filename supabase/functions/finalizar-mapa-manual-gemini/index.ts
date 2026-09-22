@@ -1,5 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { PROMPT_EDICAO_DIRETA, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-gemini.js";
+import { construirPromptEdicaoDireta, normalizarEntradaRefinamento, VERSAO_PROMPT_DIRETO } from "../_shared/prompt-edicao-direta-gemini.js";
 import { interpretarRespostaGemini } from "../_shared/resposta-imagem-gemini.js";
 
 const ORIGENS = new Set([
@@ -9,8 +9,8 @@ const ORIGENS = new Set([
 const LIMITE_MS = 120_000;
 const MODELO = "gemini-3.1-flash-lite-image";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
-const VERSAO_FUNCAO = "gemini-contato-v2";
-const VERSAO_INTEGRACAO = "contato-v1";
+const VERSAO_FUNCAO = "gemini-refinamento-v3";
+const VERSAO_INTEGRACAO = "refinamento-v2";
 const CONFIGURACAO_DIRETA = {
   responseModalities: ["IMAGE"],
   imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
@@ -86,6 +86,9 @@ Deno.serve(async (req) => {
   if (modoDireto && (corpo.modo_detalhe === true || corpo.consultar_diagnostico === true || corpo.modo_regiao === true || corpo.modo_mapa_referencia === true)) {
     return responder({ erro: "Escolha somente um modo de edição. Nenhuma geração foi solicitada." }, 400);
   }
+  if (modoDireto && Object.keys(corpo).some(campo => ![
+    "modo_edicao_direta", "versao_integracao", "preparar_teste", "composicao_base64", "inventario_lesoes", "lesoes_autorizadas", "mapa_sha256", "prompt_sha256",
+  ].includes(campo))) return responder({ estado: "entrada_invalida", erro: "O pedido contém campos não reconhecidos. Nenhuma geração foi solicitada." }, 400);
   if (corpo.preparar_teste === true && !modoDireto) return responder({ erro: "A preparação gratuita requer o modo de edição direta." }, 400);
   if (corpo.consultar_diagnostico === true) {
     const { data: diagnostico } = await administrador
@@ -114,26 +117,44 @@ Deno.serve(async (req) => {
     return responder({ erro: "A composição do mapa não tem um tamanho válido." }, 400);
   }
   let hashesDiretos: { mapa_sha256: string; prompt_sha256: string } | null = null;
+  let promptDireto = "";
+  let quantidadeLesoesDiretas = 0;
+  let quantidadeAutorizadasDiretas = 0;
   if (modoDireto) {
+    let entradaRefinamento;
+    try {
+      entradaRefinamento = normalizarEntradaRefinamento(corpo.inventario_lesoes, corpo.lesoes_autorizadas);
+      promptDireto = construirPromptEdicaoDireta(entradaRefinamento.inventario, entradaRefinamento.autorizadas);
+      quantidadeLesoesDiretas = entradaRefinamento.inventario.lesoes.length;
+      quantidadeAutorizadasDiretas = entradaRefinamento.autorizadas.length;
+    } catch (_erro) {
+      return responder({ estado: "entrada_invalida", erro: "A lista de lesões ou suas autorizações está inválida. Salve a montagem manual e abra a versão atual do editor. Nenhuma geração foi solicitada." }, 400);
+    }
     if (!/^[A-Za-z0-9+/]+={0,2}$/.test(composicao) || composicao.length % 4 !== 0) {
       return responder({ erro: "A imagem enviada está inválida. Nenhuma geração foi solicitada." }, 400);
     }
     let bytes: Uint8Array;
     try { bytes = Uint8Array.from(atob(composicao), (caractere) => caractere.charCodeAt(0)); }
     catch (_erro) { return responder({ erro: "A imagem enviada não pôde ser lida. Nenhuma geração foi solicitada." }, 400); }
-    if (bytes.length <= 24 || ![137,80,78,71,13,10,26,10].every((byte, indice) => bytes[indice] === byte)) {
+    if (bytes.length < 33 || ![137,80,78,71,13,10,26,10].every((byte, indice) => bytes[indice] === byte) ||
+        ![73,72,68,82].every((byte, indice) => bytes[indice + 12] === byte)) {
       return responder({ erro: "A edição direta requer o PNG da montagem manual. Nenhuma geração foi solicitada." }, 400);
+    }
+    const cabecalhoPng = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (cabecalhoPng.getUint32(8) !== 13 || cabecalhoPng.getUint32(16) !== entradaRefinamento.inventario.largura_mapa ||
+        cabecalhoPng.getUint32(20) !== entradaRefinamento.inventario.altura_mapa) {
+      return responder({ estado: "entrada_invalida", erro: "As dimensões da montagem e da lista de lesões não correspondem. Nenhuma geração foi solicitada." }, 400);
     }
     const hash = async (entrada: Uint8Array) => Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", entrada)))
       .map((byte) => byte.toString(16).padStart(2, "0")).join("");
-    hashesDiretos = { mapa_sha256: await hash(bytes), prompt_sha256: await hash(new TextEncoder().encode(PROMPT_EDICAO_DIRETA)) };
+    hashesDiretos = { mapa_sha256: await hash(bytes), prompt_sha256: await hash(new TextEncoder().encode(promptDireto)) };
     if (corpo.preparar_teste === true) return responder({
-      pronto: true, prompt_visual: PROMPT_EDICAO_DIRETA, prompt_sha256: hashesDiretos.prompt_sha256,
+      pronto: true, prompt_visual: promptDireto, prompt_sha256: hashesDiretos.prompt_sha256,
       parametros: CONFIGURACAO_DIRETA, imagem_1: { papel: "montagem manual sem rótulos; única imagem enviada", sha256: hashesDiretos.mapa_sha256 },
-      mascara_api: false, mascara_composicao_local: true,
+      mascara_api: false, mascara_composicao_local: true, quantidade_lesoes: quantidadeLesoesDiretas, quantidade_autorizadas: quantidadeAutorizadasDiretas,
     });
     if (corpo.mapa_sha256 !== hashesDiretos.mapa_sha256 || corpo.prompt_sha256 !== hashesDiretos.prompt_sha256) {
-      return responder({ erro: "A imagem ou o prompt mudou desde a preparação. Nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);
+      return responder({ erro: "A imagem, a lista de lesões, suas autorizações ou o prompt mudou desde a preparação. Nenhuma geração foi solicitada.", estado: "entrada_invalida" }, 409);
     }
   }
   const { data: reserva, error: erroReserva } = await supabase.rpc("reservar_geracao_imagem")
@@ -151,7 +172,7 @@ Deno.serve(async (req) => {
       .upsert({ user_id: usuario.user.id, etapa, atualizado_em: new Date().toISOString() });
   };
   try {
-    const instrucao = modoDireto ? PROMPT_EDICAO_DIRETA : (modoDetalhe ? [
+    const instrucao = modoDireto ? promptDireto : (modoDetalhe ? [
       "Close quadrado de uma ilustração científica de órgãos pélvicos internos, para revisão por médico radiologista.",
       "Refine VISIVELMENTE a lesão no centro e sua união com o tecido ao redor: crie relevo orgânico, sombra de contato e continuidade de luz e textura. A borda deve parecer parte do órgão, sem aspecto de adesivo colado.",
       "Mantenha a mesma lesão, posição, lado, tamanho, contorno clínico, parede, conteúdo e número de focos. Não crie, apague, una nem desloque achados.",
@@ -168,7 +189,8 @@ Deno.serve(async (req) => {
     ]).join(" ");
     await registrarEtapa("pedido_enviado_ao_gemini");
     tentativasEnvioImagem = 1;
-    if (modoDireto) registrar("pedido_enviado", { tentativa: 1, ...hashesDiretos, parametros: CONFIGURACAO_DIRETA });
+    if (modoDireto) registrar("pedido_enviado", { tentativa: 1, ...hashesDiretos, parametros: CONFIGURACAO_DIRETA,
+      quantidade_lesoes: quantidadeLesoesDiretas, quantidade_autorizadas: quantidadeAutorizadasDiretas });
     const resposta = await fetch(ENDPOINT, {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },

@@ -64,7 +64,7 @@ function limites(poligono, margem, largura, altura) {
   };
 }
 
-function protegerInterior(poligono, protegidos, largura, altura) {
+export function protegerInterior(poligono, protegidos, largura, altura) {
   const caixa = limites(poligono, 0, largura, altura);
   for (let y = caixa.y0; y <= caixa.y1; y++) {
     const cruzamentos = [];
@@ -94,18 +94,20 @@ function distanciaAoContorno(x, y, poligono) {
 // A preparação acontece antes da chamada paga. Se a proteção não puder ser
 // construída, não há envio. Os espaços entre focos do mesmo desenho ficam
 // dentro do envoltório convexo e também permanecem intocados.
-export async function prepararIntegracaoContato(captura) {
+export async function prepararIntegracaoContato(captura, { permitirSemContato = false } = {}) {
   const { largura, altura, lesoes } = captura || {};
   const falha = () => new Error("Não foi possível preparar a proteção das lesões. A montagem foi preservada; nenhuma geração foi solicitada.");
   if (!Number.isInteger(largura) || !Number.isInteger(altura) || largura <= 0 || altura <= 0 || largura * altura > 16000000 || !Array.isArray(lesoes) || !lesoes.length) throw falha();
   if (typeof captura.imagem !== "string" || !captura.imagem.startsWith("data:image/png;base64,")) throw falha();
   const protegidos = new Uint8Array(largura * altura);
   const poligonos = [];
-  for (const mascara of lesoes) {
+  const indicesLesoes = [];
+  for (const [indiceLesao, mascara] of lesoes.entries()) {
     if (!mascara || ![mascara.x, mascara.y, mascara.largura, mascara.altura].every(Number.isInteger) || mascara.x < 0 || mascara.y < 0 || mascara.largura < 0 || mascara.altura < 0 || mascara.x + mascara.largura > largura || mascara.y + mascara.altura > altura || !(mascara.alfa instanceof Uint8Array || mascara.alfa instanceof Uint8ClampedArray) || mascara.alfa.length !== mascara.largura * mascara.altura) throw falha();
     const poligono = envoltorio(mascara);
     if (poligono.length < 3) continue;
     poligonos.push(poligono);
+    indicesLesoes.push(indiceLesao);
     protegerInterior(poligono, protegidos, largura, altura);
     // Verificação independente do preenchimento geométrico para as bordas alfa.
     for (let y = 0; y < mascara.altura; y++) for (let x = 0; x < mascara.largura; x++) {
@@ -114,7 +116,7 @@ export async function prepararIntegracaoContato(captura) {
   }
   if (!poligonos.length) throw falha();
   const raio = Math.max(1, Math.min(6, Math.round(largura * 4 / 1086)));
-  const regioes = poligonos.map((poligono) => {
+  const regioes = poligonos.map((poligono, indice) => {
     const caixa = limites(poligono, raio * 5, largura, altura);
     const centroX = poligono.reduce((soma, p) => soma + p.x, 0) / poligono.length;
     const centroY = poligono.reduce((soma, p) => soma + p.y, 0) / poligono.length;
@@ -129,9 +131,9 @@ export async function prepararIntegracaoContato(captura) {
         contato.push({ indice, peso: (1 - distancia / raio) ** 2, cos: dx / norma, sen: dy / norma });
       } else if (distancia >= raio * 3 && distancia < raio * 5) entorno.push(indice);
     }
-    return { contato, entorno };
+    return { contato, entorno, poligono, indiceLesao: indicesLesoes[indice] };
   });
-  if (!regioes.some((regiao) => regiao.contato.length)) throw new Error("Não há borda externa disponível para integrar. A montagem foi preservada; nenhuma geração foi solicitada.");
+  if (!permitirSemContato && !regioes.some((regiao) => regiao.contato.length)) throw new Error("Não há borda externa disponível para integrar. A montagem foi preservada; nenhuma geração foi solicitada.");
   const original = await carregarImagem(captura.imagem);
   if (original.naturalWidth !== largura || original.naturalHeight !== altura) throw falha();
   return { largura, altura, originais: lerPixels(original, largura, altura).data, protegidos, regioes, raio };
@@ -170,12 +172,9 @@ function estimarLuz(regiao, originais, gerados) {
   };
 }
 
-export async function integrarContato(preparacao, geradaUrl) {
+export function integrarContatoPixels(preparacao, gerados) {
   const { largura, altura, originais, protegidos, regioes } = preparacao;
-  const gerada = await carregarImagem(geradaUrl);
-  const proporcao = (gerada.naturalWidth / gerada.naturalHeight) / (largura / altura);
-  if (!Number.isFinite(proporcao) || Math.abs(proporcao - 1) > 0.02) throw new Error("O Gemini mudou o enquadramento. O acabamento não foi aplicado; a montagem foi preservada.");
-  const gerados = lerPixels(gerada, largura, altura).data;
+  if (!(gerados instanceof Uint8ClampedArray) || gerados.length !== originais.length) throw new Error("A imagem recebida tem dimensões incompatíveis com a montagem.");
   const ajustes = new Float32Array(largura * altura);
   for (const regiao of regioes) {
     const luz = estimarLuz(regiao, originais, gerados);
@@ -190,6 +189,7 @@ export async function integrarContato(preparacao, geradaUrl) {
   for (let indice = 0; indice < ajustes.length; indice++) {
     if (protegidos[indice] || !ajustes[indice]) continue;
     const i = indice * 4;
+    if (gerados[i + 3] !== 255) continue;
     let mudou = false;
     for (let canal = 0; canal < 3; canal++) {
       saida[i + canal] = Math.round(originais[i + canal] * (1 + ajustes[indice]));
@@ -197,9 +197,18 @@ export async function integrarContato(preparacao, geradaUrl) {
     }
     if (mudou) pixelsAlterados++;
   }
+  return { pixels: saida, pixelsAlterados };
+}
+
+export async function integrarContato(preparacao, geradaUrl) {
+  const { largura, altura } = preparacao;
+  const gerada = await carregarImagem(geradaUrl);
+  const proporcao = (gerada.naturalWidth / gerada.naturalHeight) / (largura / altura);
+  if (!Number.isFinite(proporcao) || Math.abs(proporcao - 1) > 0.02) throw new Error("O Gemini mudou o enquadramento. O acabamento não foi aplicado; a montagem foi preservada.");
+  const { pixels, pixelsAlterados } = integrarContatoPixels(preparacao, lerPixels(gerada, largura, altura).data);
   const canvas = document.createElement("canvas");
   canvas.width = largura;
   canvas.height = altura;
-  canvas.getContext("2d").putImageData(new ImageData(saida, largura, altura), 0, 0);
+  canvas.getContext("2d").putImageData(new ImageData(pixels, largura, altura), 0, 0);
   return { imagem: canvas.toDataURL("image/png"), pixelsAlterados };
 }

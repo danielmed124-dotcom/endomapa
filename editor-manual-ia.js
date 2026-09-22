@@ -295,25 +295,27 @@
 
       // A proteção usa a mesma captura que será enviada. A máscara permanece
       // no navegador; a API recebe apenas a montagem, sem imagem de referência.
-      const { prepararIntegracaoContato, integrarContato } = await import("./mapa-integracao-contato.js?v=contato-1");
+      const { prepararRefinamento, refinarLesoes } = await import("./mapa-refinamento-lesoes.js?v=refinamento-1");
       if (!window.endomapaCapturarIntegracaoManual) throw new Error("A proteção das lesões não carregou. Salve sua montagem antes de atualizar a página. Nenhuma geração foi solicitada.");
-      const captura = await window.endomapaCapturarIntegracaoManual();
-      const protecao = await prepararIntegracaoContato(captura);
+      const captura = await window.endomapaCapturarIntegracaoManual({ comInventario: true });
+      const protecao = await prepararRefinamento(captura);
       const composicao = captura.imagem;
       const montagemOriginal = await window.endomapaAdicionarRotulos(composicao);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
       const base64 = composicao.split(",")[1];
-      const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, versao_integracao: "contato-v1", preparar_teste: true, composicao_base64: base64 }, sessao.session, "finalizar-mapa-manual-gemini");
+      const entrada = { modo_edicao_direta: true, versao_integracao: "refinamento-v2", composicao_base64: base64,
+        inventario_lesoes: captura.inventario, lesoes_autorizadas: protecao.autorizadas };
+      const preflight = await chamarFuncaoUmaVez({ ...entrada, preparar_teste: true }, sessao.session, "finalizar-mapa-manual-gemini");
       if (!preflight.resposta.ok || !preflight.dados?.pronto) throw new Error(preflight.dados?.erro || "Não foi possível preparar a chamada. Nenhuma geração foi solicitada.");
-      if (preflight.dados.versao_integracao !== "contato-v1") throw new Error("O servidor ainda não confirmou a integração com o desenho preservado. Nenhuma geração foi solicitada.");
+      if (preflight.dados.versao_integracao !== "refinamento-v2") throw new Error("O servidor ainda não confirmou o refinamento localizado das lesões. Nenhuma geração foi solicitada.");
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou antes do envio. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
       resultado.hidden = false;
-      mostrar(estadoFinalRealista, "O Gemini está preparando a integração de luz e sombra. O desenho das lesões será preservado. Aguarde para editar novamente; esta geração é paga.", false);
+      mostrar(estadoFinalRealista, "O Gemini está refinando a textura e a iluminação das lesões listadas na sua montagem. O resultado será aplicado somente às áreas autorizadas e suas bordas. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
-      const { resposta, dados } = await chamarFuncaoUmaVez({ modo_edicao_direta: true, versao_integracao: "contato-v1", composicao_base64: base64,
+      const { resposta, dados } = await chamarFuncaoUmaVez({ ...entrada,
         mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session, "finalizar-mapa-manual-gemini");
       const suporte = dados?.pedido_id ? ` Pedido Gemini: ${dados.pedido_id}.` : "";
       const operacao = dados?.operacao_id ? ` Operação Endomapa: ${dados.operacao_id}.` : "";
@@ -323,8 +325,8 @@
       if (!["image/png", "image/jpeg", "image/webp"].includes(formato)) throw new Error("O Gemini retornou um formato de imagem não suportado." + operacao + suporte);
       const recebida = `data:${formato};base64,${dados.imagem_base64}`;
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada à montagem atual." + operacao);
-      const integracao = await integrarContato(protecao, recebida);
-      if (!integracao.pixelsAlterados) throw new Error("A resposta do Gemini não produziu um acabamento de contato aproveitável. Nenhuma nova versão foi apresentada." + operacao + suporte);
+      const integracao = await refinarLesoes(protecao, recebida);
+      if (!integracao.pixelsInternosAlterados) throw new Error("A resposta do Gemini não trouxe refinamento no interior das lesões autorizadas. Nenhuma nova versão foi apresentada." + operacao + suporte);
       const imagemFinal = await window.endomapaAdicionarRotulos(integracao.imagem);
       await carregarImagem(imagemFinal);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação do resultado. A proposta não foi aplicada à montagem atual." + operacao);
@@ -332,7 +334,7 @@
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estadoFinalRealista, "Integração com Gemini pronta. O desenho original das lesões foi mantido; o acabamento ficou limitado à luz e à sombra junto às bordas. Confira o mapa completo antes de usar. Um novo clique solicita outra geração paga.", false);
+      mostrar(estadoFinalRealista, "Refinamento local com Gemini pronto para revisão. Confira o conteúdo, a aparência e a quantidade dos focos nas lesões. As mudanças foram limitadas às áreas autorizadas e suas bordas. Um novo clique solicita outra geração paga.", false);
     } catch (erro) {
       const aviso = envioPagoIniciado
         ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."
@@ -349,7 +351,7 @@
   }
 
   function assinaturaMapa() {
-    return JSON.stringify([...document.querySelectorAll(".lesao-editavel")].map((lesao) => ({ ...lesao.dataset })));
+    return JSON.stringify([...document.querySelectorAll(".lesao-editavel")].map((lesao) => ({ ...lesao.dataset, imagem: lesao.querySelector("img")?.src || "" })));
   }
 
   const gerando = { gemini: false, gpt: false, "gpt-referencias": false, detalhe: false };

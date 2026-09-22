@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'none'">
+<title>Refinamento interno com proteção espacial, sem API</title>
+<pre id="resultado">PENDENTE</pre>
+<script type="module">
+import { prepararRefinamento, refinarLesoes } from '../mapa-refinamento-lesoes.js';
+
+const conferir = (valor, mensagem) => { if (!valor) throw new Error(mensagem); };
+const concluidos = [];
+window.fetch = async () => { throw new Error('Este teste não pode acessar a rede.'); };
+const arredondar = (n) => Number(n.toFixed(4));
+
+function tela(largura, altura) {
+  const canvas = document.createElement('canvas');
+  canvas.width = largura; canvas.height = altura;
+  return canvas;
+}
+
+function mascara(x, y, largura, altura, { solida = false, modelo = 'cisto-referencia' } = {}) {
+  const alfa = new Uint8ClampedArray(largura * altura);
+  // Cantos quase transparentes delimitam a área. O intervalo entre os dois
+  // focos pertence ao desenho e precisa continuar mostrando o órgão original.
+  alfa[0] = alfa[largura - 1] = alfa[(altura - 1) * largura] = alfa[alfa.length - 1] = 1;
+  for (let py = 0; py < altura; py++) for (let px = 0; px < largura; px++) {
+    const d = Math.min(Math.hypot(px - largura * .24, py - altura * .5), Math.hypot(px - largura * .76, py - altura * .5));
+    if (solida || d < Math.min(largura, altura) * .18) alfa[py * largura + px] = 255;
+    else if (d < Math.min(largura, altura) * .25) alfa[py * largura + px] = 128;
+  }
+  return { x, y, largura, altura, alfa, modelo };
+}
+
+function criarCaso(largura = 240, altura = 180, lesoes = [mascara(80, 60, 61, 41)]) {
+  const canvas = tela(largura, altura), contexto = canvas.getContext('2d');
+  const imagem = contexto.createImageData(largura, altura);
+  for (let y = 0; y < altura; y++) for (let x = 0; x < largura; x++) {
+    const i = (y * largura + x) * 4;
+    imagem.data.set([130 + x % 19, 100 + y % 17, 85 + (x + y) % 11, 255], i);
+  }
+  for (const m of lesoes) for (let y = 0; y < m.altura; y++) for (let x = 0; x < m.largura; x++) {
+    const i = ((m.y + y) * largura + m.x + x) * 4, peso = m.alfa[y * m.largura + x] / 255;
+    for (let c = 0; c < 3; c++) imagem.data[i + c] = Math.round(imagem.data[i + c] * (1 - peso) + [95, 43, 31][c] * peso);
+  }
+  contexto.putImageData(imagem, 0, 0);
+  return { imagem: canvas.toDataURL('image/png'), largura, altura,
+    lesoes: lesoes.map(({ modelo, ...m }) => m),
+    inventario: { largura_mapa: largura, altura_mapa: altura,
+      lesoes: lesoes.map((m, i) => ({ id: 'L' + (i + 1), modelo: m.modelo,
+        x: arredondar((m.x + m.largura / 2) * 100 / largura), y: arredondar((m.y + m.altura / 2) * 100 / altura),
+        largura: arredondar(m.largura * 100 / largura), altura: arredondar(m.altura * 100 / altura), giro: 0, recorte: 'alfa' })) } };
+}
+
+async function ler(src) {
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = src;
+  });
+  const canvas = tela(img.naturalWidth, img.naturalHeight), ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  return { pixels: ctx.getImageData(0, 0, canvas.width, canvas.height).data, largura: canvas.width, altura: canvas.height };
+}
+
+async function resposta(captura, alterar) {
+  const original = await ler(captura.imagem), canvas = tela(original.largura, original.altura), ctx = canvas.getContext('2d');
+  const pixels = new Uint8ClampedArray(original.pixels);
+  for (let y = 0; y < original.altura; y++) for (let x = 0; x < original.largura; x++) alterar(pixels, (y * original.largura + x) * 4, x, y);
+  ctx.putImageData(new ImageData(pixels, original.largura, original.altura), 0, 0);
+  return canvas.toDataURL('image/png');
+}
+
+function alfaEm(m, x, y) {
+  return x >= m.x && x < m.x + m.largura && y >= m.y && y < m.y + m.altura ? m.alfa[(y - m.y) * m.largura + x - m.x] : 0;
+}
+
+function dentroCaixa(m, x, y) {
+  return x >= m.x && x < m.x + m.largura && y >= m.y && y < m.y + m.altura;
+}
+
+async function conferirPixels(captura, proposta, saida, autorizadas) {
+  const [original, gerada, final] = await Promise.all([ler(captura.imagem), ler(proposta), ler(saida.imagem)]);
+  conferir(final.largura === captura.largura && final.altura === captura.altura, 'A saída mudou as dimensões.');
+  const ativas = new Set(autorizadas);
+  let alterados = 0, internos = 0, opacos = 0, suaves = 0, vazios = 0;
+  for (let y = 0; y < captura.altura; y++) for (let x = 0; x < captura.largura; x++) {
+    const i = (y * captura.largura + x) * 4;
+    const bloqueado = captura.lesoes.some((m, j) => !ativas.has('L' + (j + 1)) && dentroCaixa(m, x, y));
+    const alfa = bloqueado ? 0 : Math.max(...captura.lesoes.map((m, j) => ativas.has('L' + (j + 1)) ? alfaEm(m, x, y) : 0));
+    const dentro = captura.lesoes.some((m) => dentroCaixa(m, x, y));
+    const distante = captura.lesoes.every((m, j) => !ativas.has('L' + (j + 1)) ||
+      Math.hypot(Math.max(m.x - (x + .5), x + .5 - m.x - m.largura, 0), Math.max(m.y - (y + .5), y + .5 - m.y - m.altura, 0)) >= 6);
+    let mudou = false;
+    for (let canal = 0; canal < 4; canal++) {
+      const antes = original.pixels[i + canal], depois = final.pixels[i + canal];
+      if (canal === 3 || bloqueado || !alfa && (dentro || distante) || gerada.pixels[i + 3] !== 255) {
+        conferir(depois === antes, `Pixel protegido alterado em ${x},${y}, canal ${canal}.`);
+      } else if (alfa) {
+        const esperado = Math.round(antes * (1 - alfa / 255) + gerada.pixels[i + canal] * alfa / 255);
+        conferir(depois === esperado, `Refinamento interno incorreto em ${x},${y}: ${depois}, esperado ${esperado}.`);
+      } else conferir(Math.abs(depois - antes) <= 16, 'A sombra externa excedeu o ajuste suave.');
+      mudou ||= antes !== depois;
+    }
+    if (mudou) { alterados++; if (alfa) internos++; }
+    if (alfa === 255) opacos++;
+    else if (alfa) suaves++;
+    if (!alfa && dentro) vazios++;
+  }
+  conferir(alterados === saida.pixelsAlterados, 'A contagem total não corresponde à saída.');
+  conferir(internos === saida.pixelsInternosAlterados, 'A contagem interna não corresponde à saída.');
+  return { alterados, internos, opacos, suaves, vazios };
+}
+
+async function recusar(acao, mensagem) {
+  let recusou = false;
+  try { await acao(); } catch (_) { recusou = true; }
+  conferir(recusou, mensagem);
+}
+
+try {
+  const grande = criarCaso(1086, 1448, [mascara(460, 570, 91, 71)]);
+  const copiaAlfa = [...grande.lesoes[0].alfa];
+  const preparo = await prepararRefinamento(grande);
+  conferir(preparo.raio === 4 && preparo.autorizadas.join() === 'L1', 'A seleção automática ou o limite externo mudou.');
+  const hostil = await resposta(grande, (p, i, x, y) => {
+    // Textura sintética muito distinta: o interior deve recebê-la sem o limite
+    // antigo de 6%, enquanto anatomia, logo e achados externos ficam protegidos.
+    p.set([230 - x % 31, 35 + y % 41, 155 + (x + y) % 51, 255], i);
+  });
+  const resultado = await refinarLesoes(preparo, hostil);
+  const contagem = await conferirPixels(grande, hostil, resultado, preparo.autorizadas);
+  conferir(contagem.internos > 500 && contagem.opacos && contagem.suaves && contagem.vazios, 'O cenário não exercitou acabamento perceptível, borda ou espaços.');
+  conferir(grande.lesoes[0].alfa.every((a, i) => a === copiaAlfa[i]), 'O preparo alterou a máscara original.');
+  concluidos.push('textura interna perceptível, alfa suave, exterior e espaços preservados na resolução real');
+
+  const sobreposto = criarCaso(240, 180, [mascara(60, 60, 71, 41), mascara(90, 55, 41, 51, { modelo: 'diu-cobre-referencia' }), mascara(70, 70, 41, 31)]);
+  const preparoSobreposto = await prepararRefinamento(sobreposto);
+  conferir(preparoSobreposto.autorizadas.join() === 'L1,L3', 'O DIU entrou na seleção automática.');
+  const geradaSobreposta = await resposta(sobreposto, (p, i) => p.set([215, 160, 120, 255], i));
+  await conferirPixels(sobreposto, geradaSobreposta, await refinarLesoes(preparoSobreposto, geradaSobreposta), preparoSobreposto.autorizadas);
+  const somenteUma = await prepararRefinamento(sobreposto, ['L1']);
+  await conferirPixels(sobreposto, geradaSobreposta, await refinarLesoes(somenteUma, geradaSobreposta), ['L1']);
+  concluidos.push('seleção, DIU, sobreposições e espaços de desenhos não autorizados protegidos');
+
+  const pequeno = criarCaso();
+  const p = await prepararRefinamento(pequeno);
+  const igual = await refinarLesoes(p, pequeno.imagem);
+  conferir(igual.pixelsAlterados === 0 && igual.pixelsInternosAlterados === 0, 'A resposta idêntica recebeu mudanças inventadas.');
+  const externo = await resposta(pequeno, (pixels, i, x, y) => { if (x < 30) pixels.set([0, 255, 0, 255], i); });
+  const exterior = await refinarLesoes(p, externo);
+  conferir(exterior.pixelsAlterados === 0 && exterior.pixelsInternosAlterados === 0, 'Uma nova lesão externa entrou na saída.');
+  const interno = await resposta(pequeno, (pixels, i, x, y) => { if (alfaEm(pequeno.lesoes[0], x, y)) pixels.set([210, 160, 140, 255], i); });
+  const refinado = await refinarLesoes(p, interno);
+  conferir(refinado.pixelsInternosAlterados > 0 && refinado.pixelsInternosAlterados === refinado.pixelsAlterados, 'O refinamento exclusivamente interno foi descartado ou alterou o entorno.');
+  concluidos.push('resultado idêntico e invenções externas descartados; mudança apenas interna aproveitada');
+
+  const transparencia = await resposta(pequeno, (pixels, i, x, y) => { if (alfaEm(pequeno.lesoes[0], x, y)) pixels.set([220, 50, 10, 0], i); });
+  const transparenteParcial = await refinarLesoes(p, transparencia);
+  await conferirPixels(pequeno, transparencia, transparenteParcial, p.autorizadas);
+  conferir(transparenteParcial.pixelsInternosAlterados === 0, 'Transparência gerada apagou o desenho.');
+  const transparenteTotal = tela(pequeno.largura, pequeno.altura).toDataURL('image/png');
+  await recusar(() => refinarLesoes(p, transparenteTotal), 'Uma resposta inteiramente transparente foi aceita.');
+  await recusar(() => refinarLesoes(p, tela(100, 100).toDataURL('image/png')), 'Mudança de enquadramento foi aceita.');
+  concluidos.push('transparência não apaga o original e enquadramento incompatível recusado');
+
+  const cheio = criarCaso(80, 80, [mascara(0, 0, 80, 80, { solida: true })]);
+  const preparoCheio = await prepararRefinamento(cheio);
+  conferir(preparoCheio.regioes.every((r) => !r.contato.length), 'O cenário deveria estar sem borda externa.');
+  const novaTextura = await resposta(cheio, (pixels, i) => pixels.set([200, 170, 100, 255], i));
+  conferir((await refinarLesoes(preparoCheio, novaTextura)).pixelsInternosAlterados === 6400, 'A ausência de contato externo impediu o acabamento interno.');
+  const amplo = criarCaso(3100, 100, [mascara(1500, 30, 41, 41)]);
+  conferir((await prepararRefinamento(amplo)).raio === 6, 'O contato externo passou do máximo de seis pixels.');
+  concluidos.push('acabamento sem faixa externa e limite máximo da faixa de contato');
+
+  const novoInventario = (alterar) => { const copia = structuredClone(pequeno.inventario); alterar(copia); return { ...pequeno, inventario: copia }; };
+  const invalidos = [
+    { ...pequeno, inventario: undefined },
+    { ...pequeno, largura: 241 },
+    { ...pequeno, lesoes: [] },
+    { ...pequeno, lesoes: [{ ...pequeno.lesoes[0], alfa: new Uint8Array(3) }] },
+    { ...pequeno, lesoes: [{ ...pequeno.lesoes[0], alfa: new Uint8Array(pequeno.lesoes[0].alfa.length) }] },
+    novoInventario((i) => i.lesoes[0].modelo = 'modelo-inexistente'),
+    novoInventario((i) => i.lesoes[0].id = 'L2'),
+    novoInventario((i) => i.lesoes[0].x = NaN),
+    novoInventario((i) => i.lesoes[0].largura = 0),
+    novoInventario((i) => i.lesoes[0].giro = 200),
+    novoInventario((i) => i.lesoes[0].campo_extra = 'não permitido'),
+    novoInventario((i) => i.lesoes[0].modelo = 'diu-hormonal-referencia'),
+  ];
+  for (const invalido of invalidos) await recusar(() => prepararRefinamento(invalido), 'Um inventário ou uma máscara inválida foi aceito.');
+  for (const lista of [[], ['L2'], ['L1', 'L1']]) await recusar(() => prepararRefinamento(pequeno, lista), 'Autorização inválida foi aceita.');
+  await recusar(() => prepararRefinamento(sobreposto, ['L2']), 'O DIU recebeu autorização explícita indevida.');
+  concluidos.push('inventários, máscaras e seleções inválidos recusados antes de qualquer chamada');
+
+  document.querySelector('#resultado').textContent = 'PASSOU: ' + concluidos.join('; ') + '. Nenhuma chamada de API.';
+} catch (erro) {
+  document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message + ' Concluídos: ' + concluidos.join('; ');
+}
+</script>
+</html>
