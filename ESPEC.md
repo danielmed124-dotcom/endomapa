@@ -30,6 +30,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 Atualização de 18/09/2026: por solicitação de Daniel, o editor manual e todos os recursos do ramo `experimento-editor-manual` foram incorporados ao projeto principal. Além do ditado, o médico pode abrir o editor manual, escolher imagens da biblioteca e ajustar posição, tamanho, rotação, nome e medidas. Os recursos de comparação por IA continuam experimentais e sujeitos à revisão do médico.
 
+Atualização de 21/09/2026: no editor manual, o médico monta as lesões e usa o botão **Gerar mapa realista · pago**, que envia a própria montagem diretamente à API de imagens. A etapa de acabamento gratuito deixa de ser necessária. O sistema recoloca os nomes e as medidas, exibe a montagem original e a proposta para revisão e só solicita outra geração mediante novo clique explícito. Os experimentos anteriores ficam recolhidos.
+
 - Cadastro ou identificação de pacientes.
 - Histórico de exames.
 - Integração com sistemas de laudos.

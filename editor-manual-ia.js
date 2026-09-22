@@ -23,14 +23,13 @@
   const estadoMapaApi = document.querySelector("[data-estado-mapa-api]");
   botaoPreviaMioma?.addEventListener("click", gerarPreviaMioma);
   botaoGerarRegioes?.addEventListener("click", gerarAcabamentoAprovado);
-  if (!botoes.length || !window.supabase || !window.ENDOMAPA_SUPABASE) return;
+  if (!window.supabase || !window.ENDOMAPA_SUPABASE) return;
 
   const cliente = window.supabase.createClient(
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
   );
   let preparacaoTeste = null;
-  let mapaComReferencias = null;
   let geracaoFinalIniciada = false;
   let chamadaUnicaIniciada = false;
   let urlReferenciaAnterior = null;
@@ -224,8 +223,6 @@
   async function gerarAcabamentoAprovado() {
     if (botaoGerarRegioes.disabled) return;
     botaoGerarRegioes.disabled = true;
-    botaoFinalRealista.disabled = true;
-    mapaComReferencias = null;
     try {
       const lesoes = [...document.querySelectorAll(".lesao-editavel")];
       if (!lesoes.length) throw new Error("Adicione pelo menos uma lesão antes de gerar o mapa.");
@@ -242,9 +239,6 @@
       document.querySelector("[data-resultado-regioes]").hidden = false;
       document.querySelector("[data-resultado-final-realista]").hidden = true;
       document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
-      mapaComReferencias = { imagemSemRotulos: proposta.imagem, imagemComRotulos: imagemFinal, assinatura };
-      geracaoFinalIniciada = false;
-      botaoFinalRealista.disabled = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
       const aviso = proposta.semExemplo.length
@@ -259,24 +253,47 @@
   }
 
   async function gerarFinalRealista() {
-    if (geracaoFinalIniciada || botaoFinalRealista.disabled || !mapaComReferencias) return;
-    if (mapaComReferencias.assinatura !== assinaturaMapa()) {
-      botaoFinalRealista.disabled = true;
-      return mostrar(estadoFinalRealista, "As lesões mudaram. Gere novamente o mapa gratuito antes da chamada paga.", true);
+    if (geracaoFinalIniciada || botaoFinalRealista.disabled) return;
+    if (!document.querySelector(".lesao-editavel")) {
+      return mostrar(estadoFinalRealista, "Adicione pelo menos uma lesão ao mapa antes de gerar a versão realista.", true);
     }
     geracaoFinalIniciada = true;
     botaoFinalRealista.disabled = true;
-    const mapa = mapaComReferencias;
-    document.querySelector("[data-resultado-final-realista]").hidden = true;
-    document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
-    mostrar(estadoFinalRealista, "Enviando o mapa com lesões de referência para uma edição direta. Será feita uma única chamada paga, sem repetição automática.", false);
+    botaoFinalRealista.setAttribute("aria-busy", "true");
+    botaoFinalRealista.textContent = "Gerando mapa realista…";
+    const alternarControles = document.querySelector("[data-alternar-controles]");
+    if (alternarControles?.getAttribute("aria-expanded") === "true") alternarControles.click();
+    const areasEdicao = [...document.querySelectorAll(".biblioteca-lesoes, .editor-manual__area, [data-controles-lesao], .editor-manual__experimentos")]
+      .map((elemento) => ({ elemento, inerte: elemento.inert }));
+    areasEdicao.forEach(({ elemento }) => { elemento.inert = true; });
+    const botaoLimpar = document.querySelector("[data-limpar-mapa]");
+    const limparEstavaBloqueado = botaoLimpar?.disabled;
+    if (botaoLimpar) botaoLimpar.disabled = true;
+    const assinatura = assinaturaMapa();
+    let envioPagoIniciado = false;
+    mostrar(estadoFinalRealista, "Preparando a sua montagem manual para gerar o mapa realista…", false);
     try {
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
       if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa. Nenhuma geração foi solicitada.");
-      const base64 = mapa.imagemSemRotulos.split(",")[1];
+
+      // Envia as lesões montadas pelo médico, sem aplicar o acabamento dos estudos.
+      // Nomes e medidas são desenhados pelo editor, sem pedir à IA para recriá-los.
+      const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true, formato: "image/png" });
+      const montagemOriginal = await window.endomapaAdicionarRotulos(composicao);
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
+      const base64 = composicao.split(",")[1];
       const preflight = await chamarFuncaoUmaVez({ modo_edicao_direta: true, preparar_teste: true, composicao_base64: base64 }, sessao.session);
       if (!preflight.resposta.ok || !preflight.dados?.pronto) throw new Error(preflight.dados?.erro || "Não foi possível preparar a chamada. Nenhuma geração foi solicitada.");
-      if (mapa.assinatura !== assinaturaMapa()) throw new Error("As lesões mudaram antes do envio. Nenhuma geração foi solicitada.");
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou antes do envio. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
+
+      // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
+      original.src = montagemOriginal;
+      resultado.querySelectorAll("[data-resultado-final-realista], [data-resultado-regioes], [data-resultado-gpt], [data-resultado-gemini], [data-resultado-mapa-api], [data-resultado-proposta-api], [data-resultado-diferenca-api], [data-resultado-gemini-detalhe], [data-resultado-mioma], [data-resultado-gpt-referencias], [data-comparacao-mioma-ampliada]")
+        .forEach((painel) => { painel.hidden = true; });
+      document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
+      resultado.hidden = false;
+      mostrar(estadoFinalRealista, "Gerando o mapa realista a partir da sua montagem. Aguarde para editar novamente; esta geração é paga.", false);
+      envioPagoIniciado = true;
       const { resposta, dados } = await chamarFuncaoUmaVez({ modo_edicao_direta: true, composicao_base64: base64,
         mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session);
       const suporte = dados?.pedido_id ? ` Pedido OpenAI: ${dados.pedido_id}.` : "";
@@ -285,18 +302,27 @@
       if (!dados?.imagem_base64) throw new Error("A OpenAI respondeu sem imagem utilizável." + operacao + suporte);
       const recebida = `data:image/png;base64,${dados.imagem_base64}`;
       await carregarImagem(recebida);
-      if (mapa.assinatura !== assinaturaMapa()) throw new Error("As lesões mudaram durante a chamada. A proposta não foi aplicada." + operacao);
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada à montagem atual." + operacao);
       const imagemFinal = await window.endomapaAdicionarRotulos(recebida);
       await carregarImagem(imagemFinal);
-      original.src = mapa.imagemComRotulos;
-      document.querySelector("[data-imagem-regioes]").src = mapa.imagemComRotulos;
+      if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação do resultado. A proposta não foi aplicada à montagem atual." + operacao);
       document.querySelector("[data-imagem-final-realista]").src = imagemFinal;
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estadoFinalRealista, "Proposta recebida e exibida. Compare cada lesão, posição e anatomia com o mapa gratuito; o resultado ainda exige aprovação médica." + operacao + suporte, false);
+      mostrar(estadoFinalRealista, "Mapa realista pronto para revisão. Compare as lesões e a anatomia com sua montagem manual. Um novo clique solicita outra geração paga.", false);
     } catch (erro) {
-      mostrar(estadoFinalRealista, (erro.message || "A geração não foi concluída.") + " O mapa gratuito foi preservado; não haverá outra chamada automática.", true);
+      const aviso = envioPagoIniciado
+        ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."
+        : " A montagem manual foi preservada.";
+      mostrar(estadoFinalRealista, (erro.message || "A geração não foi concluída.") + aviso, true);
+    } finally {
+      areasEdicao.forEach(({ elemento, inerte }) => { elemento.inert = inerte; });
+      if (botaoLimpar) botaoLimpar.disabled = limparEstavaBloqueado;
+      geracaoFinalIniciada = false;
+      botaoFinalRealista.disabled = false;
+      botaoFinalRealista.removeAttribute("aria-busy");
+      botaoFinalRealista.textContent = "Gerar mapa realista · pago";
     }
   }
 

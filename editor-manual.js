@@ -352,7 +352,9 @@
     }
 
     if (!opcoes.semRotulos) desenharRotulos(contexto, canvas);
-    return canvas.toDataURL("image/jpeg", 0.9);
+    return opcoes.formato === "image/png"
+      ? canvas.toDataURL("image/png")
+      : canvas.toDataURL("image/jpeg", 0.9);
   }
 
   function desenharRotulos(contexto, canvas) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#17201a" />
     <title>Editor manual | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=teste-unico-1" />
+    <link rel="stylesheet" href="styles.css?v=manual-direto-1" />
   </head>
   <body>
     <main class="editor-manual">
@@ -170,16 +170,21 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
-        <button class="botao" type="button" data-gerar-regioes>Gerar mapa com acabamento aprovado · grátis</button>
-        <button class="botao" type="button" data-gerar-final-realista disabled>Gerar mapa final realista a partir deste mapa · pago</button>
+        <p class="texto-apoio">Monte as lesões no mapa e clique para gerar uma versão realista. Cada geração é paga; o resultado será exibido para sua revisão.</p>
+        <button class="botao" type="button" data-gerar-final-realista>Gerar mapa realista · pago</button>
         <p class="mensagem-formulario" data-estado-final-realista role="status" hidden></p>
+        <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
+        <a class="link-voltar" href="app.html">Voltar ao ditado</a>
+      </div>
+      <details class="editor-manual__experimentos">
+        <summary>Experimentos anteriores</summary>
+        <div class="acoes editor-manual__acoes">
+        <button class="botao botao--secundario" type="button" data-gerar-regioes>Gerar mapa com acabamento aprovado · grátis</button>
         <p class="mensagem-formulario" data-estado-regioes role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-preparar-teste-api>Preparar teste da OpenAI · grátis</button>
         <button class="botao" type="button" data-gerar-mapa-api disabled>Executar uma geração preparada · pago</button>
         <p class="mensagem-formulario" data-estado-mapa-api role="status" hidden></p>
-        <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
-        <a class="link-voltar" href="app.html">Voltar ao ditado</a>
-      </div>
+        </div>
       <section class="resultado-editor-ia" data-preparo-teste hidden aria-labelledby="titulo-preparo-teste">
         <h2 class="secao-dados__titulo" id="titulo-preparo-teste">Confira antes da chamada paga</h2>
         <p class="texto-apoio" data-configuracao-teste></p>
@@ -194,6 +199,7 @@
         <pre data-diagnostico-teste style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
         <div data-relato-suporte hidden><h3>Relato mínimo para suporte · não enviado automaticamente</h3><pre data-texto-relato-suporte style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></div>
       </section>
+      </details>
       <section class="resultado-editor-ia" data-resultado-realista hidden aria-labelledby="titulo-resultado-realista">
         <h2 class="secao-dados__titulo" id="titulo-resultado-realista">Comparação</h2>
         <p class="texto-apoio">A montagem manual permanece preservada. Confira se a IA mudou posição, forma, anatomia ou medidas.</p>
@@ -215,8 +221,8 @@
             <figcaption data-legenda-regioes>Mapa com acabamento aprovado · revisão médica necessária</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-final-realista hidden>
-            <img data-imagem-final-realista alt="Proposta de mapa final realista criada a partir do mapa com lesões de referência" />
-            <figcaption>Mapa final realista · proposta da API para revisão médica</figcaption>
+            <img data-imagem-final-realista alt="Mapa realista gerado a partir da montagem manual para revisão médica" />
+            <figcaption>Mapa realista · confira as lesões e a anatomia</figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
@@ -255,8 +261,8 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="editor-manual.js?v=acabamento-1"></script>
+    <script src="editor-manual.js?v=manual-direto-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=mapa-final-referencias-1"></script>
+    <script src="editor-manual-ia.js?v=manual-direto-1"></script>
   </body>
 </html>

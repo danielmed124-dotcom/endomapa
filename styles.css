@@ -1836,6 +1836,22 @@ h1 span {
   margin-top: 0;
 }
 
+@media (max-width: 999px) {
+  .editor-manual:has(.controles-lesao:not([hidden])) {
+    padding-bottom: calc(min(52svh, 430px) + 32px);
+  }
+}
+
+.editor-manual__experimentos {
+  min-width: 0;
+}
+
+.editor-manual__experimentos > summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+
 .resultado-editor-ia {
   display: grid;
   gap: 12px;
@@ -1905,6 +1921,10 @@ h1 span {
   }
 
   .resultado-editor-ia[data-preparo-teste] {
+    grid-area: preparo;
+  }
+
+  .editor-manual__experimentos {
     grid-area: preparo;
   }
 

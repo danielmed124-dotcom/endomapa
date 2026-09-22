@@ -1,5 +1,13 @@
 # Diagnóstico do fluxo de imagens médicas — 20/09/2026
 
+## Fluxo manual direto — atualização de 21/09/2026
+
+Por solicitação de Daniel, o fluxo principal do editor agora é montar as lesões manualmente e clicar em **Gerar mapa realista · pago**. A captura é PNG, com as lesões atuais e sem rótulos. O navegador faz a preparação gratuita automaticamente e envia os mesmos bytes e hashes ao modo `modo_edicao_direta` da função `finalizar-mapa-manual-gpt`, que já existe no servidor. Não é necessário gerar antes o acabamento gratuito.
+
+O sistema recoloca os nomes e medidas nas duas imagens e mostra a montagem original junto da proposta. Durante a operação, o botão e os ajustes ficam bloqueados. Ao terminar, voltam a funcionar; uma nova geração exige um novo clique, sem repetição automática. Os testes anteriores ficam recolhidos em **Experimentos anteriores**. As seções abaixo descrevem o fluxo anterior de teste com duas imagens.
+
+Verificação local: `tests/botao-final-realista.html` simula oito cenários, incluindo falha, clique duplicado, mapa vazio, falta de login e mudança da montagem durante a operação. `tests/editor-manual-nomes.html` verifica a captura PNG, a reposição dos rótulos e o acesso ao botão em tela de 390 pixels. Esses testes não fazem uma geração real nem comprovam o resultado visual da IA.
+
 ## O que foi comprovado
 
 - O botão pago do editor captura o mapa em JPEG, sem rótulos, e envia os bytes em base64 e o inventário das lesões à função Supabase `finalizar-mapa-manual-gpt`.

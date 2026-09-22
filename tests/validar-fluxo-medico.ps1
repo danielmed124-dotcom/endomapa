@@ -1,3 +1,4 @@
+param([string[]]$Testes = @('erro-imagem-gpt', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso', 'botao-final-realista', 'editor-manual-nomes'))
 $ErrorActionPreference = 'Stop'
 $raiz = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {
@@ -14,7 +15,13 @@ $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {
       if (!$arquivo.StartsWith($raizProjeto + '\') -or !(Test-Path -LiteralPath $arquivo -PathType Leaf)) {
         $pedido.Response.StatusCode = 404; $pedido.Response.Close(); continue
       }
-      $pedido.Response.ContentType = if ($arquivo.EndsWith('.js')) { 'text/javascript; charset=utf-8' } else { 'text/html; charset=utf-8' }
+      $pedido.Response.ContentType = switch ([IO.Path]::GetExtension($arquivo)) {
+        '.js' { 'text/javascript; charset=utf-8' }
+        '.css' { 'text/css; charset=utf-8' }
+        '.png' { 'image/png' }
+        '.jpg' { 'image/jpeg' }
+        default { 'text/html; charset=utf-8' }
+      }
       $bytes = [IO.File]::ReadAllBytes($arquivo)
       $pedido.Response.ContentLength64 = $bytes.Length
       $pedido.Response.OutputStream.Write($bytes, 0, $bytes.Length)
@@ -24,7 +31,7 @@ $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {
 }
 try {
   Start-Sleep -Seconds 2
-  foreach ($nome in @('erro-imagem-gpt', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso')) {
+  foreach ($nome in $Testes) {
     $arquivoSaida = Join-Path $env:TEMP "endomapa-$nome-dom.html"
     $arquivoErro = Join-Path $env:TEMP "endomapa-$nome-erros.txt"
     $rota = if ($nome -eq 'preparo-teste-unico-sucesso') { 'preparo-teste-unico.html#sucesso' } else { "$nome.html" }

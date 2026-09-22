@@ -1,50 +1,230 @@
-<!doctype html><meta charset="utf-8"><title>Botão do mapa final</title>
-<button data-gerar-realista="gpt" disabled></button>
-<button data-gerar-regioes>Montar grátis</button><button data-gerar-final-realista disabled>Gerar final</button>
-<div class="lesao-editavel" data-nome="Cisto" data-x="25" data-y="50" data-giro="0" data-tamanho="65" data-eixo-x="100" data-eixo-y="100" data-proporcao="1"></div>
-<p data-estado-regioes hidden></p><p data-estado-final-realista hidden></p>
-<section data-resultado-realista hidden><img data-imagem-original>
-  <figure data-resultado-regioes hidden><img data-imagem-regioes><figcaption data-legenda-regioes></figcaption></figure>
-  <figure data-resultado-final-realista hidden><img data-imagem-final-realista></figure>
-</section>
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data:; script-src 'self' 'unsafe-inline'; connect-src 'none'; frame-src 'self'">
+<title>Teste do mapa final direto, sem chamadas reais</title>
+<div id="cenario">
+  <button data-gerar-realista="gpt" disabled></button>
+  <button data-gerar-regioes>Montar grátis</button>
+  <button data-gerar-final-realista>Gerar final</button>
+  <div class="editor-manual__area"><div class="lesao-editavel" data-id="1" data-nome="Cisto" data-nome-no-mapa="Cisto direito" data-medida1="25" data-medida2="" data-medida3="" data-medida-x="56" data-medida-y="52" data-x="25" data-y="50" data-giro="0" data-tamanho="65" data-eixo-x="100" data-eixo-y="100" data-proporcao="1"></div></div>
+  <button data-limpar-mapa>Limpar</button>
+  <img data-mapa-manual-teste alt="Montagem manual preservada">
+  <p data-estado-regioes hidden></p><p data-estado-final-realista hidden></p>
+  <section data-resultado-realista hidden>
+    <img data-imagem-original alt="Mapa enviado com rótulos">
+    <figure data-resultado-regioes hidden><img data-imagem-regioes alt="Outro mapa já montado"><figcaption data-legenda-regioes></figcaption></figure>
+    <figure data-resultado-final-realista hidden><img data-imagem-final-realista alt="Proposta para revisão"></figure>
+  </section>
+</div>
 <pre id="resultado">PENDENTE</pre>
 <script>
-const c=document.createElement('canvas');c.width=1086;c.height=1448;
-c.getContext('2d').fillStyle='#bc8172';c.getContext('2d').fillRect(0,0,c.width,c.height);
-const png=c.toDataURL('image/png');
-window.endomapaCapturarMapaManual=async()=>png;
-window.endomapaAdicionarRotulos=async(imagem)=>imagem;
-window.EndomapaAcabamentoAprovado={montar:async()=>({imagem:png,semExemplo:['Cisto']})};
-window.ENDOMAPA_SUPABASE={projectUrl:'https://mock.supabase.test',publicAnonKey:'publica'};
-window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:{access_token:'teste'}}})}})};
-let preparacoes=0,pagas=0;
-window.fetch=async(_url,opcoes)=>{
-  const corpo=JSON.parse(opcoes.body);
-  if(corpo.preparar_teste){
-    preparacoes++;
-    return new Response(JSON.stringify({pronto:true,imagem_1:{sha256:'mapa'},prompt_sha256:'prompt',
-      prompt_visual:'Edição do mapa completo sem segunda imagem',versao_prompt:'mapa-direto-v1'}),{status:200});
+const nomeCenario = new URLSearchParams(location.search).get('cenario');
+const cenarios = ['sucesso', 'clique_duplicado', 'erro', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
+const buscar = (seletor) => document.querySelector(seletor);
+const exigir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
+async function esperar(condicao, mensagem) {
+  const limite = Date.now() + 4000;
+  while (!condicao()) {
+    if (Date.now() >= limite) throw new Error(mensagem);
+    await pausa(10);
   }
-  pagas++;
-  if(corpo.modo_edicao_direta!==true||corpo.mapa_sha256!=='mapa'||corpo.prompt_sha256!=='prompt') throw Error('Payload errado');
-  return new Response(JSON.stringify({imagem_base64:png.split(',')[1],operacao_id:'operacao-mock',pedido_id:'req_mock'}),{status:200});
+}
+
+function criarPng(cor, rotulado = false) {
+  const tela = document.createElement('canvas');
+  tela.width = 1086;
+  tela.height = 1448;
+  const contexto = tela.getContext('2d');
+  contexto.fillStyle = '#fff';
+  contexto.fillRect(0, 0, tela.width, tela.height);
+  contexto.fillStyle = cor;
+  contexto.beginPath();
+  contexto.ellipse(272, 724, 65, 48, 0, 0, Math.PI * 2);
+  contexto.fill();
+  if (rotulado) {
+    contexto.fillStyle = '#000';
+    contexto.font = '22px Arial';
+    contexto.fillText('Cisto direito · 25 mm', 360, 724);
+  }
+  return tela.toDataURL('image/png');
+}
+
+const captura = criarPng('#bc8172');
+const proposta = criarPng('#986565');
+const capturaRotulada = criarPng('#bc8172', true);
+const propostaRotulada = criarPng('#986565', true);
+const outroMapa = criarPng('#467787', true);
+const chamadas = { preparacoes: 0, pagas: 0, acabamento: 0, capturas: [], rotulos: [], corpos: [], falhas: [] };
+buscar('[data-mapa-manual-teste]').src = capturaRotulada;
+buscar('[data-imagem-regioes]').src = outroMapa;
+if (nomeCenario === 'vazio') buscar('.lesao-editavel').remove();
+const dadosOriginais = buscar('.lesao-editavel') ? JSON.stringify({ ...buscar('.lesao-editavel').dataset }) : null;
+
+window.endomapaCapturarMapaManual = async (opcoes = {}) => {
+  chamadas.capturas.push(opcoes);
+  exigir(opcoes.semRotulos === true, 'A captura deve omitir os rótulos enviados à IA');
+  exigir(opcoes.formato === 'image/png', 'A captura deve solicitar PNG');
+  exigir(!opcoes.semLesoes && !opcoes.miomaIntegradoId, 'A captura alterou as lesões da montagem atual');
+  return captura;
+};
+window.endomapaAdicionarRotulos = async (imagem) => {
+  chamadas.rotulos.push(imagem);
+  if (imagem === captura) return capturaRotulada;
+  if (imagem === proposta) return propostaRotulada;
+  throw new Error('Foram reaplicados rótulos a uma imagem diferente da captura ou da proposta');
+};
+window.EndomapaAcabamentoAprovado = {
+  montar: async () => {
+    chamadas.acabamento++;
+    throw new Error('O fluxo direto dependeu do acabamento gratuito');
+  },
+};
+window.ENDOMAPA_SUPABASE = { projectUrl: 'https://mock.supabase.test', publicAnonKey: 'publica' };
+window.supabase = { createClient: () => ({ auth: { getSession: async () => ({
+  data: { session: nomeCenario === 'sem_login' ? null : { access_token: 'sessao-simulada' } }, error: null,
+}) } }) };
+const responder = (dados, status = 200) => new Response(JSON.stringify(dados), {
+  status, headers: { 'Content-Type': 'application/json' },
+});
+window.fetch = async (url, opcoes) => {
+  // Não existe alternativa para rede real: toda solicitação é simulada ou falha.
+  try {
+    exigir(url === 'https://mock.supabase.test/functions/v1/finalizar-mapa-manual-gpt', 'Endereço inesperado');
+    exigir(opcoes.method === 'POST', 'Método inesperado');
+    exigir(buscar('.editor-manual__area').inert && buscar('[data-limpar-mapa]').disabled, 'Edição manual deve aguardar o fim da geração');
+    exigir(opcoes.headers.Authorization === 'Bearer sessao-simulada', 'Login não enviado');
+    const corpo = JSON.parse(opcoes.body);
+    chamadas.corpos.push(corpo);
+    exigir(corpo.modo_edicao_direta === true, 'Não usou edição direta');
+    exigir(corpo.composicao_base64 === captura.split(',')[1], 'A imagem enviada difere da montagem capturada');
+    exigir(!corpo.modo_mapa_referencia && !corpo.modo_regiao, 'Enviou outro modo de geração');
+    if (corpo.preparar_teste === true) {
+      chamadas.preparacoes++;
+      await pausa(20);
+      if (nomeCenario === 'muda_preparo') buscar('.lesao-editavel').dataset.x = '60';
+      return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
+    }
+    chamadas.pagas++;
+    exigir(corpo.mapa_sha256 === 'hash-mapa-simulado' && corpo.prompt_sha256 === 'hash-prompt-simulado', 'Preparação não vinculada à geração');
+    await pausa(20);
+    if (nomeCenario === 'muda_geracao') buscar('.lesao-editavel').dataset.medida1 = '30';
+    if (nomeCenario === 'erro' || (nomeCenario === 'nova_tentativa' && chamadas.pagas === 1)) {
+      return responder({ erro: 'Falha simulada do serviço de imagens', operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' }, 502);
+    }
+    return responder({ imagem_base64: proposta.split(',')[1], formato: 'image/png', operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
+  } catch (erro) {
+    chamadas.falhas.push(erro.message);
+    throw erro;
+  }
 };
 </script>
 <script src="../editor-manual-ia.js"></script>
 <script>
-window.addEventListener('load',async()=>{
-  try{
-    document.querySelector('[data-gerar-regioes]').click();
-    for(let i=0;i<100&&document.querySelector('[data-gerar-final-realista]').disabled;i++) await new Promise(r=>setTimeout(r,30));
-    if(document.querySelector('[data-gerar-final-realista]').disabled) throw Error('Botão não habilitou após montagem gratuita');
-    if(pagas!==0) throw Error('Montagem gratuita chamou API paga');
-    document.querySelector('[data-gerar-final-realista]').click();
-    document.querySelector('[data-gerar-final-realista]').click();
-    for(let i=0;i<100&&document.querySelector('[data-resultado-final-realista]').hidden;i++) await new Promise(r=>setTimeout(r,30));
-    if(preparacoes!==1||pagas!==1) throw Error('Quantidade de chamadas incorreta: '+preparacoes+'/'+pagas);
-    if(document.querySelector('[data-resultado-final-realista]').hidden) throw Error('Resultado não exibido');
-    if(!document.querySelector('[data-imagem-regioes]').src.startsWith('data:image/png')) throw Error('Mapa gratuito perdido');
-    document.querySelector('#resultado').textContent='PASSOU: mapa gratuito preservado; uma chamada paga simulada; resultado exibido.';
-  }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.message+' / '+document.querySelector('[data-estado-final-realista]').textContent;}
+async function executarCenario() {
+  exigir(cenarios.includes(nomeCenario), 'Cenário desconhecido: ' + nomeCenario);
+  const botao = buscar('[data-gerar-final-realista]');
+  const estado = buscar('[data-estado-final-realista]');
+  exigir(!botao.disabled, 'O botão exigiu uma montagem gratuita anterior');
+  const clicar = async (duplicado = false) => {
+    botao.click();
+    if (duplicado) {
+      botao.click();
+      // O evento extra também verifica a trava da função, além do botão desabilitado.
+      botao.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    }
+    await esperar(() => !botao.disabled && !estado.hidden && estado.textContent.length > 0, 'A operação não terminou ou o botão não foi liberado');
+  };
+  const conferirSemProposta = () => {
+    exigir(buscar('[data-resultado-final-realista]').hidden, 'Exibiu proposta que deveria ter sido descartada');
+    exigir(!buscar('[data-imagem-final-realista]').getAttribute('src'), 'Guardou imagem descartada no resultado');
+    exigir(estado.classList.contains('mensagem-formulario--erro'), 'Falha sem aviso visível');
+  };
+
+  await clicar(nomeCenario === 'clique_duplicado');
+  if (nomeCenario === 'nova_tentativa') {
+    conferirSemProposta();
+    exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'Primeira tentativa fez chamadas extras');
+    await pausa(100);
+    exigir(chamadas.pagas === 1, 'Repetiu automaticamente após falha');
+    await clicar();
+  }
+
+  if (['sucesso', 'clique_duplicado', 'nova_tentativa'].includes(nomeCenario)) {
+    const total = nomeCenario === 'nova_tentativa' ? 2 : 1;
+    exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade incorreta de preparações ou gerações');
+    exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-final-realista]').hidden, 'Resultado não exibido');
+    exigir(buscar('[data-imagem-original]').src === capturaRotulada, 'A comparação não mostra a captura original com rótulos');
+    exigir(buscar('[data-imagem-final-realista]').src === propostaRotulada, 'A proposta não recebeu seus rótulos');
+    exigir(chamadas.rotulos.includes(captura) && chamadas.rotulos.includes(proposta), 'Faltou reaplicar nomes e medidas às duas imagens');
+    exigir(!estado.classList.contains('mensagem-formulario--erro'), 'Sucesso apresentado como falha');
+  } else {
+    conferirSemProposta();
+    if (nomeCenario === 'vazio' || nomeCenario === 'sem_login') {
+      exigir(chamadas.corpos.length === 0, 'Mapa vazio ou sem login acionou o servidor');
+      exigir(chamadas.capturas.length === 0, 'Mapa vazio ou sem login iniciou a captura');
+    } else if (nomeCenario === 'muda_preparo') {
+      exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após mudança no preparo');
+      exigir(buscar('.lesao-editavel').dataset.x === '60', 'Desfez a alteração do médico durante o preparo');
+    } else {
+      exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'Quantidade inesperada de chamadas na falha');
+      if (nomeCenario === 'muda_geracao') exigir(buscar('.lesao-editavel').dataset.medida1 === '30', 'Desfez a medida alterada pelo médico');
+    }
+  }
+
+  const totalChamadas = chamadas.corpos.length;
+  await pausa(100);
+  exigir(chamadas.corpos.length === totalChamadas, 'Houve repetição automática');
+  exigir(chamadas.falhas.length === 0, chamadas.falhas.join('; '));
+  exigir(chamadas.acabamento === 0, 'Usou o acabamento gratuito no fluxo direto');
+  exigir(buscar('[data-mapa-manual-teste]').src === capturaRotulada, 'Substituiu o mapa manual');
+  exigir(buscar('[data-imagem-regioes]').src === outroMapa, 'Substituiu outro resultado já montado');
+  if (dadosOriginais && !nomeCenario.startsWith('muda_')) {
+    exigir(JSON.stringify({ ...buscar('.lesao-editavel').dataset }) === dadosOriginais, 'Alterou os dados das lesões');
+  }
+  exigir(!botao.disabled, 'O botão não ficou disponível para uma nova ação explícita');
+  exigir(!buscar('.editor-manual__area').inert && !buscar('[data-limpar-mapa]').disabled, 'Edição manual não foi liberada ao terminar');
+  return nomeCenario + ': ' + chamadas.preparacoes + ' preparação(ões), ' + chamadas.pagas + ' geração(ões) simulada(s)';
+}
+
+async function executarTodos() {
+  buscar('#cenario').hidden = true;
+  const resultados = [];
+  for (const nome of cenarios) {
+    const quadro = document.createElement('iframe');
+    quadro.hidden = true;
+    const resposta = new Promise((resolver, rejeitar) => {
+      const receber = (evento) => {
+        if (evento.source !== quadro.contentWindow || evento.data?.tipo !== 'teste-mapa-final' || evento.data.cenario !== nome) return;
+        clearTimeout(prazo);
+        window.removeEventListener('message', receber);
+        evento.data.ok ? resolver(evento.data.relato) : rejeitar(new Error(evento.data.relato));
+      };
+      const prazo = setTimeout(() => {
+        window.removeEventListener('message', receber);
+        rejeitar(new Error('O cenário não respondeu: ' + nome));
+      }, 6000);
+      window.addEventListener('message', receber);
+    });
+    quadro.src = location.pathname + '?cenario=' + nome;
+    document.body.append(quadro);
+    try { resultados.push(await resposta); } finally { quadro.remove(); }
+    buscar('#resultado').textContent = 'EXECUTANDO\n' + resultados.join('\n');
+  }
+  return resultados.length + ' cenários; nenhuma chamada externa real.\n' + resultados.join('\n');
+}
+
+window.addEventListener('load', async () => {
+  try {
+    const relato = nomeCenario ? await executarCenario() : await executarTodos();
+    buscar('#resultado').textContent = 'PASSOU: ' + relato;
+    if (nomeCenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario: nomeCenario, ok: true, relato }, '*');
+  } catch (erro) {
+    const relato = (nomeCenario ? nomeCenario + ': ' : '') + erro.message + ' / ' + buscar('[data-estado-final-realista]').textContent;
+    buscar('#resultado').textContent = 'FALHOU: ' + relato;
+    if (nomeCenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario: nomeCenario, ok: false, relato }, '*');
+  }
 });
 </script>
+</html>

@@ -27,6 +27,14 @@ document.querySelector('iframe').addEventListener('load', async function () {
     doc.querySelector('[data-nome="Adenomiose 1"]').click();
     verificar(campo.value === '', 'Nome independente para cada lesão');
     preencher(campo, 'Adenomiose');
+    const botaoRealista = doc.querySelector('[data-gerar-final-realista]');
+    verificar(!botaoRealista.disabled && !botaoRealista.closest('details'), 'Geração direta disponível sem etapa gratuita');
+    verificar(!doc.querySelector('.editor-manual__experimentos').open, 'Experimentos antigos recolhidos');
+    janela.scrollTo({ top: doc.documentElement.scrollHeight, behavior: 'instant' });
+    const areaBotao = botaoRealista.getBoundingClientRect();
+    verificar(areaBotao.top >= 0 && areaBotao.bottom <= janela.innerHeight, 'Botão pago cabe na tela do celular ao rolar até o fim');
+    verificar(doc.elementFromPoint(areaBotao.left + areaBotao.width / 2, areaBotao.top + areaBotao.height / 2) === botaoRealista, 'Painel de ajustes não encobre o botão pago');
+    verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'Editor cabe na largura do celular');
     doc.querySelector('.lesao-editavel[data-id="1"]').click();
     verificar(campo.value === 'Endometrioma esquerdo', 'Nome restaurado ao selecionar');
     const textos = [];
@@ -35,9 +43,16 @@ document.querySelector('iframe').addEventListener('load', async function () {
       textos.push({ texto, y });
       return original.apply(this, arguments);
     };
-    await janela.endomapaCapturarMapaManual();
+    const capturaJpeg = await janela.endomapaCapturarMapaManual();
+    verificar(capturaJpeg.startsWith('data:image/jpeg;base64,'), 'Captura padrão mantém JPEG');
     verificar(textos.some(item => item.texto === 'Adenomiose'), 'Nome sem medidas na captura');
     verificar(textos.find(item => item.texto === 'Endometrioma esquerdo').y < textos.find(item => item.texto === '2,5 cm').y, 'Nome acima das medidas na captura');
+    textos.length = 0;
+    const capturaPng = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    verificar(capturaPng.startsWith('data:image/png;base64,'), 'Edição direta recebe PNG');
+    verificar(textos.length === 0, 'Nomes e medidas não são enviados para a IA redesenhar');
+    await janela.endomapaAdicionarRotulos(capturaPng);
+    verificar(textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Nomes e medidas recolocados pelo editor');
     preencher(campo, '<b>Nome</b>');
     verificar(!rotulo.querySelector('b'), 'Nome tratado como texto');
     preencher(campo, '');
@@ -46,7 +61,7 @@ document.querySelector('iframe').addEventListener('load', async function () {
     verificar(rotulo.hidden, 'Apagar nome e medidas oculta rótulo');
     doc.querySelector('[data-remover-lesao]').click();
     verificar(!doc.querySelector('[data-medida-id="1"]'), 'Excluir lesão remove rótulo');
-    resultado.textContent = 'PASSOU: nomes independentes, seleção, texto seguro, captura, remoção e medidas.';
+    resultado.textContent = 'PASSOU: nomes independentes, seleção, texto seguro, capturas JPEG e PNG, rótulos recolocados, remoção e medidas.';
   } catch (erro) {
     resultado.textContent = 'FALHOU: ' + erro.message;
   }
