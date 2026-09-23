@@ -220,7 +220,7 @@ window.fetch = async (url, opcoes) => {
     const corpo = JSON.parse(opcoes.body);
     chamadas.corpos.push(corpo);
     exigir(corpo.modo_edicao_direta === true, 'Não usou edição direta');
-    exigir(corpo.versao_integracao === 'refinamento-pro-v1', 'Não informou a versão que autoriza o Pro no refinamento interno');
+    exigir(corpo.versao_integracao === 'refinamento-lite-v3', 'Não informou a versão que autoriza o retorno ao Lite no refinamento interno');
     exigir(JSON.stringify(corpo.inventario_lesoes) === JSON.stringify(inventario), 'Não enviou a lista dinâmica capturada');
     exigir(JSON.stringify(corpo.lesoes_autorizadas) === '["L1"]', 'Não autorizou automaticamente as lesões da montagem');
     exigir(!JSON.stringify(corpo.inventario_lesoes).includes('Cisto direito'), 'Enviou nome livre no inventário');
@@ -234,9 +234,9 @@ window.fetch = async (url, opcoes) => {
       if (nomeCenario === 'erro_preparo') return responder({ erro: 'Falha simulada na preparação do Gemini' }, 503);
       if (nomeCenario === 'servidor_antigo') return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
       if (nomeCenario === 'muda_preparo') buscar('.lesao-editavel').dataset.x = '60';
-      return responder({ pronto: true, versao_integracao: 'refinamento-pro-v1',
-        modelo: nomeCenario === 'modelo_divergente' ? 'gemini-3.1-flash-lite-image' : 'gemini-3-pro-image',
-        parametros: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '3:4', imageSize: nomeCenario === 'tamanho_divergente' ? '1K' : '2K' } },
+      return responder({ pronto: true, versao_integracao: 'refinamento-lite-v3',
+        modelo: nomeCenario === 'modelo_divergente' ? 'gemini-3-pro-image' : 'gemini-3.1-flash-lite-image',
+        parametros: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '3:4', imageSize: nomeCenario === 'tamanho_divergente' ? '2K' : '1K' }, thinkingConfig: { thinkingLevel: 'minimal' } },
         imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
     }
     chamadas.pagas++;
@@ -462,7 +462,7 @@ async function executarCenario() {
     exigir(JSON.stringify({ ...buscar('.lesao-editavel').dataset }) === dadosOriginais, 'Alterou os dados das lesões');
   }
   exigir(!botao.disabled, 'O botão não ficou disponível para uma nova ação explícita');
-  if (nomeCenario !== 'vazio') exigir(botao.textContent === 'Gerar mapa realista com Gemini Pro · pago', 'O botão não informa o modelo Pro e o custo');
+  if (nomeCenario !== 'vazio') exigir(botao.textContent === 'Gerar mapa realista com Gemini Lite · pago', 'O botão não informa o modelo Lite e o custo');
   exigir(!estado.textContent.includes('OpenAI'), 'A mensagem do fluxo principal atribui a resposta ao provedor anterior');
   exigir(!buscar('.editor-manual__area').inert && !buscar('[data-limpar-mapa]').disabled, 'Edição manual não foi liberada ao terminar');
   return nomeCenario + ': ' + chamadas.preparacoes + ' preparação(ões), ' + chamadas.pagas + ' geração(ões) simulada(s)';

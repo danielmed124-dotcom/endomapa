@@ -2,6 +2,22 @@
 
 Daniel autorizou a troca do botão principal para avaliação, com retorno ao modelo anterior se o resultado não funcionar. A publicação e os testes locais não geram imagens reais. A avaliação visual depende do clique explícito do usuário.
 
+## Resultado da avaliação e retorno ao Lite
+
+Daniel apresentou a montagem manual, o original do Gemini e o resultado final após testar a versão Pro. Relatou que o original inventou lesões e que o resultado final permaneceu muito semelhante à montagem. A comparação visual dos anexos desta conversa sustenta que esta tentativa não atingiu o objetivo:
+
+- No original do Gemini há novos agrupamentos escuros abaixo dos focos do útero e na parte superior do intestino, ausentes da montagem enviada.
+- O resultado final descarta esses agrupamentos externos, mas conserva uma alteração interna indevida na lesão circular à esquerda do observador: a rede avermelhada original foi substituída por áreas arredondadas separadas por faixas claras.
+- O aspecto final ainda não apresenta a integração local desejada por Daniel. A avaliação é deste exemplo; não comprova impossibilidade de todas as edições com o modelo.
+
+A revisão do código confirma a causa da proteção parcial: a montagem original fornece os pixels externos e o Gemini fornece os pixels internos nas áreas autorizadas. Nos pontos opacos da lesão, a cor do Gemini é aplicada integralmente. A proteção controla a localização, mas não verifica a fidelidade dos detalhes internos. O prompt já solicita preservar esses detalhes. Não há evidência para atribuir o problema principalmente à redução de resolução ou a uma mistura fraca no interior.
+
+Conforme a autorização de retornar ao original se a avaliação não funcionasse, a configuração do botão principal retorna ao Lite em 1K, com `thinkingLevel: "minimal"`. Esta reversão não resolve a limitação de acabamento. O prompt v5, a proteção espacial, a montagem manual e os três downloads continuam disponíveis. Nenhuma geração faz parte da reversão; não há repetição automática nem mudança de provedor, conta ou filtros.
+
+Para identificar a reversão nos registros e interromper abas Pro antes da cota/chamada, as novas versões são `gemini-lite-retorno-v1` (função) e `refinamento-lite-v3` (compatibilidade). As verificações de modelo/resolução na preparação e os testes de resposta maior são conservados. As configurações abaixo registram o histórico da avaliação; não representam a configuração após este retorno.
+
+Este registro usa os anexos e o código; não recupera registros da chamada paga. Pedido, operação, horário exato, parâmetros efetivamente enviados naquela operação e cobrança não foram verificados nesta análise. Nenhuma cobrança é inferida das imagens.
+
 ## Configuração da avaliação
 
 - Modelo: `gemini-3-pro-image`.

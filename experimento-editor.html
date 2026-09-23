@@ -170,8 +170,8 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
-        <p class="texto-apoio">Avaliação com Gemini 3 Pro Image, gerando em resolução 2K. Monte as lesões e clique uma vez para refinar sua textura, iluminação e integração ao órgão. Cada geração é paga. Compare as três imagens e confira o conteúdo das lesões e o mapa completo antes de usar.</p>
-        <button class="botao" type="button" data-gerar-final-realista>Gerar mapa realista com Gemini Pro · pago</button>
+        <p class="texto-apoio">Gemini Lite, gerando em resolução 1K. Monte as lesões e clique uma vez para refinar sua textura, iluminação e integração ao órgão. Cada geração é paga. Compare as três imagens e confira o conteúdo das lesões e o mapa completo antes de usar.</p>
+        <button class="botao" type="button" data-gerar-final-realista>Gerar mapa realista com Gemini Lite · pago</button>
         <p class="mensagem-formulario" data-estado-final-realista role="status" hidden></p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <a class="link-voltar" href="app.html">Voltar ao ditado</a>
@@ -222,11 +222,11 @@
           </figure>
           <figure class="mapa-visual" data-resultado-gemini-original hidden>
             <img data-imagem-gemini-original alt="Imagem original recebida do Gemini, antes dos ajustes do Endomapa" />
-            <figcaption>Original do Gemini Pro · para comparação<br />Sem os ajustes de preservação nem os nomes e medidas recolocados pelo Endomapa. Confira anatomia e lesões.<br /><a class="botao botao--secundario" data-baixar-gemini-original hidden>Baixar original do Gemini Pro</a></figcaption>
+            <figcaption>Original do Gemini Lite · para comparação<br />Sem os ajustes de preservação nem os nomes e medidas recolocados pelo Endomapa. Confira anatomia e lesões.<br /><a class="botao botao--secundario" data-baixar-gemini-original hidden>Baixar original do Gemini Lite</a></figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-final-realista hidden>
             <img data-imagem-final-realista alt="Montagem com refinamento localizado de textura e iluminação nas lesões para revisão médica" />
-            <figcaption>Resultado final do Endomapa<br />Refinamento local com Gemini Pro · confira o conteúdo das lesões.<br /><a class="botao botao--secundario" data-baixar-final-realista hidden>Baixar resultado final</a></figcaption>
+            <figcaption>Resultado final do Endomapa<br />Refinamento local com Gemini Lite · confira o conteúdo das lesões.<br /><a class="botao botao--secundario" data-baixar-final-realista hidden>Baixar resultado final</a></figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
@@ -267,6 +267,6 @@
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=manual-refinamento-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=gemini-pro-avaliacao-1"></script>
+    <script src="editor-manual-ia.js?v=gemini-lite-retorno-1"></script>
   </body>
 </html>
