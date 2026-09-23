@@ -1,6 +1,7 @@
 import { ENDPOINT_GEMINI, estado, reiniciar } from "./ambiente.ts";
 import "../../supabase/functions/finalizar-mapa-manual-gemini/index.ts";
 import { construirPromptEdicaoDireta, VERSAO_PROMPT_DIRETO } from "../../supabase/functions/_shared/prompt-edicao-direta-gemini.js";
+import { CATALOGO_REFINAMENTO } from "../../supabase/functions/_shared/catalogo-refinamento.js";
 
 function igual(atual: unknown, esperado: unknown, mensagem: string) {
   if (JSON.stringify(atual) !== JSON.stringify(esperado)) {
@@ -39,6 +40,26 @@ const INVENTARIO = { largura_mapa: 1, altura_mapa: 1, lesoes: [
   { id: "L3", modelo: "diu-cobre-referencia", x: 50, y: 35, largura: 5, altura: 8, giro: 0, recorte: "alfa" },
 ] };
 const PROMPT_ESPERADO = construirPromptEdicaoDireta(INVENTARIO);
+const catalogo: Record<string, { nome: string; tipo_visual: string; preservar: string; editavel: boolean }> = CATALOGO_REFINAMENTO;
+
+function conferirListaVisual(prompt: string, inventario = INVENTARIO, autorizadas?: string[]) {
+  verificar(!/\bL\d+\b/.test(prompt), "O prompt enviado contém identificadores que podem virar rótulos");
+  verificar(!prompt.includes("LESOES_AUTORIZADAS"), "A enumeração de códigos de autorização foi enviada ao modelo");
+  for (const [modelo, perfil] of Object.entries(catalogo)) {
+    verificar(!prompt.includes(modelo), `O nome de arquivo do catálogo foi enviado ao modelo: ${modelo}`);
+    verificar(!prompt.includes(perfil.nome), `O nome do botão da biblioteca foi enviado ao modelo: ${perfil.nome}`);
+  }
+  const lista = JSON.parse(prompt.split("[INÍCIO DA LISTA DINÂMICA]\n")[1].split("\n[FINAL DA LISTA DINÂMICA]")[0]);
+  const esperada = inventario.lesoes.map((lesao) => {
+    const perfil = catalogo[lesao.modelo];
+    return { x: lesao.x, y: lesao.y, largura: lesao.largura, altura: lesao.altura,
+      giro: lesao.giro, recorte: lesao.recorte, tipo_visual: perfil.tipo_visual,
+      preservar: perfil.preservar, autorizada: autorizadas ? autorizadas.includes(lesao.id) : perfil.editavel };
+  });
+  igual(lista, esperada, "Lista visual deve conservar ordem, todas as posições, perfis e autorizações sem campos internos");
+  return lista;
+}
+
 const imagemResposta = { inlineData: { mimeType: "image/png", data: PNG } };
 const respostaValida = () => Response.json({ responseId: "pedido-simulado-1", candidates: [
   { finishReason: "STOP", content: { parts: [imagemResposta] } },
@@ -85,8 +106,8 @@ teste("preparação preenche a lista real e não reserva cota nem chama Gemini",
   igual(dados.pronto, true, "Preparação concluída");
   igual(dados.prompt_visual, PROMPT_ESPERADO, "Prompt montado a partir do inventário validado");
   verificar(!dados.prompt_visual.includes("{{LESION_LIST}}"), "Lista dinâmica ficou sem preenchimento");
-  const lista = JSON.parse(dados.prompt_visual.split("[INÍCIO DA LISTA DINÂMICA]\n")[1].split("\n[FINAL DA LISTA DINÂMICA]")[0]);
-  igual(lista.map((lesao: { id: string; autorizada: boolean }) => [lesao.id, lesao.autorizada]), [["L1", true], ["L2", true], ["L3", false]], "DIU protegido e lesões autorizadas por padrão");
+  const lista = conferirListaVisual(dados.prompt_visual);
+  igual(lista.map((lesao: { autorizada: boolean }) => lesao.autorizada), [true, true, false], "DIU protegido e lesões autorizadas por padrão");
   verificar(lista.every((lesao: { tipo_visual: string; preservar: string }) => lesao.tipo_visual && lesao.preservar), "Perfil conhecido ausente da lista dinâmica");
   igual(dados.quantidade_lesoes, 3, "Quantidade de elementos capturados");
   igual(dados.quantidade_autorizadas, 2, "Quantidade autorizada sem incluir dispositivo");
@@ -195,7 +216,8 @@ teste("autorizações vazias, desconhecidas, repetidas e de dispositivo são rec
 
 teste("trocar a lista ou as autorizações depois da preparação impede a chamada", async () => {
   const hashes = await preparar();
-  for (const alteracao of [{ x: 25.1 }, { modelo: "endometrioma-referencia" }, { giro: -15 }, { recorte: "elipse" }]) {
+  for (const alteracao of [{ x: 25.1 }, { y: 50.1 }, { largura: 13.1 }, { altura: 9.85 },
+    { giro: -15 }, { recorte: "elipse" }, { modelo: "endometrioma-referencia" }]) {
     const inventario = { ...INVENTARIO, lesoes: [{ ...INVENTARIO.lesoes[0], ...alteracao }, ...INVENTARIO.lesoes.slice(1)] };
     const { status, dados } = await chamar({ ...hashes, inventario_lesoes: inventario });
     igual(status, 409, "Inventário alterado após preparar");
@@ -211,7 +233,8 @@ teste("seleção explícita produz lista e prompt idênticos na preparação e n
   const autorizadas = ["L2"];
   const preparacao = await chamar({ preparar_teste: true, lesoes_autorizadas: autorizadas });
   igual(preparacao.status, 200, "Preparação de subconjunto");
-  verificar(preparacao.dados.prompt_visual.includes('LESOES_AUTORIZADAS = ["L2"]'), "Seleção não foi incorporada ao prompt");
+  const lista = conferirListaVisual(preparacao.dados.prompt_visual, INVENTARIO, autorizadas);
+  igual(lista.map((lesao: { autorizada: boolean }) => lesao.autorizada), [false, true, false], "Seleção e DIU protegido devem ser representados por posição, sem códigos");
   igual(preparacao.dados.quantidade_autorizadas, 1, "Somente uma lesão autorizada");
   estado.responder = respostaValida;
   const resultado = await chamar({ lesoes_autorizadas: autorizadas, mapa_sha256: preparacao.dados.imagem_1.sha256,
@@ -220,6 +243,52 @@ teste("seleção explícita produz lista e prompt idênticos na preparação e n
   igual(estado.pedidos.length, 1, "Uma chamada para o subconjunto inteiro");
   const enviado = JSON.parse(String(estado.pedidos[0].opcoes?.body));
   igual(enviado.contents[0].parts[1].text, preparacao.dados.prompt_visual, "Texto realmente enviado coincide com a preparação");
+  conferirListaVisual(enviado.contents[0].parts[1].text, INVENTARIO, autorizadas);
+});
+
+teste("os 18 perfis visuais são únicos e trocar um modelo protegido altera o prompt e seu hash", async () => {
+  const perfis = Object.entries(catalogo);
+  igual(perfis.length, 18, "Todos os perfis da biblioteca participam da conferência");
+  const assinaturasVisuais = new Set(perfis.map(([, perfil]) => JSON.stringify([perfil.tipo_visual, perfil.preservar])));
+  igual(assinaturasVisuais.size, perfis.length, "Tipo visual e instrução de preservação precisam distinguir cada modelo");
+  const textos = new Set<string>();
+  const hashes = new Set<string>();
+  for (const [modelo] of perfis) {
+    const inventario = { ...INVENTARIO, lesoes: [INVENTARIO.lesoes[0], { ...INVENTARIO.lesoes[1], modelo }] };
+    const autorizadas = ["L1"];
+    const { status, dados } = await chamar({ preparar_teste: true, inventario_lesoes: inventario, lesoes_autorizadas: autorizadas });
+    igual(status, 200, `Preparação com o segundo modelo protegido: ${modelo}`);
+    const lista = conferirListaVisual(dados.prompt_visual, inventario, autorizadas);
+    igual(lista.map((lesao: { autorizada: boolean }) => lesao.autorizada), [true, false], "A lesão fixa permanece autorizada e a variante fica protegida, inclusive os DIUs");
+    verificar(!textos.has(dados.prompt_visual), `Trocar o modelo não alterou o texto: ${modelo}`);
+    verificar(!hashes.has(dados.prompt_sha256), `Trocar o modelo não alterou o hash: ${modelo}`);
+    textos.add(dados.prompt_visual);
+    hashes.add(dados.prompt_sha256);
+  }
+  igual(textos.size, 18, "Cada modelo protegido deve produzir um prompt distinto na mesma posição");
+  igual(hashes.size, 18, "Cada modelo protegido deve produzir um hash distinto na mesma posição");
+  igual(estado.reservas, 0, "A conferência dos perfis não reserva cota");
+  igual(estado.pedidos.length, 0, "A conferência dos perfis não gera imagens");
+});
+
+teste("trocar a seleção entre elementos idênticos sobrepostos altera o prompt e invalida o hash anterior", async () => {
+  const inventario = { ...INVENTARIO, lesoes: [INVENTARIO.lesoes[0], { ...INVENTARIO.lesoes[0], id: "L2" }] };
+  const primeira = await chamar({ preparar_teste: true, inventario_lesoes: inventario, lesoes_autorizadas: ["L1"] });
+  const segunda = await chamar({ preparar_teste: true, inventario_lesoes: inventario, lesoes_autorizadas: ["L2"] });
+  igual(primeira.status, 200, "Preparação do primeiro elemento sobreposto");
+  igual(segunda.status, 200, "Preparação do segundo elemento sobreposto");
+  const listaPrimeira = conferirListaVisual(primeira.dados.prompt_visual, inventario, ["L1"]);
+  const listaSegunda = conferirListaVisual(segunda.dados.prompt_visual, inventario, ["L2"]);
+  igual(listaPrimeira.map((lesao: { autorizada: boolean }) => lesao.autorizada), [true, false], "Autorização do primeiro elemento preservada pela ordem");
+  igual(listaSegunda.map((lesao: { autorizada: boolean }) => lesao.autorizada), [false, true], "Autorização do segundo elemento preservada pela ordem");
+  verificar(primeira.dados.prompt_visual !== segunda.dados.prompt_visual, "O prompt perdeu a distinção entre as autorizações sem os códigos visíveis");
+  verificar(primeira.dados.prompt_sha256 !== segunda.dados.prompt_sha256, "Autorizações diferentes de elementos idênticos precisam de hashes diferentes");
+  const resultado = await chamar({ inventario_lesoes: inventario, lesoes_autorizadas: ["L2"],
+    mapa_sha256: primeira.dados.imagem_1.sha256, prompt_sha256: primeira.dados.prompt_sha256 });
+  igual(resultado.status, 409, "A seleção invertida não pode usar o hash anterior");
+  igual(resultado.dados.estado, "entrada_invalida", "Seleção invertida recusada antes da geração");
+  igual(estado.reservas, 0, "A seleção invertida não reserva cota");
+  igual(estado.pedidos.length, 0, "A seleção invertida não chama o Gemini");
 });
 
 teste("uma geração envia somente o PNG e o prompt dinâmico preparado com o modelo configurado", async () => {
@@ -234,6 +303,7 @@ teste("uma geração envia somente o PNG e o prompt dinâmico preparado com o mo
   igual(pedido.opcoes?.method, "POST", "Método da geração");
   const corpo = JSON.parse(String(pedido.opcoes?.body));
   igual(corpo.contents, [{ parts: [{ inlineData: { mimeType: "image/png", data: PNG } }, { text: PROMPT_ESPERADO }] }], "Imagem e prompt preparado preservados");
+  conferirListaVisual(corpo.contents[0].parts[1].text);
   igual(corpo.generationConfig, { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:4", imageSize: "1K" }, thinkingConfig: { thinkingLevel: "minimal" } }, "Parâmetros configurados");
   igual(Object.keys(corpo).sort(), ["contents", "generationConfig"], "Sem instrução adicional nem alteração de safetySettings");
   igual(dados.imagem_base64, PNG, "Imagem desta resposta");

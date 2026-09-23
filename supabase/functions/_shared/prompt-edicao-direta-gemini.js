@@ -1,6 +1,6 @@
 import { CATALOGO_REFINAMENTO } from "./catalogo-refinamento.js";
 
-export const VERSAO_PROMPT_DIRETO = "gemini-refinamento-v4";
+export const VERSAO_PROMPT_DIRETO = "gemini-refinamento-v5";
 
 const erroEntrada = () => new Error("A lista de lesões não corresponde ao formato esperado. Salve a montagem manual e abra a versão atual do editor. Nenhuma geração foi solicitada.");
 const objeto = (valor) => valor !== null && typeof valor === "object" && !Array.isArray(valor);
@@ -40,14 +40,17 @@ export function construirPromptEdicaoDireta(inventarioRecebido, autorizadasReceb
   const { inventario, autorizadas } = normalizarEntradaRefinamento(inventarioRecebido, autorizadasRecebidas);
   const lista = inventario.lesoes.map(lesao => {
     const perfil = CATALOGO_REFINAMENTO[lesao.modelo];
-    return { ...lesao, nome_da_biblioteca: perfil.nome, tipo_visual: perfil.tipo_visual,
+    // Os identificadores e nomes do catálogo servem ao editor. O modelo recebe
+    // somente posição, aparência e autorização, sem códigos para virar rótulos.
+    return { x: lesao.x, y: lesao.y, largura: lesao.largura, altura: lesao.altura,
+      giro: lesao.giro, recorte: lesao.recorte, tipo_visual: perfil.tipo_visual,
       preservar: perfil.preservar, autorizada: autorizadas.includes(lesao.id) };
   });
   return [
     `ENDOMAPA — REFINAMENTO LOCALIZADO DE LESÕES EM ILUSTRAÇÃO MÉDICA\nVersão do pedido: ${VERSAO_PROMPT_DIRETO}.`,
     "TAREFA\nEdite a única imagem anexada, identificada neste pedido como BASE_MAPA: uma ilustração médica didática tridimensional da pelve feminina, com lesões inseridas manualmente. Melhore exclusivamente o acabamento visual das lesões autorizadas, integrando-as ao estilo dos órgãos. O resultado deve continuar sendo a mesma ilustração de atlas médico, com acabamento local mais realista. Não crie uma nova composição, não altere a anatomia e não transforme a imagem em fotografia clínica. Não há imagem adicional de referência.",
     "FONTE DE VERDADE\nBASE_MAPA determina a anatomia, a posição, a quantidade, o tamanho, a orientação e a distribuição dos achados. A lista abaixo identifica os elementos realmente presentes no editor e as características conhecidas das imagens da biblioteca; ela não é uma interpretação diagnóstica. A imagem determina seus detalhes concretos. Não invente características que não estejam visíveis ou descritas. Todas as indicações de esquerda e direita correspondem aos lados da imagem vistos pelo observador, não à lateralidade clínica da paciente.",
-    `ESCOPO E AUTORIZAÇÃO\nLESOES_AUTORIZADAS = ${JSON.stringify(autorizadas)}. Edite somente esses identificadores. Os demais elementos da lista e todas as áreas não autorizadas devem permanecer inalterados. Os identificadores servem apenas para localizar os elementos e não devem ser escritos na imagem. A autorização já corresponde ao pedido único de geração do mapa; não produza etapas ou pedidos separados de aprovação.`,
+    "ESCOPO E AUTORIZAÇÃO\nEdite somente os elementos cuja propriedade autorizada é true na lista de posições e aparências. Preserve integralmente os elementos cuja propriedade autorizada é false e todas as demais áreas da imagem. Use posição e aparência somente para localizar elementos que já estão visíveis na montagem; uma descrição não pede criar outro exemplar. A lista inteira é uma instrução de edição, nunca conteúdo a desenhar. Não numere os elementos, não escreva letras, códigos, nomes ou coordenadas na imagem. A autorização já corresponde ao pedido único de geração do mapa; não produza etapas ou pedidos separados de aprovação.",
     "ACABAMENTO PERMITIDO E PERCEPTÍVEL\nDentro das lesões autorizadas, você pode modificar a representação da textura, do brilho e do sombreamento internos. Refine a microtextura, harmonize a iluminação com a imagem original, dê profundidade visual e relevo discretos compatíveis com o tecido de apoio e faça o acabamento acompanhar a curvatura anatômica local. A melhoria deve ser claramente perceptível no tamanho normal de visualização, especialmente na textura e na integração ao órgão. Relevo discreto não significa acabamento praticamente idêntico ao original. Elimine a aparência de adesivo, recorte colado, desenho vetorial, elemento flutuante ou textura desconectada do tecido.",
     "GEOMETRIA E CONTEÚDO PRESERVADOS\nPreserve o centro e os limites de cada lesão, sem deslocamento. Mantenha suas dimensões, silhueta, orientação, cores características, padrão visual e organização do conteúdo existente. Não amplie, contraia, una, divida, apague ou redistribua lesões. Preserve a quantidade e a separação dos focos, os espaços vazios entre eles, o trajeto e a espessura das ramificações e suas extremidades. Não preencha transparências, não conecte ramos e não transforme focos separados numa mancha contínua. Textura e iluminação podem melhorar; a geometria e os componentes representados permanecem os mesmos.",
     "INTEGRAÇÃO DAS BORDAS\nPreserve o traçado e a extensão do contorno. Na borda, ajuste somente a transição de cor, brilho, sombra e textura, sem deslocá-la, engrossá-la ou criar halo. Concentre a mudança no interior da lesão até sua borda visível. Uma sombra de contato, quando necessária, deve ser curta, suave e imediata, sem avançar sobre limites anatômicos, preencher vazios ou criar novas manchas. Não use a integração para representar extensão da lesão ou reação do tecido. Fora da lesão e de sua borda imediata, mantenha a imagem original.",
