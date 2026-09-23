@@ -41,11 +41,33 @@
   async function executarExperimento(acao) {
     if (geracaoFinalIniciada) return;
     experimentosEmAndamento++;
+    limparComparacaoDireta();
     try {
       return await acao();
     } finally {
       experimentosEmAndamento--;
     }
+  }
+
+  function limparComparacaoDireta() {
+    document.querySelectorAll("[data-resultado-gemini-original], [data-resultado-final-realista]")
+      .forEach((painel) => { painel.hidden = true; });
+    document.querySelectorAll("[data-imagem-gemini-original], [data-imagem-final-realista]")
+      .forEach((imagem) => { imagem.removeAttribute("src"); });
+    document.querySelectorAll("[data-baixar-gemini-original], [data-baixar-montagem-comparacao], [data-baixar-final-realista]")
+      .forEach((link) => {
+        link.hidden = true;
+        link.removeAttribute("href");
+        link.removeAttribute("download");
+      });
+  }
+
+  function disponibilizarDownload(seletor, imagem, nome) {
+    const link = document.querySelector(seletor);
+    if (!link) return;
+    link.href = imagem;
+    link.download = nome;
+    link.hidden = false;
   }
 
   function montarInventario(lesoes, imagem) {
@@ -284,7 +306,10 @@
     const limparEstavaBloqueado = botaoLimpar?.disabled;
     if (botaoLimpar) botaoLimpar.disabled = true;
     const assinatura = assinaturaMapa();
+    const identificadorComparacao = new Date().toISOString().replace(/[:.]/g, "-");
     let envioPagoIniciado = false;
+    let originalGeminiDisponivel = false;
+    limparComparacaoDireta();
     resultado.querySelectorAll("[data-resultado-final-realista], [data-resultado-regioes], [data-resultado-gpt], [data-resultado-gemini], [data-resultado-mapa-api], [data-resultado-proposta-api], [data-resultado-diferenca-api], [data-resultado-gemini-detalhe], [data-resultado-mioma], [data-resultado-gpt-referencias], [data-comparacao-mioma-ampliada]")
       .forEach((painel) => { painel.hidden = true; });
     document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
@@ -312,6 +337,7 @@
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
+      disponibilizarDownload("[data-baixar-montagem-comparacao]", montagemOriginal, `endomapa-manual-${identificadorComparacao}.png`);
       resultado.hidden = false;
       mostrar(estadoFinalRealista, "O Gemini está refinando a textura e a iluminação das lesões listadas na sua montagem. O resultado será aplicado somente às áreas autorizadas e suas bordas. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
@@ -324,13 +350,24 @@
       const formato = dados.formato || "image/png";
       if (!["image/png", "image/jpeg", "image/webp"].includes(formato)) throw new Error("O Gemini retornou um formato de imagem não suportado." + operacao + suporte);
       const recebida = `data:${formato};base64,${dados.imagem_base64}`;
+      // Preserve os bytes recebidos antes de redimensionar, compor ou recolocar
+      // rótulos. O download usa a própria resposta, sem outra chamada à API.
+      await carregarImagem(recebida);
+      const imagemRecebida = document.querySelector("[data-imagem-gemini-original]");
+      if (imagemRecebida) imagemRecebida.src = recebida;
+      const extensao = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[formato];
+      disponibilizarDownload("[data-baixar-gemini-original]", recebida, `endomapa-gemini-original-${identificadorComparacao}.${extensao}`);
+      const painelRecebida = document.querySelector("[data-resultado-gemini-original]");
+      if (painelRecebida) painelRecebida.hidden = false;
+      originalGeminiDisponivel = Boolean(painelRecebida);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a geração. A proposta não foi aplicada à montagem atual." + operacao);
       const integracao = await refinarLesoes(protecao, recebida);
-      if (!integracao.pixelsInternosAlterados) throw new Error("A resposta do Gemini não trouxe refinamento no interior das lesões autorizadas. Nenhuma nova versão foi apresentada." + operacao + suporte);
+      if (!integracao.pixelsInternosAlterados) throw new Error("A resposta do Gemini não trouxe refinamento no interior das lesões autorizadas. O resultado final não foi criado." + operacao + suporte);
       const imagemFinal = await window.endomapaAdicionarRotulos(integracao.imagem);
       await carregarImagem(imagemFinal);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação do resultado. A proposta não foi aplicada à montagem atual." + operacao);
       document.querySelector("[data-imagem-final-realista]").src = imagemFinal;
+      disponibilizarDownload("[data-baixar-final-realista]", imagemFinal, `endomapa-final-${identificadorComparacao}.png`);
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -339,7 +376,8 @@
       const aviso = envioPagoIniciado
         ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."
         : " A montagem manual foi preservada.";
-      mostrar(estadoFinalRealista, (erro.message || "A geração não foi concluída.") + aviso, true);
+      const avisoOriginal = originalGeminiDisponivel ? " A imagem original do Gemini está disponível abaixo para comparação e download." : "";
+      mostrar(estadoFinalRealista, (erro.message || "A geração não foi concluída.") + aviso + avisoOriginal, true);
     } finally {
       areasEdicao.forEach(({ elemento, inerte }) => { elemento.inert = inerte; });
       if (botaoLimpar) botaoLimpar.disabled = limparEstavaBloqueado;

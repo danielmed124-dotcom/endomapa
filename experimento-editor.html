@@ -206,7 +206,7 @@
         <div class="resultado-editor-ia__grade">
           <figure class="mapa-visual">
             <img data-imagem-original alt="Montagem manual exata enviada à inteligência artificial" />
-            <figcaption>Montagem manual exata</figcaption>
+            <figcaption>Montagem manual<br /><a class="botao botao--secundario" data-baixar-montagem-comparacao hidden>Baixar montagem manual</a></figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-gemini hidden>
             <img data-imagem-realista alt="Versão realista experimental criada pelo Gemini" />
@@ -220,9 +220,13 @@
             <img data-imagem-regioes alt="Mapa completo com regiões integradas experimentalmente" />
             <figcaption data-legenda-regioes>Mapa com acabamento aprovado · revisão médica necessária</figcaption>
           </figure>
+          <figure class="mapa-visual" data-resultado-gemini-original hidden>
+            <img data-imagem-gemini-original alt="Imagem original recebida do Gemini, antes dos ajustes do Endomapa" />
+            <figcaption>Original do Gemini · para comparação<br />Sem os ajustes de preservação nem os nomes e medidas recolocados pelo Endomapa. Confira anatomia e lesões.<br /><a class="botao botao--secundario" data-baixar-gemini-original hidden>Baixar original do Gemini</a></figcaption>
+          </figure>
           <figure class="mapa-visual" data-resultado-final-realista hidden>
             <img data-imagem-final-realista alt="Montagem com refinamento localizado de textura e iluminação nas lesões para revisão médica" />
-            <figcaption>Refinamento local com Gemini · confira o conteúdo das lesões</figcaption>
+            <figcaption>Resultado final do Endomapa<br />Refinamento local com Gemini · confira o conteúdo das lesões.<br /><a class="botao botao--secundario" data-baixar-final-realista hidden>Baixar resultado final</a></figcaption>
           </figure>
           <figure class="mapa-visual" data-resultado-mapa-api hidden>
             <img data-imagem-mapa-api alt="Mapa completo experimental gerado pela OpenAI" />
@@ -263,6 +267,6 @@
     <script src="supabase-config.js"></script>
     <script src="editor-manual.js?v=manual-refinamento-1"></script>
     <script src="mapa-acabamento-aprovado.js?v=acabamento-1"></script>
-    <script src="editor-manual-ia.js?v=manual-gemini-refinamento-1"></script>
+    <script src="editor-manual-ia.js?v=gemini-comparacao-original-1"></script>
   </body>
 </html>

@@ -13,8 +13,13 @@
   <p data-estado-regioes hidden></p><p data-estado-final-realista hidden></p>
   <section data-resultado-realista hidden>
     <img data-imagem-original alt="Mapa enviado com rótulos">
+    <a data-baixar-montagem-comparacao hidden>Baixar montagem enviada</a>
+    <figure data-resultado-gemini-original hidden>
+      <img data-imagem-gemini-original alt="Imagem original devolvida pelo Gemini">
+      <a data-baixar-gemini-original hidden>Baixar original do Gemini</a>
+    </figure>
     <figure data-resultado-regioes hidden><img data-imagem-regioes alt="Outro mapa já montado"><figcaption data-legenda-regioes></figcaption></figure>
-    <figure data-resultado-final-realista hidden><img data-imagem-final-realista alt="Proposta para revisão"></figure>
+    <figure data-resultado-final-realista hidden><img data-imagem-final-realista alt="Proposta para revisão"><a data-baixar-final-realista hidden>Baixar mapa final</a></figure>
   </section>
 </div>
 <pre id="resultado">PENDENTE</pre>
@@ -32,7 +37,7 @@ window.addEventListener('unhandledrejection', (evento) => {
   if (cenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario, ok: false, relato }, '*');
 });
 const nomeCenario = new URLSearchParams(location.search).get('cenario');
-const cenarios = ['sucesso', 'so_interior', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'servidor_antigo', 'sem_imagem', 'sem_acabamento', 'mascara_invalida', 'inventario_invalido', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa'];
+const cenarios = ['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'servidor_antigo', 'sem_imagem', 'sem_acabamento', 'bytes_invalidos', 'erro_composicao', 'mascara_invalida', 'inventario_invalido', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa', 'sucesso_depois_erro'];
 const buscar = (seletor) => document.querySelector(seletor);
 const exigir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -44,10 +49,10 @@ async function esperar(condicao, mensagem) {
   }
 }
 
-function criarImagem(cor, rotulado = false, formato = 'image/png', sombra = false) {
+function criarImagem(cor, rotulado = false, formato = 'image/png', sombra = false, altura = 1448) {
   const tela = document.createElement('canvas');
   tela.width = 1086;
-  tela.height = 1448;
+  tela.height = altura;
   const contexto = tela.getContext('2d');
   contexto.fillStyle = '#fff';
   contexto.fillRect(0, 0, tela.width, tela.height);
@@ -111,9 +116,11 @@ async function adicionarRotulo(fonte) {
   return tela.toDataURL('image/png');
 }
 
-const formatoProposta = nomeCenario === 'jpeg' ? 'image/jpeg' : 'image/png';
+const formatoProposta = nomeCenario === 'jpeg' ? 'image/jpeg' : nomeCenario === 'webp' ? 'image/webp' : 'image/png';
 const captura = criarImagem('#bc8172');
-const proposta = nomeCenario === 'sem_acabamento' ? captura : criarImagem('#56171d', false, formatoProposta, nomeCenario !== 'so_interior');
+const proposta = nomeCenario === 'sem_acabamento' ? captura : nomeCenario === 'bytes_invalidos'
+  ? 'data:image/png;base64,' + btoa('Isto não contém os bytes de uma imagem PNG.')
+  : criarImagem('#56171d', false, formatoProposta, nomeCenario !== 'so_interior', nomeCenario === 'erro_composicao' ? 1086 : 1448);
 const capturaRotulada = criarImagem('#bc8172', true);
 const outroMapa = criarImagem('#467787', true);
 const mascara = criarMascara();
@@ -123,10 +130,33 @@ const inventario = { largura_mapa: 1086, altura_mapa: 1448, lesoes: [{
   largura: arredondar(130 * 100 / 1086), altura: arredondar(96 * 100 / 1448), giro: 0, recorte: 'alfa',
 }] };
 const chamadas = { preparacoes: 0, pagas: 0, acabamento: 0, capturas: [], rotulos: [], corpos: [], falhas: [], alternativas: [] };
+const seletorDownloads = '[data-baixar-gemini-original], [data-baixar-montagem-comparacao], [data-baixar-final-realista]';
+const downloads = () => [...document.querySelectorAll(seletorDownloads)];
+function conferirOriginalRemovido() {
+  exigir(buscar('[data-resultado-gemini-original]').hidden, 'A resposta anterior do Gemini ficou visível');
+  exigir(!buscar('[data-imagem-gemini-original]').getAttribute('src'), 'Conservou os bytes da resposta anterior do Gemini');
+  exigir(buscar('[data-baixar-gemini-original]').hidden && !buscar('[data-baixar-gemini-original]').getAttribute('href'), 'Conservou o download da resposta anterior do Gemini');
+}
+function conferirDownloadsRemovidos() {
+  exigir(downloads().every((link) => link.hidden && !link.getAttribute('href') && !link.getAttribute('download')), 'Conservou links de uma comparação anterior');
+}
+function conferirFinalRemovido() {
+  exigir(buscar('[data-resultado-final-realista]').hidden && !buscar('[data-imagem-final-realista]').getAttribute('src'), 'Conservou o resultado final de uma comparação anterior');
+}
 let experimentoPendente = false;
 let concluirExperimento;
 buscar('[data-mapa-manual-teste]').src = capturaRotulada;
 buscar('[data-imagem-regioes]').src = outroMapa;
+exigir(downloads().every((link) => link.hidden && !link.hasAttribute('href')), 'Os links da página precisam começar ocultos e sem endereço');
+// Simula uma comparação anterior para provar que uma tentativa aceita a remove.
+// Mapa vazio não inicia tentativa e conserva a comparação que já estava aberta.
+buscar('[data-imagem-gemini-original]').src = outroMapa;
+buscar('[data-resultado-gemini-original]').hidden = false;
+for (const link of downloads()) {
+  link.href = outroMapa;
+  link.download = 'comparacao-anterior.png';
+  link.hidden = false;
+}
 if (nomeCenario && nomeCenario !== 'vazio') {
   buscar('[data-imagem-final-realista]').src = outroMapa;
   buscar('[data-resultado-final-realista]').hidden = false;
@@ -139,6 +169,8 @@ window.endomapaCapturarMapaManual = async (opcoes = {}) => {
   throw new Error('O fluxo direto usou captura sem a proteção do desenho das lesões');
 };
 window.endomapaCapturarIntegracaoManual = async (opcoes) => {
+  conferirOriginalRemovido();
+  conferirDownloadsRemovidos();
   exigir(opcoes?.comInventario === true, 'Não solicitou a lista dinâmica da mesma captura');
   chamadas.capturas.push({ integracao: true });
   return {
@@ -180,6 +212,8 @@ window.fetch = async (url, opcoes) => {
     exigir(buscar('.editor-manual__area').inert && buscar('[data-limpar-mapa]').disabled, 'Edição manual deve aguardar o fim da geração');
     exigir(opcoes.headers.Authorization === 'Bearer sessao-simulada', 'Login não enviado');
     exigir(buscar('[data-resultado-final-realista]').hidden && !buscar('[data-imagem-final-realista]').getAttribute('src'), 'Uma proposta anterior ficou visível durante a solicitação');
+    conferirOriginalRemovido();
+    exigir(buscar('[data-baixar-final-realista]').hidden && !buscar('[data-baixar-final-realista]').getAttribute('href'), 'O download do mapa final anterior permaneceu durante a solicitação');
     if (nomeCenario === 'experimento_pendente') buscar('[data-gerar-regioes]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
     const corpo = JSON.parse(opcoes.body);
     chamadas.corpos.push(corpo);
@@ -192,6 +226,7 @@ window.fetch = async (url, opcoes) => {
     exigir(!corpo.modo_mapa_referencia && !corpo.modo_regiao, 'Enviou outro modo de geração');
     exigir(Object.keys(corpo).every((chave) => ['modo_edicao_direta', 'versao_integracao', 'preparar_teste', 'composicao_base64', 'mapa_sha256', 'prompt_sha256', 'inventario_lesoes', 'lesoes_autorizadas'].includes(chave)), 'Enviou referência ou outro parâmetro inesperado ao provedor');
     if (corpo.preparar_teste === true) {
+      conferirDownloadsRemovidos();
       chamadas.preparacoes++;
       await pausa(20);
       if (nomeCenario === 'erro_preparo') return responder({ erro: 'Falha simulada na preparação do Gemini' }, 503);
@@ -201,13 +236,14 @@ window.fetch = async (url, opcoes) => {
     }
     chamadas.pagas++;
     exigir(buscar('[data-imagem-original]').src === capturaRotulada && !buscar('[data-resultado-realista]').hidden, 'A montagem original deve estar disponível antes do envio pago');
+    exigir(!buscar('[data-baixar-montagem-comparacao]').hidden && buscar('[data-baixar-montagem-comparacao]').getAttribute('href') === capturaRotulada, 'O download manual deve corresponder à captura enviada, com os rótulos preservados');
     exigir(corpo.mapa_sha256 === 'hash-mapa-simulado' && corpo.prompt_sha256 === 'hash-prompt-simulado', 'Preparação não vinculada à geração');
     await pausa(20);
     if (nomeCenario === 'erro_rede') return Promise.reject(new TypeError('Falha de rede simulada'));
     if (nomeCenario === 'bloqueio') return responder({ erro: 'O Gemini bloqueou esta solicitação.', estado: 'bloqueado_provedor', operacao_id: 'operacao-teste' }, 422);
     if (nomeCenario === 'sem_imagem') return responder({ operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
     if (nomeCenario === 'muda_geracao') buscar('.lesao-editavel').dataset.medida1 = '30';
-    if (nomeCenario === 'erro' || (nomeCenario === 'nova_tentativa' && chamadas.pagas === 1)) {
+    if (nomeCenario === 'erro' || (nomeCenario === 'nova_tentativa' && chamadas.pagas === 1) || (nomeCenario === 'sucesso_depois_erro' && chamadas.pagas === 2)) {
       return responder({ erro: 'Falha simulada do serviço de imagens', operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' }, 502);
     }
     return responder({ imagem_base64: proposta.split(',')[1], formato: formatoProposta, operacao_id: 'operacao-teste', pedido_id: 'pedido-teste' });
@@ -249,6 +285,34 @@ async function conferirIntegracaoPreservada() {
   exigir(buscar('[data-imagem-final-realista]').src === await adicionarRotulo(semRotulos), 'A imagem protegida não recebeu os nomes e as medidas originais');
 }
 
+function conferirOriginalGemini() {
+  const link = buscar('[data-baixar-gemini-original]');
+  const extensao = { 'image/png': '.png', 'image/jpeg': '.jpg', 'image/webp': '.webp' }[formatoProposta];
+  exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-gemini-original]').hidden, 'A resposta original do Gemini não está disponível para comparação');
+  exigir(buscar('[data-imagem-gemini-original]').getAttribute('src') === proposta, 'A imagem original do Gemini foi alterada, redimensionada ou recodificada');
+  exigir(!link.hidden && link.getAttribute('href') === proposta, 'O download não preservou os bytes exatos da resposta recebida');
+  exigir(link.download.startsWith('endomapa-gemini-original-') && link.download.endsWith(extensao), 'O nome do arquivo original não identifica o conteúdo e seu formato real');
+  exigir(buscar('[data-imagem-original]').src === capturaRotulada, 'A comparação perdeu a montagem capturada no momento do envio');
+  exigir(buscar('[data-baixar-montagem-comparacao]').getAttribute('href') === capturaRotulada, 'O arquivo manual deixou de corresponder à montagem enviada');
+}
+
+function conferirDownloadFinal() {
+  const final = buscar('[data-baixar-final-realista]');
+  exigir(!final.hidden && final.getAttribute('href') === buscar('[data-imagem-final-realista]').getAttribute('src'), 'O download final não corresponde ao resultado protegido exibido');
+  exigir(final.download.startsWith('endomapa-final-') && final.download.endsWith('.png'), 'O download final não identifica o resultado PNG');
+}
+
+async function conferirDownloadsSemGeracao() {
+  const antes = JSON.stringify({ corpos: chamadas.corpos.length, alternativas: chamadas.alternativas.length, capturas: chamadas.capturas.length });
+  for (const link of downloads().filter((item) => !item.hidden)) {
+    // Executa os ouvintes do clique, impedindo apenas a gravação real do arquivo.
+    link.addEventListener('click', (evento) => evento.preventDefault(), { once: true });
+    link.click();
+  }
+  await pausa(30);
+  exigir(JSON.stringify({ corpos: chamadas.corpos.length, alternativas: chamadas.alternativas.length, capturas: chamadas.capturas.length }) === antes, 'Baixar uma imagem iniciou outra captura, solicitação ou geração');
+}
+
 async function executarCenario() {
   exigir(cenarios.includes(nomeCenario), 'Cenário desconhecido: ' + nomeCenario);
   const botao = buscar('[data-gerar-final-realista]');
@@ -267,12 +331,16 @@ async function executarCenario() {
     exigir(buscar('[data-resultado-final-realista]').hidden, 'Exibiu proposta que deveria ter sido descartada');
     exigir(!buscar('[data-imagem-final-realista]').getAttribute('src'), 'Guardou imagem descartada no resultado');
     exigir(estado.classList.contains('mensagem-formulario--erro'), 'Falha sem aviso visível');
+    if (nomeCenario !== 'vazio') exigir(buscar('[data-baixar-final-realista]').hidden && !buscar('[data-baixar-final-realista]').getAttribute('href'), 'A falha conservou o download de um resultado final anterior');
   };
 
   if (nomeCenario === 'experimento_pendente') {
     experimentoPendente = true;
     buscar('[data-gerar-regioes]').click();
     await esperar(() => typeof concluirExperimento === 'function', 'O experimento anterior não ficou pendente');
+    conferirOriginalRemovido();
+    conferirDownloadsRemovidos();
+    conferirFinalRemovido();
     await clicar();
     exigir(estado.textContent.startsWith('Aguarde'), 'O botão não avisou sobre o experimento em andamento');
     exigir(chamadas.corpos.length === 0 && chamadas.capturas.length === 0, 'Gemini iniciou enquanto o experimento ainda podia alterar a comparação');
@@ -280,6 +348,8 @@ async function executarCenario() {
     await esperar(() => !buscar('[data-gerar-regioes]').disabled, 'O experimento não terminou');
     experimentoPendente = false;
     exigir(buscar('[data-imagem-original]').src === outroMapa, 'O experimento simulado não atualizou a comparação ao terminar');
+    conferirOriginalRemovido();
+    conferirDownloadsRemovidos();
     await pausa(100);
     exigir(chamadas.corpos.length === 0, 'Gemini iniciou automaticamente após terminar o experimento');
   }
@@ -291,14 +361,24 @@ async function executarCenario() {
     exigir(chamadas.pagas === 1, 'Repetiu automaticamente após falha');
     await clicar();
   }
+  if (nomeCenario === 'sucesso_depois_erro') {
+    exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'O primeiro sucesso fez chamadas extras');
+    conferirOriginalGemini();
+    conferirDownloadFinal();
+    await conferirIntegracaoPreservada();
+    await conferirDownloadsSemGeracao();
+    await clicar();
+    exigir(chamadas.preparacoes === 2 && chamadas.pagas === 2, 'A nova tentativa não corresponde a um único clique explícito');
+  }
 
-  if (['sucesso', 'so_interior', 'jpeg', 'clique_duplicado', 'experimento_pendente', 'nova_tentativa'].includes(nomeCenario)) {
+  if (['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa'].includes(nomeCenario)) {
     const total = nomeCenario === 'nova_tentativa' ? 2 : 1;
     exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade incorreta de preparações ou gerações');
     exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-final-realista]').hidden, 'Resultado não exibido');
     exigir(buscar('[data-imagem-original]').src === capturaRotulada, 'A comparação não mostra a captura original com rótulos');
     exigir(chamadas.rotulos.includes(captura), 'Faltou reaplicar nomes e medidas à montagem original');
     await conferirIntegracaoPreservada();
+    conferirDownloadFinal();
     exigir(!estado.classList.contains('mensagem-formulario--erro'), 'Sucesso apresentado como falha');
     exigir(estado.textContent.includes('Gemini'), 'O resultado não identifica o provedor usado');
   } else {
@@ -316,21 +396,56 @@ async function executarCenario() {
     } else if (['erro_preparo', 'servidor_antigo'].includes(nomeCenario)) {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após erro na preparação');
     } else {
-      exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'Quantidade inesperada de chamadas na falha');
+      const total = nomeCenario === 'sucesso_depois_erro' ? 2 : 1;
+      exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade inesperada de chamadas na falha');
       if (nomeCenario === 'muda_geracao') exigir(buscar('.lesao-editavel').dataset.medida1 === '30', 'Desfez a medida alterada pelo médico');
       if (nomeCenario === 'sem_acabamento') {
         exigir(/refinamento/i.test(estado.textContent), 'Não avisou que o Gemini não forneceu refinamento aproveitável');
         exigir(!chamadas.rotulos.some((imagem) => imagem !== captura), 'Preparou um resultado novo sem acabamento aproveitável');
       }
+      if (nomeCenario === 'erro_composicao') exigir(/enquadramento/i.test(estado.textContent), 'Não informou por que a resposta válida não pôde ser composta');
     }
   }
 
+  if (['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa', 'sem_acabamento', 'erro_composicao', 'muda_geracao'].includes(nomeCenario)) {
+    conferirOriginalGemini();
+  } else if (nomeCenario === 'vazio') {
+    exigir(!buscar('[data-resultado-gemini-original]').hidden && buscar('[data-imagem-gemini-original]').src === outroMapa, 'O aviso de mapa vazio apagou uma comparação sem iniciar tentativa');
+    exigir(downloads().every((link) => !link.hidden && link.getAttribute('href') === outroMapa), 'O aviso de mapa vazio apagou os downloads de uma comparação anterior');
+  } else {
+    conferirOriginalRemovido();
+  }
+  if (nomeCenario !== 'vazio') {
+    const manual = buscar('[data-baixar-montagem-comparacao]');
+    if (chamadas.pagas > 0) {
+      exigir(!manual.hidden && manual.getAttribute('href') === capturaRotulada && manual.download.endsWith('.png'), 'Perdeu a montagem enviada depois da resposta ou falha');
+    } else {
+      conferirDownloadsRemovidos();
+    }
+  }
+  await conferirDownloadsSemGeracao();
+  if (nomeCenario === 'experimento_depois_sucesso') {
+    experimentoPendente = true;
+    buscar('[data-gerar-regioes]').click();
+    await esperar(() => typeof concluirExperimento === 'function', 'O experimento não iniciou após a comparação concluída');
+    conferirOriginalRemovido();
+    conferirDownloadsRemovidos();
+    conferirFinalRemovido();
+    concluirExperimento({ imagem: outroMapa, semExemplo: [] });
+    await esperar(() => !buscar('[data-gerar-regioes]').disabled, 'O experimento após o sucesso não terminou');
+    experimentoPendente = false;
+    exigir(buscar('[data-imagem-original]').src === outroMapa, 'O experimento não atualizou a montagem da comparação');
+    conferirOriginalRemovido();
+    conferirDownloadsRemovidos();
+    conferirFinalRemovido();
+    exigir(chamadas.preparacoes === 1 && chamadas.pagas === 1, 'O experimento repetiu a geração direta');
+  }
   const totalChamadas = chamadas.corpos.length;
   await pausa(100);
   exigir(chamadas.corpos.length === totalChamadas, 'Houve repetição automática');
   exigir(chamadas.falhas.length === 0, chamadas.falhas.join('; '));
   exigir(chamadas.alternativas.length === 0, 'Tentou outra chamada, provedor ou recuperar resultado antigo');
-  exigir(chamadas.acabamento === (nomeCenario === 'experimento_pendente' ? 1 : 0), 'Iniciou acabamento durante o fluxo direto');
+  exigir(chamadas.acabamento === (['experimento_pendente', 'experimento_depois_sucesso'].includes(nomeCenario) ? 1 : 0), 'Iniciou acabamento durante o fluxo direto');
   exigir(buscar('[data-mapa-manual-teste]').src === capturaRotulada, 'Substituiu o mapa manual');
   exigir(buscar('[data-imagem-regioes]').src === outroMapa, 'Substituiu outro resultado já montado');
   if (dadosOriginais && !nomeCenario.startsWith('muda_')) {
