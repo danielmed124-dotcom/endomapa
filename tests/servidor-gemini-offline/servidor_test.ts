@@ -40,6 +40,7 @@ const INVENTARIO = { largura_mapa: 1, altura_mapa: 1, lesoes: [
   { id: "L3", modelo: "diu-cobre-referencia", x: 50, y: 35, largura: 5, altura: 8, giro: 0, recorte: "alfa" },
 ] };
 const PROMPT_ESPERADO = construirPromptEdicaoDireta(INVENTARIO);
+const CONFIGURACAO_PRO = { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:4", imageSize: "2K" } };
 const catalogo: Record<string, { nome: string; tipo_visual: string; preservar: string; editavel: boolean }> = CATALOGO_REFINAMENTO;
 
 function conferirListaVisual(prompt: string, inventario = INVENTARIO, autorizadas?: string[]) {
@@ -70,7 +71,7 @@ async function chamar(corpo: Record<string, unknown>) {
   const resposta = await estado.handler(new Request("https://endomapa-teste.invalid/funcao", {
     method: "POST",
     headers: { Origin: "https://endomapa.pages.dev", Authorization: "Bearer sessao-sintetica", "Content-Type": "application/json" },
-    body: JSON.stringify({ modo_edicao_direta: true, versao_integracao: "refinamento-v2", composicao_base64: PNG, inventario_lesoes: INVENTARIO, ...corpo }),
+    body: JSON.stringify({ modo_edicao_direta: true, versao_integracao: "refinamento-pro-v1", composicao_base64: PNG, inventario_lesoes: INVENTARIO, ...corpo }),
   }));
   return { status: resposta.status, dados: await resposta.json() };
 }
@@ -83,10 +84,10 @@ function conferirMetadados(dados: Record<string, unknown>, tentativas: number) {
   verificar(typeof dados.operacao_id === "string" && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/.test(dados.operacao_id), "Identificador de operação ausente");
   verificar(typeof dados.horario_utc === "string" && /Z$/.test(dados.horario_utc) && !Number.isNaN(Date.parse(dados.horario_utc)), "Horário UTC ausente");
   igual(dados.tentativas_envio_imagem, tentativas, "Quantidade de envios");
-  igual(dados.versao_funcao, "gemini-refinamento-v3", "Versão da função");
-  igual(dados.versao_integracao, "refinamento-v2", "Versão de compatibilidade da integração local");
+  igual(dados.versao_funcao, "gemini-pro-avaliacao-v1", "Versão da função");
+  igual(dados.versao_integracao, "refinamento-pro-v1", "Versão de compatibilidade da integração local");
   igual(dados.versao_prompt, VERSAO_PROMPT_DIRETO, "Versão do prompt");
-  igual(dados.modelo, "gemini-3.1-flash-lite-image", "Modelo configurado");
+  igual(dados.modelo, "gemini-3-pro-image", "Modelo configurado");
   igual(dados.endpoint, ENDPOINT_GEMINI, "Endpoint configurado");
 }
 function teste(nome: string, executar: () => Promise<void>) {
@@ -104,6 +105,7 @@ teste("preparação preenche a lista real e não reserva cota nem chama Gemini",
   const { status, dados } = await chamar({ preparar_teste: true });
   igual(status, 200, "Status da preparação");
   igual(dados.pronto, true, "Preparação concluída");
+  igual(dados.parametros, CONFIGURACAO_PRO, "Preparação deve anunciar Pro 2K e deixar o raciocínio no padrão do modelo");
   igual(dados.prompt_visual, PROMPT_ESPERADO, "Prompt montado a partir do inventário validado");
   verificar(!dados.prompt_visual.includes("{{LESION_LIST}}"), "Lista dinâmica ficou sem preenchimento");
   const lista = conferirListaVisual(dados.prompt_visual);
@@ -122,7 +124,7 @@ teste("preparação preenche a lista real e não reserva cota nem chama Gemini",
 
 teste("editor antigo é recusado na preparação e no envio antes de cota ou chamada", async () => {
   const hashes = await preparar();
-  for (const versao of [undefined, "contato-v1", "contato-desatualizado"]) {
+  for (const versao of [undefined, "contato-v1", "contato-desatualizado", "refinamento-v2"]) {
     for (const prepararTeste of [true, false]) {
       const { status, dados } = await chamar({ ...hashes, preparar_teste: prepararTeste, versao_integracao: versao });
       igual(status, 409, "Versão ausente ou incompatível");
@@ -299,12 +301,12 @@ teste("uma geração envia somente o PNG e o prompt dinâmico preparado com o mo
   igual(estado.reservas, 1, "Reserva única");
   igual(estado.pedidos.length, 1, "Envio único");
   const pedido = estado.pedidos[0];
-  igual(pedido.url, ENDPOINT_GEMINI, "Modelo e endpoint permanecem configurados");
+  igual(pedido.url, ENDPOINT_GEMINI, "Geração direta deve usar o endpoint Pro autorizado");
   igual(pedido.opcoes?.method, "POST", "Método da geração");
   const corpo = JSON.parse(String(pedido.opcoes?.body));
   igual(corpo.contents, [{ parts: [{ inlineData: { mimeType: "image/png", data: PNG } }, { text: PROMPT_ESPERADO }] }], "Imagem e prompt preparado preservados");
   conferirListaVisual(corpo.contents[0].parts[1].text);
-  igual(corpo.generationConfig, { responseModalities: ["IMAGE"], imageConfig: { aspectRatio: "3:4", imageSize: "1K" }, thinkingConfig: { thinkingLevel: "minimal" } }, "Parâmetros configurados");
+  igual(corpo.generationConfig, CONFIGURACAO_PRO, "Configuração Pro 2K, sem herdar thinkingConfig minimal do Lite");
   igual(Object.keys(corpo).sort(), ["contents", "generationConfig"], "Sem instrução adicional nem alteração de safetySettings");
   igual(dados.imagem_base64, PNG, "Imagem desta resposta");
   igual(dados.formato, "image/png", "Formato da resposta");
@@ -313,7 +315,9 @@ teste("uma geração envia somente o PNG e o prompt dinâmico preparado com o mo
   conferirMetadados(dados, 1);
   igual(estado.registros.map(item => item.etapa), ["pedido_enviado", "imagem_recebida"], "Etapas registradas");
   verificar(estado.registros.every(item => item.operacao_id === dados.operacao_id), "Logs não correspondem à operação");
-  verificar(estado.registros.every(item => item.versao_integracao === "refinamento-v2"), "Logs precisam registrar a compatibilidade da composição local");
+  verificar(estado.registros.every(item => item.versao_integracao === "refinamento-pro-v1"), "Logs precisam registrar a compatibilidade da composição local");
+  verificar(estado.registros.every(item => item.modelo === "gemini-3-pro-image" && item.endpoint === ENDPOINT_GEMINI), "Logs precisam identificar o modelo Pro efetivamente selecionado");
+  igual(estado.registros[0].parametros, CONFIGURACAO_PRO, "Registro deve conservar a configuração Pro enviada");
   igual(estado.registros[0].quantidade_lesoes, 3, "Registro da quantidade de elementos");
   igual(estado.registros[0].quantidade_autorizadas, 2, "Registro da quantidade autorizada");
   verificar(!JSON.stringify(estado.registros).includes(PNG) && !JSON.stringify(estado.registros).includes("nome_da_biblioteca"), "Logs não devem guardar imagem nem inventário completo");
@@ -348,6 +352,20 @@ teste("resposta 429 é apresentada sem repetir a chamada", async () => {
   igual(estado.reservas, 1, "Reserva única após 429");
   verificar(!JSON.stringify(dados).includes("mensagem livre"), "Texto livre vazou no diagnóstico");
   verificar(!("imagem_base64" in dados) && !("imagem_url" in dados), "Erro devolveu uma imagem");
+  conferirMetadados(dados, 1);
+});
+
+teste("Pro indisponível informa falha sem voltar ao Lite nem repetir a geração", async () => {
+  const hashes = await preparar();
+  estado.responder = () => Response.json({ error: { code: 404, status: "NOT_FOUND", message: "modelo indisponível nesta conta simulada" } }, { status: 404 });
+  const { status, dados } = await chamar(hashes);
+  igual(status, 502, "Falha do modelo indisponível");
+  igual(dados.error_code, 404, "Código original da indisponibilidade");
+  igual(dados.error_type, "NOT_FOUND", "Tipo original da indisponibilidade");
+  igual(estado.pedidos.length, 1, "Não deve tentar outro modelo automaticamente");
+  igual(estado.pedidos[0].url, ENDPOINT_GEMINI, "Única tentativa deve continuar identificada como Pro");
+  igual(estado.reservas, 1, "Indisponibilidade não deve criar outra reserva");
+  verificar(!("imagem_base64" in dados) && !("imagem_url" in dados), "Indisponibilidade não pode apresentar resultado antigo");
   conferirMetadados(dados, 1);
 });
 

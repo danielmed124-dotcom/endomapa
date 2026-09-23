@@ -1,5 +1,5 @@
 // Testes inteiramente locais. Nenhuma função real de rede ou ambiente é preservada.
-export const ENDPOINT_GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-image:generateContent";
+export const ENDPOINT_GEMINI = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent";
 
 type Handler = (req: Request) => Promise<Response>;
 type RespostaSimulada = () => Response | Promise<Response>;

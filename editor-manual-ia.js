@@ -296,7 +296,7 @@
     geracaoFinalIniciada = true;
     botaoFinalRealista.disabled = true;
     botaoFinalRealista.setAttribute("aria-busy", "true");
-    botaoFinalRealista.textContent = "Gerando com Gemini…";
+    botaoFinalRealista.textContent = "Gerando com Gemini Pro…";
     const alternarControles = document.querySelector("[data-alternar-controles]");
     if (alternarControles?.getAttribute("aria-expanded") === "true") alternarControles.click();
     const areasEdicao = [...document.querySelectorAll(".biblioteca-lesoes, .editor-manual__area, [data-controles-lesao], .editor-manual__experimentos")]
@@ -313,7 +313,7 @@
     resultado.querySelectorAll("[data-resultado-final-realista], [data-resultado-regioes], [data-resultado-gpt], [data-resultado-gemini], [data-resultado-mapa-api], [data-resultado-proposta-api], [data-resultado-diferenca-api], [data-resultado-gemini-detalhe], [data-resultado-mioma], [data-resultado-gpt-referencias], [data-comparacao-mioma-ampliada]")
       .forEach((painel) => { painel.hidden = true; });
     document.querySelector("[data-imagem-final-realista]").removeAttribute("src");
-    mostrar(estadoFinalRealista, "Preparando a sua montagem manual para gerar o mapa realista com Gemini…", false);
+    mostrar(estadoFinalRealista, "Preparando a sua montagem manual para avaliar o Gemini Pro em 2K…", false);
     try {
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
       if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa. Nenhuma geração foi solicitada.");
@@ -328,18 +328,21 @@
       const montagemOriginal = await window.endomapaAdicionarRotulos(composicao);
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou durante a preparação. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
       const base64 = composicao.split(",")[1];
-      const entrada = { modo_edicao_direta: true, versao_integracao: "refinamento-v2", composicao_base64: base64,
+      const entrada = { modo_edicao_direta: true, versao_integracao: "refinamento-pro-v1", composicao_base64: base64,
         inventario_lesoes: captura.inventario, lesoes_autorizadas: protecao.autorizadas };
       const preflight = await chamarFuncaoUmaVez({ ...entrada, preparar_teste: true }, sessao.session, "finalizar-mapa-manual-gemini");
       if (!preflight.resposta.ok || !preflight.dados?.pronto) throw new Error(preflight.dados?.erro || "Não foi possível preparar a chamada. Nenhuma geração foi solicitada.");
-      if (preflight.dados.versao_integracao !== "refinamento-v2") throw new Error("O servidor ainda não confirmou o refinamento localizado das lesões. Nenhuma geração foi solicitada.");
+      if (preflight.dados.versao_integracao !== "refinamento-pro-v1" ||
+          preflight.dados.modelo !== "gemini-3-pro-image" || preflight.dados.parametros?.imageConfig?.imageSize !== "2K") {
+        throw new Error("O servidor ainda não confirmou o Gemini Pro em 2K desta avaliação. Salve a montagem antes de abrir a versão atual do editor. Nenhuma geração foi solicitada.");
+      }
       if (assinatura !== assinaturaMapa()) throw new Error("O mapa mudou antes do envio. Clique novamente para enviar a montagem atual. Nenhuma geração foi solicitada.");
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
       disponibilizarDownload("[data-baixar-montagem-comparacao]", montagemOriginal, `endomapa-manual-${identificadorComparacao}.png`);
       resultado.hidden = false;
-      mostrar(estadoFinalRealista, "O Gemini está refinando a textura e a iluminação das lesões listadas na sua montagem. O resultado será aplicado somente às áreas autorizadas e suas bordas. Aguarde para editar novamente; esta geração é paga.", false);
+      mostrar(estadoFinalRealista, "O Gemini Pro está gerando em 2K para esta avaliação. O resultado será aplicado somente às áreas autorizadas e suas bordas. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
       const { resposta, dados } = await chamarFuncaoUmaVez({ ...entrada,
         mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session, "finalizar-mapa-manual-gemini");
@@ -371,7 +374,7 @@
       document.querySelector("[data-resultado-final-realista]").hidden = false;
       resultado.hidden = false;
       resultado.scrollIntoView({ behavior: "smooth", block: "start" });
-      mostrar(estadoFinalRealista, "Refinamento local com Gemini pronto para revisão. Confira o conteúdo, a aparência e a quantidade dos focos nas lesões. As mudanças foram limitadas às áreas autorizadas e suas bordas. Um novo clique solicita outra geração paga.", false);
+      mostrar(estadoFinalRealista, "Refinamento local com Gemini Pro pronto para avaliação. Compare a montagem manual, o original do Gemini e o resultado final. Confira conteúdo, aparência e quantidade dos focos. Um novo clique solicita outra geração paga.", false);
     } catch (erro) {
       const aviso = envioPagoIniciado
         ? " A montagem manual foi preservada. Não haverá repetição automática; um novo clique poderá gerar outra cobrança."
@@ -384,7 +387,7 @@
       geracaoFinalIniciada = false;
       botaoFinalRealista.disabled = false;
       botaoFinalRealista.removeAttribute("aria-busy");
-      botaoFinalRealista.textContent = "Gerar mapa realista com Gemini · pago";
+      botaoFinalRealista.textContent = "Gerar mapa realista com Gemini Pro · pago";
     }
   }
 

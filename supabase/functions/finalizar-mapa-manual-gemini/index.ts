@@ -9,12 +9,16 @@ const ORIGENS = new Set([
 const LIMITE_MS = 120_000;
 const MODELO = "gemini-3.1-flash-lite-image";
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO}:generateContent`;
-const VERSAO_FUNCAO = "gemini-refinamento-v3";
-const VERSAO_INTEGRACAO = "refinamento-v2";
+// Avaliação autorizada somente no botão principal. Experimentos antigos
+// conservam o Lite; nenhuma falha dispara troca ou nova chamada automática.
+const MODELO_DIRETO = "gemini-3-pro-image";
+const ENDPOINT_DIRETO = `https://generativelanguage.googleapis.com/v1beta/models/${MODELO_DIRETO}:generateContent`;
+const VERSAO_FUNCAO = "gemini-pro-avaliacao-v1";
+const VERSAO_INTEGRACAO = "refinamento-pro-v1";
 const CONFIGURACAO_DIRETA = {
   responseModalities: ["IMAGE"],
-  imageConfig: { aspectRatio: "3:4", imageSize: "1K" },
-  thinkingConfig: { thinkingLevel: "minimal" },
+  imageConfig: { aspectRatio: "3:4", imageSize: "2K" },
+  // O Pro usa seu raciocínio padrão; "minimal" pertence à configuração Lite.
 };
 const corsBase = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -57,7 +61,8 @@ Deno.serve(async (req) => {
   const metadados = () => ({ operacao_id: operacaoId, horario_utc: new Date().toISOString(),
     versao_funcao: VERSAO_FUNCAO, versao_prompt: modoDireto ? VERSAO_PROMPT_DIRETO : "legado",
     ...(modoDireto ? { versao_integracao: VERSAO_INTEGRACAO } : {}),
-    modelo: MODELO, endpoint: ENDPOINT, tentativas_envio_imagem: tentativasEnvioImagem });
+    modelo: modoDireto ? MODELO_DIRETO : MODELO, endpoint: modoDireto ? ENDPOINT_DIRETO : ENDPOINT,
+    tentativas_envio_imagem: tentativasEnvioImagem });
   const responder = (corpo: Record<string, unknown>, status = 200) => responderComOrigem({ ...corpo, ...metadados() }, status, origem);
   const registrar = (etapa: string, dados: Record<string, unknown> = {}) => console.info(JSON.stringify({ ...metadados(), etapa, ...dados }));
   if (req.method === "OPTIONS") return origem && ORIGENS.has(origem) ? new Response("ok", { headers: cabecalhos(origem) }) : responder({ erro: "Origem não autorizada." }, 403);
@@ -191,7 +196,7 @@ Deno.serve(async (req) => {
     tentativasEnvioImagem = 1;
     if (modoDireto) registrar("pedido_enviado", { tentativa: 1, ...hashesDiretos, parametros: CONFIGURACAO_DIRETA,
       quantidade_lesoes: quantidadeLesoesDiretas, quantidade_autorizadas: quantidadeAutorizadasDiretas });
-    const resposta = await fetch(ENDPOINT, {
+    const resposta = await fetch(modoDireto ? ENDPOINT_DIRETO : ENDPOINT, {
       method: "POST", signal: controlador.signal,
       headers: { "x-goog-api-key": chave, "Content-Type": "application/json" },
       body: JSON.stringify({

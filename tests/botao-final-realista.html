@@ -37,7 +37,7 @@ window.addEventListener('unhandledrejection', (evento) => {
   if (cenario) parent.postMessage({ tipo: 'teste-mapa-final', cenario, ok: false, relato }, '*');
 });
 const nomeCenario = new URLSearchParams(location.search).get('cenario');
-const cenarios = ['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'servidor_antigo', 'sem_imagem', 'sem_acabamento', 'bytes_invalidos', 'erro_composicao', 'mascara_invalida', 'inventario_invalido', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa', 'sucesso_depois_erro'];
+const cenarios = ['sucesso', 'resposta_maior', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'erro', 'bloqueio', 'erro_rede', 'erro_preparo', 'servidor_antigo', 'modelo_divergente', 'tamanho_divergente', 'sem_imagem', 'sem_acabamento', 'bytes_invalidos', 'erro_composicao', 'mascara_invalida', 'inventario_invalido', 'vazio', 'sem_login', 'muda_preparo', 'muda_geracao', 'nova_tentativa', 'sucesso_depois_erro'];
 const buscar = (seletor) => document.querySelector(seletor);
 const exigir = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
 const pausa = (ms) => new Promise((resolver) => setTimeout(resolver, ms));
@@ -49,13 +49,15 @@ async function esperar(condicao, mensagem) {
   }
 }
 
-function criarImagem(cor, rotulado = false, formato = 'image/png', sombra = false, altura = 1448) {
+function criarImagem(cor, rotulado = false, formato = 'image/png', sombra = false, altura = 1448, largura = 1086) {
   const tela = document.createElement('canvas');
-  tela.width = 1086;
+  tela.width = largura;
   tela.height = altura;
   const contexto = tela.getContext('2d');
   contexto.fillStyle = '#fff';
   contexto.fillRect(0, 0, tela.width, tela.height);
+  // Resposta maior conserva a mesma geometria relativa da montagem sintética.
+  if (largura !== 1086) contexto.scale(largura / 1086, altura / 1448);
   if (sombra) {
     contexto.strokeStyle = '#a98f81';
     contexto.lineWidth = 16;
@@ -120,7 +122,7 @@ const formatoProposta = nomeCenario === 'jpeg' ? 'image/jpeg' : nomeCenario === 
 const captura = criarImagem('#bc8172');
 const proposta = nomeCenario === 'sem_acabamento' ? captura : nomeCenario === 'bytes_invalidos'
   ? 'data:image/png;base64,' + btoa('Isto não contém os bytes de uma imagem PNG.')
-  : criarImagem('#56171d', false, formatoProposta, nomeCenario !== 'so_interior', nomeCenario === 'erro_composicao' ? 1086 : 1448);
+  : criarImagem('#56171d', false, formatoProposta, nomeCenario !== 'so_interior', nomeCenario === 'erro_composicao' ? 1086 : nomeCenario === 'resposta_maior' ? 2400 : 1448, nomeCenario === 'resposta_maior' ? 1792 : 1086);
 const capturaRotulada = criarImagem('#bc8172', true);
 const outroMapa = criarImagem('#467787', true);
 const mascara = criarMascara();
@@ -218,7 +220,7 @@ window.fetch = async (url, opcoes) => {
     const corpo = JSON.parse(opcoes.body);
     chamadas.corpos.push(corpo);
     exigir(corpo.modo_edicao_direta === true, 'Não usou edição direta');
-    exigir(corpo.versao_integracao === 'refinamento-v2', 'Não informou a versão do refinamento interno');
+    exigir(corpo.versao_integracao === 'refinamento-pro-v1', 'Não informou a versão que autoriza o Pro no refinamento interno');
     exigir(JSON.stringify(corpo.inventario_lesoes) === JSON.stringify(inventario), 'Não enviou a lista dinâmica capturada');
     exigir(JSON.stringify(corpo.lesoes_autorizadas) === '["L1"]', 'Não autorizou automaticamente as lesões da montagem');
     exigir(!JSON.stringify(corpo.inventario_lesoes).includes('Cisto direito'), 'Enviou nome livre no inventário');
@@ -232,7 +234,10 @@ window.fetch = async (url, opcoes) => {
       if (nomeCenario === 'erro_preparo') return responder({ erro: 'Falha simulada na preparação do Gemini' }, 503);
       if (nomeCenario === 'servidor_antigo') return responder({ pronto: true, imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
       if (nomeCenario === 'muda_preparo') buscar('.lesao-editavel').dataset.x = '60';
-      return responder({ pronto: true, versao_integracao: 'refinamento-v2', imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
+      return responder({ pronto: true, versao_integracao: 'refinamento-pro-v1',
+        modelo: nomeCenario === 'modelo_divergente' ? 'gemini-3.1-flash-lite-image' : 'gemini-3-pro-image',
+        parametros: { responseModalities: ['IMAGE'], imageConfig: { aspectRatio: '3:4', imageSize: nomeCenario === 'tamanho_divergente' ? '1K' : '2K' } },
+        imagem_1: { sha256: 'hash-mapa-simulado' }, prompt_sha256: 'hash-prompt-simulado' });
     }
     chamadas.pagas++;
     exigir(buscar('[data-imagem-original]').src === capturaRotulada && !buscar('[data-resultado-realista]').hidden, 'A montagem original deve estar disponível antes do envio pago');
@@ -260,9 +265,14 @@ async function conferirIntegracaoPreservada() {
   exigir(semRotulos !== captura && semRotulos !== proposta, 'O resultado deve ser a integração protegida, sem reapresentar a entrada nem copiar a proposta integral');
   const [base, final, gerada] = await Promise.all([telaDaImagem(captura), telaDaImagem(semRotulos), telaDaImagem(proposta)]);
   exigir(final.width === base.width && final.height === base.height, 'A integração mudou as dimensões originais');
+  if (nomeCenario === 'resposta_maior') exigir(gerada.width === 1792 && gerada.height === 2400, 'A comparação original perdeu a resolução recebida do provedor');
+  const geradaNaMontagem = document.createElement('canvas');
+  geradaNaMontagem.width = base.width;
+  geradaNaMontagem.height = base.height;
+  geradaNaMontagem.getContext('2d').drawImage(gerada, 0, 0, base.width, base.height);
   const antes = base.getContext('2d').getImageData(0, 0, base.width, base.height).data;
   const depois = final.getContext('2d').getImageData(0, 0, final.width, final.height).data;
-  const esperado = gerada.getContext('2d').getImageData(0, 0, gerada.width, gerada.height).data;
+  const esperado = geradaNaMontagem.getContext('2d').getImageData(0, 0, base.width, base.height).data;
   let alterados = 0, internos = 0;
   for (let y = 0; y < base.height; y++) {
     for (let x = 0; x < base.width; x++) {
@@ -371,7 +381,7 @@ async function executarCenario() {
     exigir(chamadas.preparacoes === 2 && chamadas.pagas === 2, 'A nova tentativa não corresponde a um único clique explícito');
   }
 
-  if (['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa'].includes(nomeCenario)) {
+  if (['sucesso', 'resposta_maior', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa'].includes(nomeCenario)) {
     const total = nomeCenario === 'nova_tentativa' ? 2 : 1;
     exigir(chamadas.preparacoes === total && chamadas.pagas === total, 'Quantidade incorreta de preparações ou gerações');
     exigir(!buscar('[data-resultado-realista]').hidden && !buscar('[data-resultado-final-realista]').hidden, 'Resultado não exibido');
@@ -393,7 +403,7 @@ async function executarCenario() {
     } else if (nomeCenario === 'muda_preparo') {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após mudança no preparo');
       exigir(buscar('.lesao-editavel').dataset.x === '60', 'Desfez a alteração do médico durante o preparo');
-    } else if (['erro_preparo', 'servidor_antigo'].includes(nomeCenario)) {
+    } else if (['erro_preparo', 'servidor_antigo', 'modelo_divergente', 'tamanho_divergente'].includes(nomeCenario)) {
       exigir(chamadas.preparacoes === 1 && chamadas.pagas === 0, 'Enviou geração paga após erro na preparação');
     } else {
       const total = nomeCenario === 'sucesso_depois_erro' ? 2 : 1;
@@ -407,7 +417,7 @@ async function executarCenario() {
     }
   }
 
-  if (['sucesso', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa', 'sem_acabamento', 'erro_composicao', 'muda_geracao'].includes(nomeCenario)) {
+  if (['sucesso', 'resposta_maior', 'so_interior', 'jpeg', 'webp', 'clique_duplicado', 'experimento_pendente', 'experimento_depois_sucesso', 'nova_tentativa', 'sem_acabamento', 'erro_composicao', 'muda_geracao'].includes(nomeCenario)) {
     conferirOriginalGemini();
   } else if (nomeCenario === 'vazio') {
     exigir(!buscar('[data-resultado-gemini-original]').hidden && buscar('[data-imagem-gemini-original]').src === outroMapa, 'O aviso de mapa vazio apagou uma comparação sem iniciar tentativa');
@@ -452,7 +462,7 @@ async function executarCenario() {
     exigir(JSON.stringify({ ...buscar('.lesao-editavel').dataset }) === dadosOriginais, 'Alterou os dados das lesões');
   }
   exigir(!botao.disabled, 'O botão não ficou disponível para uma nova ação explícita');
-  if (nomeCenario !== 'vazio') exigir(botao.textContent === 'Gerar mapa realista com Gemini · pago', 'O botão não informa o provedor e o custo');
+  if (nomeCenario !== 'vazio') exigir(botao.textContent === 'Gerar mapa realista com Gemini Pro · pago', 'O botão não informa o modelo Pro e o custo');
   exigir(!estado.textContent.includes('OpenAI'), 'A mensagem do fluxo principal atribui a resposta ao provedor anterior');
   exigir(!buscar('.editor-manual__area').inert && !buscar('[data-limpar-mapa]').disabled, 'Edição manual não foi liberada ao terminar');
   return nomeCenario + ': ' + chamadas.preparacoes + ' preparação(ões), ' + chamadas.pagas + ' geração(ões) simulada(s)';
