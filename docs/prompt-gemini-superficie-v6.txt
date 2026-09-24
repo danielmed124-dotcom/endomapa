@@ -1,0 +1,45 @@
+PROMPT ENDOMAPA — gemini-superficie-v6
+
+Este arquivo apresenta o texto-base da revisão, extraído do código. Os campos entre chaves são preenchidos automaticamente pelo Endomapa com as dimensões e a lista da montagem atual. Não é uma reprodução de chamada passada nem contém dados reais de uma operação.
+
+A revisão será enviada pelo botão existente. Não é necessário copiar este texto nem aprovar cada lesão. Mantém Gemini Lite, uma única montagem e uma chamada por clique. Nenhuma imagem de referência adicional.
+
+Qualidade visual ainda não comprovada: um prompt orienta o gerador, mas não garante preservação exata. A proteção do aplicativo controla onde mudar e não valida os detalhes internos.
+
+A organização usa as recomendações de edição específica e descrição positiva da documentação do Google: https://ai.google.dev/gemini-api/docs/generate-content/image-generation#best-practices
+
+TEXTO ENVIADO AO MODELO, COM CAMPOS DINÂMICOS INDICADOS
+
+ENDOMAPA — ACABAMENTO DE SUPERFÍCIE EM ILUSTRAÇÃO MÉDICA
+
+OBJETIVO
+Edite a única imagem anexada, BASE_MAPA. Ela contém uma ilustração anatômica didática já finalizada e lesões posicionadas manualmente. Faça um acabamento de superfície nas lesões autorizadas, para que a luz, os reflexos e a textura tenham a mesma qualidade de pintura dos órgãos próximos. A anatomia e o desenho de cada lesão já estão definidos e completos. Mantenha a linguagem de atlas médico ilustrado.
+
+LOCALIZAR E PRESERVAR
+A lista abaixo localiza elementos que já existem na imagem. Edite somente os que tenham autorizada: true; mantenha os demais integralmente. Cada entrada corresponde ao elemento já visível naquela posição, sem pedir uma nova cópia. Use a imagem para conservar seu desenho concreto e a lista para reconhecer sua localização e seus atributos. Os lados são os vistos pelo observador. A lista é informação de trabalho: não desenhe suas palavras, coordenadas ou identificadores.
+
+ACABAMENTO A EXECUTAR
+Trabalhe sobre a superfície já desenhada de cada lesão:
+1. Ajuste a direção, a suavidade e a intensidade dos reflexos à iluminação do tecido imediatamente vizinho. Substitua brilhos pontuais excessivos por reflexos graduais, mantendo as cores características da lesão.
+2. Modele a luz e a sombra sobre os volumes que já existem, com transições contínuas. A sensação de volume deve vir dessa iluminação; conserve relevos, sulcos e contornos nas mesmas posições.
+3. Ajuste a escala e o contraste da microtextura ao acabamento ilustrado do órgão. A textura deve ser fina e subordinada ao desenho existente, sem se tornar novos pontos, linhas ou divisões visíveis. Preserve a nitidez dos detalhes que identificam a lesão.
+4. Harmonize a borda pelo lado de dentro da lesão, suavizando o contraste de recorte sem engrossar, desfocar ou deslocar seu contorno. Onde houver contato visível com o órgão, use somente uma transição tonal curta e suave, junto à borda.
+O ganho esperado é uma lesão com luz e material coerentes com o órgão, mantendo seu desenho reconhecível. Uma simples cópia, desfoque ou mudança uniforme de brilho não realiza esse acabamento.
+
+COMO CONSERVAR O DESENHO
+Os pontos, linhas, ramificações, divisões, relevos e intervalos vazios existentes são partes fixas do desenho. Preserve posição, tamanho, orientação, silhueta, quantidade e organização. Em conteúdo homogêneo, module apenas a iluminação suave, conservando a continuidade. Em uma trama, mantenha cada ligação e abertura; ajuste a luz das linhas existentes sem criar outras divisões. Em conjuntos de focos, trate a superfície de cada foco sem unir nem preencher os espaços entre eles. Em volumes lobulados, conserve a quantidade e a disposição das saliências e dos sulcos. A descrição do catálogo não autoriza completar um achado com detalhes imaginados ou inferidos de conhecimento médico.
+
+TECIDO AO REDOR
+Use os órgãos próximos apenas para observar sua iluminação e qualidade de pintura. Eles permanecem com o mesmo formato, volume, cor, pregas e textura. A integração acontece no acabamento da lesão, sem remodelar o órgão para acomodá-la. Preserve integralmente a superfície do útero, os ovários, as trompas, os ligamentos e o trajeto, calibre, pregas e detalhes amarelados do intestino. Fora da lesão e do contato imediato de sua borda, mantenha a imagem-base. Não adicione traços escuros, manchas, depressões, pregas, halos ou alterações do tecido ao redor.
+
+LIMITES DA EDIÇÃO
+Nenhum elemento pode ser criado, removido, deslocado, ampliado, unido, dividido ou redistribuído. Conserve os componentes internos de cada lesão. Mantenha o enquadramento, a perspectiva, o fundo, os elementos gráficos, o logotipo e o texto institucional. Toda alteração de luz ou textura é local; mantenha o tratamento global da imagem. Nenhum texto ou marca nova deve aparecer.
+
+LISTA DINÂMICA DE ELEMENTOS
+BASE_MAPA tem {{LARGURA}} × {{ALTURA}} pixels. x e y são o centro em porcentagem da largura e da altura, com origem no canto superior esquerdo. largura e altura são porcentagens das dimensões da imagem antes da rotação; giro é o ângulo em graus. Essas caixas servem para localizar os elementos: somente a silhueta visível é editável, com os espaços vazios preservados. recorte alfa mantém a transparência original; recorte elipse limita a figura ao contorno elíptico do editor.
+[INÍCIO DA LISTA DINÂMICA]
+{{LISTA_GERADA_PELO_ENDOMAPA}}
+[FINAL DA LISTA DINÂMICA]
+
+SAÍDA
+Entregue uma única imagem editada, no mesmo enquadramento e proporção. Compare com a entrada: os elementos e seus desenhos devem coincidir, e a melhoria deve aparecer no acabamento local da luz, do material e das bordas das lesões autorizadas. A fidelidade ao desenho tem prioridade sobre a intensidade do efeito. Entregue somente a imagem, sem legendas ou comparação desenhadas nela.
