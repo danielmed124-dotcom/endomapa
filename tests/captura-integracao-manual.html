@@ -165,7 +165,7 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
     verificar(vazia.lesoes.length === 0 && vazia.imagem === pngVazio, 'Mapa sem lesões conserva a anatomia e não cria máscaras');
 
     // Somente o HTML estático da própria origem: nenhuma função ou API é chamada.
-    const respostaEditor = await fetch(new URL('experimento-editor.html', document.baseURI));
+    const respostaEditor = await fetch(new URL('app.html', document.baseURI));
     verificar(respostaEditor.ok, 'Página real do editor deve estar disponível para conferir a biblioteca');
     const paginaEditor = new DOMParser().parseFromString(await respostaEditor.text(), 'text/html');
     const botoes = [...paginaEditor.querySelectorAll('[data-modelo]')];

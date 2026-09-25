@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação do editor manual no Endomapa</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const somenteNomes = new URLSearchParams(location.search).get('caso') === 'nomes';
+  const manterVisual = new URLSearchParams(location.search).has('visual');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 200; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html no servidor local');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const botoesIA = '[data-gerar-final-realista], [data-gerar-realista], [data-gerar-detalhe-gemini], [data-gerar-mapa-fotorealista], [data-gerar-mapa-gemini], [data-gerar-mapa-api], [data-preparar-teste-api], [data-verificar-conexao-gpt], [data-previa-mioma], [data-gerar-regioes]';
+    verificar(!origem.querySelector(botoesIA), 'app.html ainda oferece controles experimentais de imagem');
+    const scriptsOriginais = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    verificar(!scriptsOriginais.some(src => /(?:editor-manual-ia|mapa-fotorealista|mapa-gemini|mapa-acabamento-aprovado)\.js/.test(src)), 'app.html ainda carrega geração de imagens');
+    verificar(scriptsOriginais.some(src => /^prototipo\.js(?:\?|$)/.test(src)) && scriptsOriginais.some(src => /^editor-manual\.js(?:\?|$)/.test(src)), 'O aplicativo deve carregar sua navegação e seu editor manual reais');
+    verificar(origem.querySelector('.editor-manual[data-tela="editor-manual"]'), 'Editor manual precisa estar dentro do aplicativo');
+
+    // Esta cópia carrega somente a navegação e a montagem locais. O HTML real é
+    // verificado acima, antes de retirar login, banco de dados, ditado e demais scripts.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], destinos: [] };
+      // about:srcdoc não permite substituir a URL por um caminho do aplicativo.
+      history.replaceState = function (estado, titulo, url) { window.__teste.destinos.push(String(url)); };
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste manual'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste manual');
+      };
+      window.addEventListener('error', evento => window.__teste.erros.push(evento.message));
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    ['prototipo.js', 'editor-manual.js'].forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    const preencher = (elemento, valor) => {
+      elemento.value = valor;
+      elemento.dispatchEvent(new janela.Event('input', { bubbles: true }));
+    };
+    const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
+      detail: { id: 'medico-do-teste', titulo: 'Dra.', nome: 'Médica de Teste', assinatura: 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
+    }));
+    const editor = buscar('.editor-manual[data-tela="editor-manual"]');
+    const campo = buscar('[data-controle-nome-lesao]');
+    const medida = buscar('[data-medida="1"]');
+    const mapaBase = buscar('.editor-manual [data-mapa-base]');
+    const botaoAbrir = buscar('[data-tela-alvo="editor-manual"]');
+    const botaoBaixar = buscar('[data-baixar-mapa-manual]');
+    perfil(false);
+    verificar(editor.hidden && janela.getComputedStyle(editor).display === 'none', 'Editor inicia oculto, inclusive com a regra de grade do CSS');
+    botaoAbrir.click();
+    verificar(!editor.hidden && buscar('[data-tela="novo-mapa"]').hidden, 'Botão abre editor dentro do Endomapa');
+    verificar(janela.__teste.destinos.some(destino => destino.endsWith('#editor-manual')), 'Navegação deve registrar o endereço do editor');
+    verificar(new URL(mapaBase.src).pathname === new URL(mapaBase.dataset.srcVisitante, doc.baseURI).pathname, 'Visitante deve usar anatomia sem marca da clínica');
+
+    if (!somenteNomes) {
+      botaoBaixar.click();
+      const estadoVazio = buscar('[data-estado-mapa-manual]');
+      await aguardar(() => !estadoVazio.hidden && /adicione|informe/i.test(estadoVazio.textContent) && /lesão|lesões|achado/i.test(estadoVazio.textContent), 'Mapa vazio deve mostrar uma orientação');
+      verificar(janela.__teste.downloads.length === 0 && janela.__teste.chamadas.length === 0, 'Mapa vazio não deve baixar nem chamar IA');
+    }
+
+    buscar('[data-modelo][data-nome="Endometrioma"]').click();
+    const primeira = buscar('.lesao-editavel');
+    const rotulo = buscar('[data-medida-id="' + primeira.dataset.id + '"]');
+    verificar(rotulo.hidden, 'Rótulo vazio deve ficar oculto');
+    preencher(campo, 'Endometrioma esquerdo');
+    verificar(rotulo.textContent === 'Endometrioma esquerdo' && !rotulo.hidden, 'Nome sem medidas');
+    preencher(medida, '2,5');
+    verificar(rotulo.textContent === 'Endometrioma esquerdo\n2,5 cm', 'Nome acima das medidas');
+    verificar(janela.getComputedStyle(rotulo).whiteSpace === 'pre', 'Quebra de linha visível');
+    buscar('[data-modelo][data-nome="Adenomiose 1"]').click();
+    verificar(campo.value === '', 'Nome independente para cada lesão');
+    preencher(campo, 'Adenomiose');
+    primeira.click();
+    verificar(campo.value === 'Endometrioma esquerdo', 'Nome restaurado ao selecionar');
+
+    const textos = [];
+    const bases = [];
+    const contexto = janela.CanvasRenderingContext2D.prototype;
+    const escreverOriginal = contexto.fillText;
+    const desenharOriginal = contexto.drawImage;
+    contexto.fillText = function (texto, x, y) {
+      textos.push({ texto, y });
+      return escreverOriginal.apply(this, arguments);
+    };
+    contexto.drawImage = function (imagem) {
+      if (imagem instanceof janela.HTMLImageElement) bases.push(imagem.src);
+      return desenharOriginal.apply(this, arguments);
+    };
+    const capturaJpeg = await janela.endomapaCapturarMapaManual();
+    verificar(capturaJpeg.startsWith('data:image/jpeg;base64,'), 'Captura padrão mantém JPEG');
+    verificar(bases[0] === mapaBase.src, 'Captura deve usar o mapa do perfil visitante, sem marca');
+    verificar(textos.some(item => item.texto === 'Adenomiose'), 'Nome sem medidas na captura');
+    verificar(textos.find(item => item.texto === 'Endometrioma esquerdo')?.y < textos.find(item => item.texto === '2,5 cm')?.y, 'Nome acima das medidas na captura');
+    textos.length = 0;
+    const capturaPng = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    verificar(capturaPng.startsWith('data:image/png;base64,'), 'Captura PNG local');
+    verificar(textos.length === 0, 'Opção sem rótulos respeitada');
+    await janela.endomapaAdicionarRotulos(capturaPng);
+    verificar(textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Nomes e medidas recolocados pelo editor');
+
+    if (!somenteNomes) {
+      const estado = Array.from(doc.querySelectorAll('.lesao-editavel'), item => JSON.stringify(item.dataset));
+      const voltar = buscar('.editor-manual [data-tela-alvo="novo-mapa"]');
+      const conferirToque = (botao, descricao) => {
+        const area = botao.getBoundingClientRect();
+        const diagnostico = JSON.stringify({
+          botao: { top: area.top, bottom: area.bottom, left: area.left, width: area.width },
+          janela: { altura: janela.innerHeight, scrollY: janela.scrollY, scrollHeight: doc.documentElement.scrollHeight },
+          controles: buscar('[data-controles-lesao]').getBoundingClientRect().toJSON(),
+          estado: buscar('[data-estado-mapa-manual]').textContent,
+        });
+        verificar(area.width > 0 && area.top >= 0 && area.bottom <= janela.innerHeight, descricao + ' deve caber na tela: ' + diagnostico);
+        const alvo = doc.elementFromPoint(area.left + area.width / 2, area.top + area.height / 2);
+        verificar(alvo && (alvo === botao || botao.contains(alvo)), 'Painel de ajustes encobre ' + descricao + ': ' + diagnostico);
+      };
+      janela.scrollTo({ top: doc.documentElement.scrollHeight, behavior: 'instant' });
+      conferirToque(botaoBaixar, 'botão de baixar');
+      verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'Editor deve caber em 390 pixels sem rolagem lateral');
+      const navegacao = buscar('.navegacao [data-tela-alvo="novo-mapa"]');
+      conferirToque(navegacao, 'navegação principal');
+      const figura = mapaBase.getBoundingClientRect();
+      const camada = buscar('[data-camada-editor]').getBoundingClientRect();
+      verificar(Math.abs(figura.width - camada.width) < 1 && Math.abs(figura.height - camada.height) < 1 && Math.abs(figura.top - camada.top) < 1, 'Camada de lesões deve coincidir com a anatomia exibida');
+      textos.length = 0;
+      bases.length = 0;
+      botaoBaixar.click();
+      await aguardar(() => janela.__teste.downloads.length === 1, 'Botão não concluiu o download local');
+      verificar(/\.png$/i.test(janela.__teste.downloads[0].nome), 'Arquivo baixado precisa ser PNG');
+      verificar(/^(?:data:image\/png;base64,|blob:)/.test(janela.__teste.downloads[0].endereco), 'Download precisa usar imagem local');
+      verificar(bases[0] === mapaBase.src && textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Download deve preservar anatomia do perfil, nome e medidas');
+      voltar.click();
+      verificar(editor.hidden && buscar('[data-controles-lesao]').getClientRects().length === 0, 'Sair do editor também deve ocultar ajustes fixos');
+      botaoAbrir.click();
+      verificar(JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), item => JSON.stringify(item.dataset))) === JSON.stringify(estado), 'Voltar ao ditado e reabrir deve preservar as lesões');
+      verificar(campo.value === 'Endometrioma esquerdo' && medida.value === '2,5', 'Navegação deve preservar a seleção e os valores');
+      perfil(true);
+      verificar(new URL(mapaBase.src).pathname === new URL(mapaBase.dataset.srcClinica, doc.baseURI).pathname, 'Perfil da clínica deve usar sua anatomia');
+      bases.length = 0;
+      await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+      verificar(bases[0] === mapaBase.src, 'Captura da clínica acompanha o perfil');
+      perfil(false);
+    }
+
+    if (!manterVisual) {
+      preencher(campo, '<b>Nome</b>');
+      verificar(!rotulo.querySelector('b') && rotulo.textContent.includes('<b>Nome</b>'), 'Nome tratado como texto seguro');
+      preencher(campo, '');
+      verificar(rotulo.textContent === '2,5 cm', 'Medidas continuam após apagar nome');
+      preencher(medida, '');
+      verificar(rotulo.hidden, 'Apagar nome e medidas oculta rótulo');
+      buscar('[data-remover-lesao]').click();
+      verificar(!doc.querySelector('[data-medida-id="' + primeira.dataset.id + '"]'), 'Excluir lesão remove rótulo');
+    }
+    verificar(janela.__teste.chamadas.length === 0, 'Montagem e download não podem solicitar serviços externos');
+    verificar(janela.__teste.erros.length === 0, 'Erros no editor: ' + janela.__teste.erros.join('; '));
+    saida.textContent = somenteNomes
+      ? 'PASSOU: nomes independentes, seleção, texto seguro, capturas JPEG e PNG, rótulos, remoção e medidas no aplicativo integrado. Nenhuma API.'
+      : 'PASSOU: editor integrado, geração de imagens removida, visitante e clínica, nomes, medidas, captura e download PNG locais, mapa vazio, navegação sem perder lesões e celular de 390 pixels. Nenhuma API.';
+  } catch (erro) {
+    saida.textContent = 'FALHOU: ' + erro.message;
+  }
+  if (somenteNomes && window.parent !== window) {
+    window.parent.postMessage({ teste: 'editor-manual-nomes', resultado: saida.textContent }, location.origin);
+  }
+})();
+</script>
+</html>

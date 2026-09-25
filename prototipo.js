@@ -29,8 +29,21 @@ const mapasBase = document.querySelectorAll("[data-mapa-base]");
 const identificacoesDaClinica = document.querySelectorAll("[data-identificacao-clinica]");
 
 function abrirTela(nomeDaTela) {
+  if (!Array.from(telas).some((tela) => tela.dataset.tela === nomeDaTela)) return;
   telas.forEach((tela) => {
     tela.hidden = tela.dataset.tela !== nomeDaTela;
+  });
+
+  document.querySelectorAll(".navegacao [data-tela-alvo]").forEach((botao) => {
+    if (botao.dataset.telaAlvo === nomeDaTela) botao.setAttribute("aria-current", "page");
+    else botao.removeAttribute("aria-current");
+  });
+  if (nomeDaTela === "editor-manual" || window.location.hash === "#editor-manual") {
+    const fragmento = nomeDaTela === "editor-manual" ? "#editor-manual" : "";
+    window.history.replaceState(null, "", window.location.pathname + window.location.search + fragmento);
+  }
+  window.requestAnimationFrame(() => {
+    window.dispatchEvent(new CustomEvent("endomapa:tela-aberta", { detail: nomeDaTela }));
   });
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -113,3 +126,7 @@ window.addEventListener("endomapa:lesoes-confirmadas", () => {
   aplicarVistas();
   abrirTela("revisao");
 });
+
+if (window.location.hash === "#editor-manual") {
+  abrirTela("editor-manual");
+}

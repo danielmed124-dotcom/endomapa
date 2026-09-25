@@ -1,69 +1,20 @@
 <!doctype html>
+<html lang="pt-BR">
 <meta charset="utf-8">
 <title>Verificação de nomes no editor</title>
 <pre id="resultado">Executando</pre>
-<iframe src="../experimento-editor.html" style="width:390px;height:844px"></iframe>
+<iframe title="Editor manual sem serviços externos" style="width:420px;height:900px"></iframe>
 <script>
-document.querySelector('iframe').addEventListener('load', async function () {
-  const resultado = document.querySelector('#resultado');
-  try {
-    const janela = this.contentWindow;
-    const doc = janela.document;
-    const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
-    const campo = doc.querySelector('[data-controle-nome-lesao]');
-    const medida = doc.querySelector('[data-medida="1"]');
-    const preencher = (elemento, valor) => {
-      elemento.value = valor;
-      elemento.dispatchEvent(new janela.Event('input', { bubbles: true }));
-    };
-    doc.querySelector('[data-nome="Endometrioma"]').click();
-    const rotulo = doc.querySelector('[data-medida-id="1"]');
-    verificar(rotulo.hidden, 'Rótulo vazio deve ficar oculto');
-    preencher(campo, 'Endometrioma esquerdo');
-    verificar(rotulo.textContent === 'Endometrioma esquerdo' && !rotulo.hidden, 'Nome sem medidas');
-    preencher(medida, '2,5');
-    verificar(rotulo.textContent === 'Endometrioma esquerdo\n2,5 cm', 'Nome acima das medidas');
-    verificar(janela.getComputedStyle(rotulo).whiteSpace === 'pre', 'Quebra de linha visível');
-    doc.querySelector('[data-nome="Adenomiose 1"]').click();
-    verificar(campo.value === '', 'Nome independente para cada lesão');
-    preencher(campo, 'Adenomiose');
-    const botaoRealista = doc.querySelector('[data-gerar-final-realista]');
-    verificar(!botaoRealista.disabled && !botaoRealista.closest('details'), 'Geração direta disponível sem etapa gratuita');
-    verificar(!doc.querySelector('.editor-manual__experimentos').open, 'Experimentos antigos recolhidos');
-    janela.scrollTo({ top: doc.documentElement.scrollHeight, behavior: 'instant' });
-    const areaBotao = botaoRealista.getBoundingClientRect();
-    verificar(areaBotao.top >= 0 && areaBotao.bottom <= janela.innerHeight, 'Botão pago cabe na tela do celular ao rolar até o fim');
-    verificar(doc.elementFromPoint(areaBotao.left + areaBotao.width / 2, areaBotao.top + areaBotao.height / 2) === botaoRealista, 'Painel de ajustes não encobre o botão pago');
-    verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'Editor cabe na largura do celular');
-    doc.querySelector('.lesao-editavel[data-id="1"]').click();
-    verificar(campo.value === 'Endometrioma esquerdo', 'Nome restaurado ao selecionar');
-    const textos = [];
-    const original = janela.CanvasRenderingContext2D.prototype.fillText;
-    janela.CanvasRenderingContext2D.prototype.fillText = function (texto, x, y) {
-      textos.push({ texto, y });
-      return original.apply(this, arguments);
-    };
-    const capturaJpeg = await janela.endomapaCapturarMapaManual();
-    verificar(capturaJpeg.startsWith('data:image/jpeg;base64,'), 'Captura padrão mantém JPEG');
-    verificar(textos.some(item => item.texto === 'Adenomiose'), 'Nome sem medidas na captura');
-    verificar(textos.find(item => item.texto === 'Endometrioma esquerdo').y < textos.find(item => item.texto === '2,5 cm').y, 'Nome acima das medidas na captura');
-    textos.length = 0;
-    const capturaPng = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
-    verificar(capturaPng.startsWith('data:image/png;base64,'), 'Edição direta recebe PNG');
-    verificar(textos.length === 0, 'Nomes e medidas não são enviados para a IA redesenhar');
-    await janela.endomapaAdicionarRotulos(capturaPng);
-    verificar(textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Nomes e medidas recolocados pelo editor');
-    preencher(campo, '<b>Nome</b>');
-    verificar(!rotulo.querySelector('b'), 'Nome tratado como texto');
-    preencher(campo, '');
-    verificar(rotulo.textContent === '2,5 cm', 'Medidas continuam após apagar nome');
-    preencher(medida, '');
-    verificar(rotulo.hidden, 'Apagar nome e medidas oculta rótulo');
-    doc.querySelector('[data-remover-lesao]').click();
-    verificar(!doc.querySelector('[data-medida-id="1"]'), 'Excluir lesão remove rótulo');
-    resultado.textContent = 'PASSOU: nomes independentes, seleção, texto seguro, capturas JPEG e PNG, rótulos recolocados, remoção e medidas.';
-  } catch (erro) {
-    resultado.textContent = 'FALHOU: ' + erro.message;
-  }
+// Reutiliza a mesma cópia local do aplicativo, sem autenticação nem serviços de IA.
+const quadro = document.querySelector('iframe');
+const temporizador = setTimeout(() => {
+  document.querySelector('#resultado').textContent = 'FALHOU: o teste do editor não terminou.';
+}, 25000);
+window.addEventListener('message', (evento) => {
+  if (evento.source !== quadro.contentWindow || evento.origin !== location.origin || evento.data?.teste !== 'editor-manual-nomes') return;
+  clearTimeout(temporizador);
+  document.querySelector('#resultado').textContent = evento.data.resultado;
 });
+quadro.src = 'editor-manual-integrado.html?caso=nomes';
 </script>
+</html>

@@ -1475,7 +1475,7 @@ h1 span {
 }
 
 .navegacao__conteudo--app {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .navegacao__conteudo--app .navegacao__item {
@@ -1560,6 +1560,16 @@ h1 span {
   gap: 22px;
 }
 
+.conteudo:has(> .editor-manual:not([hidden])) {
+  width: min(100%, 1600px);
+  padding: 0;
+  align-items: start;
+}
+
+.mapa-editor__desenho {
+  position: relative;
+}
+
 .editor-manual__cabecalho,
 .biblioteca-lesoes,
 .editor-manual__area,
@@ -1601,7 +1611,7 @@ h1 span {
 .mapa-editor__camada {
   position: absolute;
   z-index: 4;
-  inset: 0 0 42px;
+  inset: 0;
   overflow: hidden;
 }
 
@@ -1837,8 +1847,11 @@ h1 span {
 }
 
 @media (max-width: 999px) {
+  .tela.editor-manual .controles-lesao {
+    bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
   .editor-manual:has(.controles-lesao:not([hidden])) {
-    padding-bottom: calc(min(52svh, 430px) + 32px);
+    padding-bottom: calc(min(52svh, 430px) + 110px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -1897,8 +1910,8 @@ h1 span {
   .biblioteca-lesoes {
     grid-area: biblioteca;
     position: sticky;
-    top: 16px;
-    max-height: calc(100svh - 32px);
+    top: 84px;
+    max-height: calc(100svh - 162px);
     overflow-y: auto;
   }
 
@@ -1931,13 +1944,13 @@ h1 span {
   .controles-lesao {
     grid-area: controles;
     position: sticky;
-    top: 16px;
+    top: 84px;
     right: auto;
     bottom: auto;
     left: auto;
     width: 100%;
     min-width: 0;
-    max-height: calc(100svh - 32px);
+    max-height: calc(100svh - 162px);
     margin: 0;
     transform: none;
   }

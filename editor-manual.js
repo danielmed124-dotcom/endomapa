@@ -53,7 +53,13 @@
   });
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
+  const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
+  const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
+  botaoBaixar?.addEventListener("click", baixarMontagemManual);
   window.addEventListener("resize", atualizarTodasAsLinhas);
+  window.addEventListener("endomapa:tela-aberta", function (evento) {
+    if (evento.detail === "editor-manual") atualizarTodasAsLinhas();
+  });
   window.endomapaCapturarMapaManual = capturarMapa;
   window.endomapaCapturarIntegracaoManual = capturarIntegracaoManual;
   window.endomapaAdicionarRotulos = async function (imagem) {
@@ -307,6 +313,31 @@
     });
   }
 
+  async function baixarMontagemManual() {
+    if (botaoBaixar.disabled) return;
+    estadoMapa.hidden = false;
+    if (!camada.querySelector(".lesao-editavel")) {
+      estadoMapa.textContent = "Adicione pelo menos uma lesão ao mapa antes de baixar a montagem.";
+      return;
+    }
+    botaoBaixar.disabled = true;
+    estadoMapa.textContent = "Preparando a montagem com os nomes e as medidas…";
+    try {
+      const imagem = await capturarMapa({ formato: "image/png" });
+      const link = document.createElement("a");
+      link.href = imagem;
+      link.download = "endomapa-manual-coronal.png";
+      document.body.append(link);
+      link.click();
+      link.remove();
+      estadoMapa.textContent = "Montagem preparada. Confira o arquivo na pasta de downloads do seu aparelho.";
+    } catch (erro) {
+      estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
+    } finally {
+      botaoBaixar.disabled = false;
+    }
+  }
+
   async function capturarMapa(opcoes = {}) {
     const lesoes = fotografarLesoes();
     const { canvas } = await renderizarMontagem(lesoes, opcoes);
@@ -360,7 +391,8 @@
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false) {
-    const base = await carregarImagem("assets/mapa-base-coronal.png");
+    const imagemBase = document.querySelector("[data-mapa-editor] [data-mapa-base], [data-mapa-editor] > img");
+    const base = await carregarImagem(imagemBase?.src || "assets/mapa-base-coronal.png");
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;

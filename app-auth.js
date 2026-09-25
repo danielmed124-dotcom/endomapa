@@ -81,7 +81,8 @@
   }
 
   function enviarParaLogin(motivo = "acesso") {
-    window.location.replace(`login.html?motivo=${motivo}`);
+    const destino = window.location.hash === "#editor-manual" ? "&destino=editor-manual" : "";
+    window.location.replace(`login.html?motivo=${motivo}${destino}`);
   }
 
   function mostrarErro(texto) {

@@ -1,6 +1,10 @@
 (function () {
   "use strict";
 
+  const destinoAposLogin = new URLSearchParams(window.location.search).get("destino") === "editor-manual"
+    ? "app.html#editor-manual"
+    : "app.html";
+
   const formulario = document.querySelector("[data-form-autenticacao]");
   const botoesModo = document.querySelectorAll("[data-modo]");
   const titulo = document.querySelector("#titulo-autenticacao");
@@ -100,7 +104,7 @@
     }
 
     if (data.session) {
-      window.location.replace("app.html");
+      window.location.replace(destinoAposLogin);
     }
   }
 
@@ -116,7 +120,7 @@
     }
 
     mostrarMensagem("Entrada confirmada. Abrindo sua área protegida...", false);
-    window.location.replace("app.html");
+    window.location.replace(destinoAposLogin);
   }
 
   async function cadastrar(email, senha, nome, tituloProfissional) {
@@ -146,7 +150,7 @@
     }
 
     mostrarMensagem("Cadastro concluído. Abrindo sua área protegida...", false);
-    window.location.replace("app.html");
+    window.location.replace(destinoAposLogin);
   }
 
   function alterarModo(novoModo, limpar = true) {
@@ -208,10 +212,13 @@
 
   function mostrarMotivoDoRedirecionamento() {
     const parametros = new URLSearchParams(window.location.search);
+    const enderecoLogin = destinoAposLogin === "app.html#editor-manual"
+      ? "login.html?destino=editor-manual"
+      : "login.html";
 
     if (parametros.get("motivo") === "acesso") {
       mostrarMensagem("Entre para acessar a área protegida do Endomapa.", true);
-      window.history.replaceState({}, "", "login.html");
+      window.history.replaceState({}, "", enderecoLogin);
     }
 
     if (parametros.get("motivo") === "perfil") {
@@ -219,7 +226,7 @@
         "Não foi possível abrir o perfil médico. Entre novamente ou procure o responsável pelo sistema.",
         true,
       );
-      window.history.replaceState({}, "", "login.html");
+      window.history.replaceState({}, "", enderecoLogin);
     }
   }
 

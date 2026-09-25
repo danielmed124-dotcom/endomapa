@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Seleção demonstrativa do médico responsável pelo mapa no Endomapa."
+      content="Monte mapas anatômicos manualmente ou dite os achados no Endomapa."
     />
-    <title>Selecionar médico | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=20260803-adenomiose3" />
+    <title>Área de trabalho | Endomapa</title>
+    <link rel="stylesheet" href="styles.css?v=manual-integrado-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -34,7 +34,7 @@
             Use o microfone para transcrever os achados ao vivo e confira o texto antes de salvar.
           </p>
           <div class="acoes">
-            <a class="botao botao--secundario" href="experimento-editor.html">Abrir editor manual</a>
+            <button class="botao botao--secundario" type="button" data-tela-alvo="editor-manual">Montar mapa manualmente</button>
           </div>
         </header>
 
@@ -318,35 +318,6 @@
             </figure>
           </div>
 
-          <section class="previa-fotorealista" data-previa-fotorealista hidden>
-            <h3 class="secao-dados__titulo">Prévia fotorealista experimental</h3>
-            <p class="texto-apoio">
-              A IA editará uma cópia do mapa. O mapa-base original permanece preservado e a imagem só será aceita depois da sua conferência.
-            </p>
-            <button class="botao" type="button" data-gerar-mapa-fotorealista>
-              Gerar prévia fotorealista
-            </button>
-            <p class="mensagem-formulario" data-estado-mapa-fotorealista hidden></p>
-            <figure class="mapa-visual previa-fotorealista__resultado" data-resultado-mapa-fotorealista hidden>
-              <img data-imagem-mapa-fotorealista alt="Prévia fotorealista produzida por inteligência artificial para conferência médica" />
-              <span class="medida-no-mapa medida-no-mapa--fotorealista" data-medida-mapa-fotorealista hidden></span>
-              <figcaption>Prévia produzida por IA · ainda não aprovada</figcaption>
-            </figure>
-
-            <div class="comparacao-gemini">
-              <h3 class="secao-dados__titulo">Comparação com Gemini</h3>
-              <p class="texto-apoio">Gere uma única alternativa com os mesmos dados para comparar qualidade, posição e tempo.</p>
-              <button class="botao botao--secundario" type="button" data-gerar-mapa-gemini>
-                Gerar com Gemini
-              </button>
-              <p class="mensagem-formulario" data-estado-mapa-gemini hidden></p>
-              <figure class="mapa-visual previa-fotorealista__resultado" data-resultado-mapa-gemini hidden>
-                <img data-imagem-mapa-gemini alt="Prévia criada pelo Gemini para comparação médica" />
-                <span class="medida-no-mapa medida-no-mapa--fotorealista" data-medida-mapa-gemini hidden></span>
-                <figcaption>Prévia Gemini · ainda não aprovada</figcaption>
-              </figure>
-            </div>
-          </section>
         </section>
 
         <section class="secao-dados" aria-labelledby="titulo-lesoes">
@@ -558,12 +529,172 @@
           <div class="lista-mapas-salvos" data-lista-painel></div>
         </div>
       </section>
+      <section class="editor-manual tela" data-tela="editor-manual" aria-labelledby="titulo-editor-manual" hidden>
+      <header class="editor-manual__cabecalho">
+        <div class="selo">Editor manual do Endomapa</div>
+        <h1 class="titulo-tela" id="titulo-editor-manual">Monte o mapa manualmente</h1>
+        <p class="texto-apoio">Escolha uma lesão-padrão, adicione ao mapa e ajuste com o dedo.</p>
+      </header>
+
+      <section class="biblioteca-lesoes" aria-labelledby="titulo-biblioteca">
+        <h2 class="secao-dados__titulo" id="titulo-biblioteca">Lesões disponíveis</h2>
+        <div class="biblioteca-lesoes__lista">
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometriose-isolada-referencia-transparente.png" data-nome="Ligamento uterossacro" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/endometriose-isolada-referencia-transparente.png" alt="" />
+            <span>Ligamento uterossacro</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/cisto-referencia.png" data-nome="Cisto" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/cisto-referencia.png" alt="" />
+            <span>Cisto</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/cisto-hemorragico-referencia.png" data-nome="Cisto hemorrágico" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/cisto-hemorragico-referencia.png" alt="" />
+            <span>Cisto hemorrágico</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometrioma-referencia.png" data-nome="Endometrioma" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/endometrioma-referencia.png" alt="" />
+            <span>Endometrioma</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/adenomiose-1-referencia.png" data-nome="Adenomiose 1" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50">
+            <img src="assets/lesoes/adenomiose-1-referencia.png" alt="" />
+            <span>Adenomiose 1</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/teratoma-referencia.png" data-nome="Teratoma" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/teratoma-referencia.png" alt="" />
+            <span>Teratoma</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-1-referencia.png" data-nome="Mioma 1" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/mioma-1-referencia.png" alt="" />
+            <span>Mioma 1</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-integrado-estudo-v1.png" data-nome="Mioma integrado · estudo" data-proporcao="1.5" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/mioma-integrado-estudo-v1.png" alt="" />
+            <span>Mioma integrado · estudo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-2-referencia.png" data-nome="Mioma 2" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/mioma-2-referencia.png" alt="" />
+            <span>Mioma 2</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-3-referencia.png" data-nome="Mioma 3" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/mioma-3-referencia.png" alt="" />
+            <span>Mioma 3</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-pediculado-referencia.png" data-nome="Mioma pediculado" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/mioma-pediculado-referencia.png" alt="" />
+            <span>Mioma pediculado</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/polipo-referencia.png" data-nome="Pólipo" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50">
+            <img src="assets/lesoes/polipo-referencia.png" alt="" />
+            <span>Pólipo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/diu-cobre-referencia.png" data-nome="DIU de Cobre" data-proporcao="0.800285306704708" data-sem-recorte="true" data-tamanho-inicial="120">
+            <img src="assets/lesoes/diu-cobre-referencia.png" alt="" />
+            <span>DIU de Cobre</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/diu-hormonal-referencia.png" data-nome="DIU hormonal" data-proporcao="1.77683315621679" data-sem-recorte="true" data-tamanho-inicial="205">
+            <img src="assets/lesoes/diu-hormonal-referencia.png" alt="" />
+            <span>DIU hormonal</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-1-marrom-escuro.png" data-nome="Aderências 1" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="75">
+            <img src="assets/lesoes/aderencia-1-marrom-escuro.png" alt="" />
+            <span>Aderências 1</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-2-marrom-escuro.png" data-nome="Aderência 2" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="80">
+            <img src="assets/lesoes/aderencia-2-marrom-escuro.png" alt="" />
+            <span>Aderência 2</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-3-marrom-escuro.png" data-nome="Aderência 3" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="70">
+            <img src="assets/lesoes/aderencia-3-marrom-escuro.png" alt="" />
+            <span>Aderência 3</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-4-marrom-escuro.png" data-nome="Aderência 4" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/aderencia-4-marrom-escuro.png" alt="" />
+            <span>Aderência 4</span>
+          </button>
+        </div>
+        <p class="mensagem-formulario" data-mensagem-editor>Toque em um modelo para acrescentá-lo ao mapa.</p>
+      </section>
+
+      <section class="editor-manual__area" aria-labelledby="titulo-mapa-manual">
+        <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
+        <figure class="mapa-visual mapa-editor" data-mapa-editor>
+          <div class="mapa-editor__desenho">
+          <img src="assets/mapa-base-coronal-visitante.png" data-mapa-base data-src-clinica="assets/mapa-base-coronal.png" data-src-visitante="assets/mapa-base-coronal-visitante.png" alt="Mapa anatômico coronal sem lesões" draggable="false" />
+          <div class="mapa-editor__camada" data-camada-editor aria-label="Lesões adicionadas ao mapa"></div>
+          </div>
+          <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+        </figure>
+      </section>
+
+      <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
+        <div class="controles-lesao__topo">
+          <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
+          <strong data-nome-lesao>Lesão selecionada</strong>
+          <button class="controles-lesao__alternar" type="button" data-alternar-controles aria-expanded="true" aria-controls="conteudo-controles-lesao">Recolher</button>
+        </div>
+        <div class="controles-lesao__conteudo" id="conteudo-controles-lesao">
+        <div class="controles-lesao__atalhos" aria-label="Ajustes rápidos">
+          <button type="button" data-girar="-10" aria-label="Girar para a esquerda">↶<span>Esquerda</span></button>
+          <button type="button" data-girar="10" aria-label="Girar para a direita">↷<span>Direita</span></button>
+          <button type="button" data-redimensionar="-10" aria-label="Diminuir lesão">−<span>Diminuir</span></button>
+          <button type="button" data-redimensionar="10" aria-label="Aumentar lesão">+<span>Aumentar</span></button>
+        </div>
+        <label class="calibracao-mapa__controle">
+          <span>Girar <strong data-valor-giro>0°</strong></span>
+          <input type="range" min="-180" max="180" step="1" value="0" data-controle-giro />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Tamanho <strong data-valor-tamanho>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-tamanho />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Eixo X · horizontal <strong data-valor-eixo-x>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-eixo-x />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Eixo Y · vertical <strong data-valor-eixo-y>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-eixo-y />
+        </label>
+        <fieldset class="medidas-editor">
+          <legend>Medidas em centímetros</legend>
+          <label class="medidas-editor__nome">
+            <span>Nome da lesão no mapa · opcional</span>
+            <input type="text" maxlength="60" placeholder="Ex.: Endometrioma esquerdo" data-controle-nome-lesao />
+          </label>
+          <label>
+            <span>1ª medida</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 1,0" data-medida="1" />
+          </label>
+          <label>
+            <span>2ª medida</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 0,3" data-medida="2" />
+          </label>
+          <label>
+            <span>3ª medida · opcional</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 0,5" data-medida="3" />
+          </label>
+        </fieldset>
+        <button class="botao botao--perigo" type="button" data-remover-lesao>Excluir esta lesão</button>
+        </div>
+      </section>
+
+      <div class="acoes editor-manual__acoes">
+        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar a montagem.</p>
+        <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
+        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao ditado</button>
+        <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
+        <button class="botao" type="button" data-baixar-mapa-manual>Baixar montagem manual</button>
+      </div>
+      </section>
     </main>
 
     <nav class="navegacao" aria-label="Navegação principal">
       <div class="navegacao__conteudo navegacao__conteudo--app">
         <button class="navegacao__item" type="button" data-tela-alvo="novo-mapa">
           Novo mapa
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="editor-manual">
+          Editor manual
         </button>
         <button class="navegacao__item" type="button" data-tela-alvo="meus-mapas">
           Meus mapas
@@ -581,13 +712,12 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="app-auth.js"></script>
-    <script src="prototipo.js"></script>
+    <script src="app-auth.js?v=manual-integrado-1"></script>
+    <script src="prototipo.js?v=manual-integrado-1"></script>
     <script src="mapas.js"></script>
     <script src="voz.js"></script>
     <script src="ia.js"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
-    <script src="mapa-fotorealista.js"></script>
-    <script src="mapa-gemini.js"></script>
+    <script src="editor-manual.js?v=manual-integrado-1"></script>
   </body>
 </html>

@@ -1,5 +1,11 @@
-param([string[]]$Testes = @('erro-imagem-gpt', 'resposta-imagem-gemini', 'fluxo-mapa-medico', 'preparo-teste-unico', 'preparo-teste-unico-sucesso', 'botao-final-realista', 'editor-manual-nomes', 'captura-integracao-manual', 'integracao-contato', 'refinamento-lesoes'), [int]$TempoVirtual = 15000)
+param([string[]]$Testes = @('editor-manual-integrado', 'editor-manual-nomes', 'captura-integracao-manual'), [int]$TempoVirtual = 15000, [switch]$Captura)
 $ErrorActionPreference = 'Stop'
+# O ambiente do aplicativo pode trazer Path e PATH. O Start-Process do Windows
+# exige uma única entrada; a normalização vale somente para este processo.
+$caminhoParaTestes = [Environment]::GetEnvironmentVariable('Path', 'Process')
+[Environment]::SetEnvironmentVariable('PATH', $null, 'Process')
+[Environment]::SetEnvironmentVariable('Path', $null, 'Process')
+[Environment]::SetEnvironmentVariable('Path', $caminhoParaTestes, 'Process')
 $raiz = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $servidor = Start-Job -ArgumentList $raiz -ScriptBlock {
   param($raizProjeto)
@@ -36,6 +42,9 @@ try {
     $arquivoErro = Join-Path $env:TEMP "endomapa-$nome-erros.txt"
     $rota = if ($nome -eq 'preparo-teste-unico-sucesso') { 'preparo-teste-unico.html#sucesso' } else { "$nome.html" }
     $argumentos = @('--headless=new', '--disable-gpu', '--no-first-run', "--user-data-dir=$env:TEMP\endomapa-fluxo-medico-$nome", "--virtual-time-budget=$TempoVirtual", '--dump-dom', "http://localhost:8766/tests/$rota")
+    if ($Captura) {
+      $argumentos = @('--window-size=1440,1100', "--screenshot=$env:TEMP\endomapa-$nome.png") + $argumentos
+    }
     $processo = Start-Process -FilePath 'C:\Program Files\Google\Chrome\Application\chrome.exe' -ArgumentList $argumentos -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $arquivoSaida -RedirectStandardError $arquivoErro
     $texto = Get-Content $arquivoSaida -Raw -ErrorAction SilentlyContinue
     if ($processo.ExitCode -ne 0 -or $texto -notmatch '<pre[^>]*>PASSOU:') { throw "Teste $nome falhou. Consulte $arquivoSaida e $arquivoErro." }
