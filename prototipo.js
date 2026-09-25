@@ -30,6 +30,7 @@ const identificacoesDaClinica = document.querySelectorAll("[data-identificacao-c
 
 function abrirTela(nomeDaTela) {
   if (!Array.from(telas).some((tela) => tela.dataset.tela === nomeDaTela)) return;
+  aplicarVistas();
   telas.forEach((tela) => {
     tela.hidden = tela.dataset.tela !== nomeDaTela;
   });
@@ -105,11 +106,27 @@ function aplicarVistas() {
   imagensPorVista.forEach((imagem) => {
     imagem.hidden = vistaSelecionada !== "ambas" && imagem.dataset.vista !== vistaSelecionada;
   });
+  document.querySelectorAll('input[name="vistas-editor"]').forEach((campo) => {
+    campo.checked = campo.value === vistaSelecionada;
+  });
+  window.dispatchEvent(new CustomEvent("endomapa:vistas-alteradas", { detail: vistaSelecionada }));
 }
+
+document.querySelectorAll('input[name="vistas"]').forEach((campo) => {
+  campo.addEventListener("change", aplicarVistas);
+});
+
+document.querySelectorAll('input[name="vistas-editor"]').forEach((campo) => {
+  campo.addEventListener("change", () => {
+    const escolha = document.querySelector(`input[name="vistas"][value="${campo.value}"]`);
+    if (!escolha) return;
+    escolha.checked = true;
+    escolha.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+});
 
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
-    aplicarVistas();
     abrirTela(elemento.dataset.telaAlvo);
   });
 });
@@ -123,7 +140,6 @@ if (window.endomapaMedico) {
 }
 
 window.addEventListener("endomapa:lesoes-confirmadas", () => {
-  aplicarVistas();
   abrirTela("revisao");
 });
 

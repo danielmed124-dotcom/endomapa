@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const camada = document.querySelector("[data-camada-editor]");
+  let camada = document.querySelector("[data-camada-editor]");
   const controles = document.querySelector("[data-controles-lesao]");
   const alternarControles = document.querySelector("[data-alternar-controles]");
   const mensagem = document.querySelector("[data-mensagem-editor]");
@@ -12,6 +12,10 @@
   let selecionada = null;
   let proximoId = 1;
   if (!camada || !controles) return;
+
+  const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
+  const selecoesPorVista = new Map();
+  let vistaAtiva = camada.dataset.camadaEditor || "coronal";
 
   alternarControles?.addEventListener("click", function () {
     definirControlesRecolhidos(!controles.classList.contains("controles-lesao--recolhido"));
@@ -56,6 +60,16 @@
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
   botaoBaixar?.addEventListener("click", baixarMontagemManual);
+  document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
+    botao.addEventListener("click", function () { ativarVista(botao.dataset.editarVista); });
+  });
+  mapasManuais.forEach(function (mapa) {
+    mapa.addEventListener("pointerdown", function () { ativarVista(mapa.dataset.mapaEditor); });
+    mapa.querySelector("[data-mapa-base]")?.addEventListener("load", atualizarTodasAsLinhas);
+  });
+  window.addEventListener("endomapa:vistas-alteradas", function (evento) {
+    aplicarVistasManuais(evento.detail);
+  });
   window.addEventListener("resize", atualizarTodasAsLinhas);
   window.addEventListener("endomapa:tela-aberta", function (evento) {
     if (evento.detail === "editor-manual") atualizarTodasAsLinhas();
@@ -63,15 +77,55 @@
   window.endomapaCapturarMapaManual = capturarMapa;
   window.endomapaCapturarIntegracaoManual = capturarIntegracaoManual;
   window.endomapaAdicionarRotulos = async function (imagem) {
+    const lesoes = fotografarLesoes();
     const base = await carregarImagem(imagem);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0);
-    desenharRotulos(contexto, canvas);
+    desenharRotulos(contexto, canvas, lesoes);
     return canvas.toDataURL("image/png");
   };
+
+  aplicarVistasManuais(document.querySelector('input[name="vistas"]:checked')?.value || "coronal");
+
+  function aplicarVistasManuais(escolha) {
+    if (!mapasManuais.length) return;
+    document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
+      vista.hidden = escolha !== "ambas" && vista.dataset.vistaManual !== escolha;
+    });
+    const destino = escolha === "ambas" ? vistaAtiva : escolha;
+    ativarVista(destino);
+    atualizarTodasAsLinhas();
+  }
+
+  function ativarVista(vista, restaurarSelecao = true) {
+    const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
+    if (!mapa || mapa.closest("[data-vista-manual]")?.hidden) return;
+    if (vista !== vistaAtiva) {
+      selecoesPorVista.set(vistaAtiva, selecionada);
+      selecionada?.classList.remove("lesao-editavel--selecionada");
+      vistaAtiva = vista;
+      camada = mapa.querySelector("[data-camada-editor]");
+      selecionada = null;
+      controles.hidden = true;
+      if (estadoMapa) estadoMapa.hidden = true;
+      const anterior = selecoesPorVista.get(vista);
+      if (restaurarSelecao && anterior?.isConnected) selecionar(anterior);
+    }
+    document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
+      botao.setAttribute("aria-pressed", String(botao.dataset.editarVista === vistaAtiva));
+    });
+    document.querySelectorAll("[data-vista-manual]").forEach(function (item) {
+      item.classList.toggle("vista-manual--ativa", item.dataset.vistaManual === vistaAtiva);
+    });
+    const indicacao = document.querySelector("[data-vista-em-edicao]");
+    if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${vistaAtiva}.`;
+    if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${vistaAtiva}`;
+    document.querySelector("[data-limpar-mapa]").textContent = `Limpar vista ${vistaAtiva}`;
+    atualizarTodasAsLinhas();
+  }
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100") {
     const lesao = document.createElement("button");
@@ -108,6 +162,8 @@
   }
 
   function selecionar(lesao) {
+    const vista = lesao.closest("[data-camada-editor]")?.dataset.camadaEditor;
+    if (vista && vista !== vistaAtiva) ativarVista(vista, false);
     if (selecionada !== lesao) definirControlesRecolhidos(false);
     camada.querySelectorAll(".lesao-editavel").forEach(function (item) {
       item.classList.toggle("lesao-editavel--selecionada", item === lesao);
@@ -128,11 +184,13 @@
 
   function iniciarMovimento(evento) {
     const lesao = evento.currentTarget;
+    const camadaDoMovimento = lesao.closest("[data-camada-editor]");
     selecionar(lesao);
     evento.preventDefault();
     lesao.setPointerCapture(evento.pointerId);
     const mover = function (movimento) {
-      const area = camada.getBoundingClientRect();
+      const area = camadaDoMovimento.getBoundingClientRect();
+      if (!area.width || !area.height) return;
       lesao.dataset.x = limitar(((movimento.clientX - area.left) / area.width) * 100, 3, 97).toFixed(1);
       lesao.dataset.y = limitar(((movimento.clientY - area.top) / area.height) * 100, 3, 97).toFixed(1);
       atualizarVisual(lesao);
@@ -194,7 +252,8 @@
   }
 
   function atualizarRotuloDeMedidas(lesao) {
-    const rotulo = camada.querySelector(`[data-medida-id="${lesao.dataset.id}"]`);
+    const camadaDaLesao = lesao.closest("[data-camada-editor]");
+    const rotulo = camadaDaLesao?.querySelector(`[data-medida-id="${lesao.dataset.id}"]`);
     if (!rotulo) return;
     const linhas = linhasDoRotulo(lesao);
     rotulo.textContent = linhas.join("\n");
@@ -213,13 +272,15 @@
 
   function iniciarMovimentoDaMedida(evento) {
     const rotulo = evento.currentTarget;
-    const lesao = camada.querySelector(`[data-id="${rotulo.dataset.medidaId}"]`);
+    const camadaDoMovimento = rotulo.closest("[data-camada-editor]");
+    const lesao = camadaDoMovimento.querySelector(`[data-id="${rotulo.dataset.medidaId}"]`);
     if (!lesao) return;
     selecionar(lesao);
     evento.preventDefault();
     rotulo.setPointerCapture(evento.pointerId);
     const mover = function (movimento) {
-      const area = camada.getBoundingClientRect();
+      const area = camadaDoMovimento.getBoundingClientRect();
+      if (!area.width || !area.height) return;
       lesao.dataset.medidaX = limitar(((movimento.clientX - area.left) / area.width) * 100, 4, 96).toFixed(1);
       lesao.dataset.medidaY = limitar(((movimento.clientY - area.top) / area.height) * 100, 4, 96).toFixed(1);
       atualizarRotuloDeMedidas(lesao);
@@ -235,11 +296,12 @@
   }
 
   function atualizarLinhaDeMedida(lesao, visivel) {
-    const linha = camada.querySelector(`[data-linha-id="${lesao.dataset.id}"]`);
+    const camadaDaLesao = lesao.closest("[data-camada-editor]");
+    const linha = camadaDaLesao?.querySelector(`[data-linha-id="${lesao.dataset.id}"]`);
     if (!linha) return;
     linha.hidden = !visivel;
     if (!visivel) return;
-    const area = camada.getBoundingClientRect();
+    const area = camadaDaLesao.getBoundingClientRect();
     const inicioX = area.width * Number(lesao.dataset.x) / 100;
     const inicioY = area.height * Number(lesao.dataset.y) / 100;
     const fimX = area.width * Number(lesao.dataset.medidaX) / 100;
@@ -253,7 +315,7 @@
   }
 
   function atualizarTodasAsLinhas() {
-    camada.querySelectorAll(".lesao-editavel").forEach(function (lesao) {
+    document.querySelectorAll("[data-camada-editor] .lesao-editavel").forEach(function (lesao) {
       atualizarRotuloDeMedidas(lesao);
     });
   }
@@ -300,7 +362,8 @@
     camada.replaceChildren();
     selecionada = null;
     controles.hidden = true;
-    mostrar("Mapa limpo. Escolha uma lesão para começar novamente.");
+    selecoesPorVista.delete(vistaAtiva);
+    mostrar(`Vista ${vistaAtiva} limpa. Escolha uma lesão para começar novamente.`);
   }
 
   function mostrar(texto) { mensagem.textContent = texto; }
@@ -315,9 +378,10 @@
 
   async function baixarMontagemManual() {
     if (botaoBaixar.disabled) return;
+    const vistaDaCaptura = vistaAtiva;
     estadoMapa.hidden = false;
     if (!camada.querySelector(".lesao-editavel")) {
-      estadoMapa.textContent = "Adicione pelo menos uma lesão ao mapa antes de baixar a montagem.";
+      estadoMapa.textContent = `Adicione pelo menos uma lesão à vista ${vistaDaCaptura} antes de baixar a montagem.`;
       return;
     }
     botaoBaixar.disabled = true;
@@ -326,12 +390,14 @@
       const imagem = await capturarMapa({ formato: "image/png" });
       const link = document.createElement("a");
       link.href = imagem;
-      link.download = "endomapa-manual-coronal.png";
+      link.download = `endomapa-manual-${vistaDaCaptura}.png`;
       document.body.append(link);
       link.click();
       link.remove();
-      estadoMapa.textContent = "Montagem preparada. Confira o arquivo na pasta de downloads do seu aparelho.";
+      estadoMapa.hidden = false;
+      estadoMapa.textContent = `Vista ${vistaDaCaptura} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
     } catch (erro) {
+      estadoMapa.hidden = false;
       estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
     } finally {
       botaoBaixar.disabled = false;
@@ -391,7 +457,8 @@
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false) {
-    const imagemBase = document.querySelector("[data-mapa-editor] [data-mapa-base], [data-mapa-editor] > img");
+    const mapa = camada.closest("[data-mapa-editor]");
+    const imagemBase = mapa?.querySelector("[data-mapa-base], :scope > img");
     const base = await carregarImagem(imagemBase?.src || "assets/mapa-base-coronal.png");
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;

@@ -1570,6 +1570,24 @@ h1 span {
   position: relative;
 }
 
+.vista-manual {
+  display: grid;
+  min-width: 0;
+  padding: 10px;
+  gap: 10px;
+  border: 1px solid var(--borda);
+  border-radius: 18px;
+}
+
+.vista-manual--ativa {
+  border-color: var(--dourado);
+}
+
+[data-editar-vista][aria-pressed="true"] {
+  outline: 2px solid var(--dourado);
+  outline-offset: 2px;
+}
+
 .editor-manual__cabecalho,
 .biblioteca-lesoes,
 .editor-manual__area,

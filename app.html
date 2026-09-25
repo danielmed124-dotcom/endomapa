@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente ou dite os achados no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=manual-integrado-1" />
+    <link rel="stylesheet" href="styles.css?v=manual-vistas-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -534,6 +534,14 @@
         <div class="selo">Editor manual do Endomapa</div>
         <h1 class="titulo-tela" id="titulo-editor-manual">Monte o mapa manualmente</h1>
         <p class="texto-apoio">Escolha uma lesão-padrão, adicione ao mapa e ajuste com o dedo.</p>
+        <fieldset class="opcoes-vistas">
+          <legend>Vistas do mapa</legend>
+          <label class="opcao-vista">Coronal <input type="radio" name="vistas-editor" value="coronal" /></label>
+          <label class="opcao-vista">Sagital <input type="radio" name="vistas-editor" value="sagital" /></label>
+          <label class="opcao-vista">Ambas <input type="radio" name="vistas-editor" value="ambas" checked /></label>
+        </fieldset>
+        <p class="texto-apoio">Em ambas, selecione a vista que deseja editar. Monte e baixe cada vista separadamente.</p>
+        <p class="mensagem-formulario" data-vista-em-edicao role="status">Adicionando lesões à vista coronal.</p>
       </header>
 
       <section class="biblioteca-lesoes" aria-labelledby="titulo-biblioteca">
@@ -615,15 +623,29 @@
         <p class="mensagem-formulario" data-mensagem-editor>Toque em um modelo para acrescentá-lo ao mapa.</p>
       </section>
 
-      <section class="editor-manual__area" aria-labelledby="titulo-mapa-manual">
-        <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
-        <figure class="mapa-visual mapa-editor" data-mapa-editor>
-          <div class="mapa-editor__desenho">
-          <img src="assets/mapa-base-coronal-visitante.png" data-mapa-base data-src-clinica="assets/mapa-base-coronal.png" data-src-visitante="assets/mapa-base-coronal-visitante.png" alt="Mapa anatômico coronal sem lesões" draggable="false" />
-          <div class="mapa-editor__camada" data-camada-editor aria-label="Lesões adicionadas ao mapa"></div>
-          </div>
-          <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
-        </figure>
+      <section class="editor-manual__area" aria-label="Mapas para edição manual">
+        <section class="vista-manual" data-vista-manual="coronal" aria-labelledby="titulo-mapa-manual">
+          <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="coronal" aria-pressed="true">Editar vista coronal</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="coronal">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapa-base-coronal-visitante.png" data-mapa-base data-src-clinica="assets/mapa-base-coronal.png" data-src-visitante="assets/mapa-base-coronal-visitante.png" alt="Mapa anatômico coronal sem lesões" draggable="false" />
+              <div class="mapa-editor__camada" data-camada-editor="coronal" aria-label="Lesões adicionadas ao mapa coronal"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="sagital" aria-labelledby="titulo-mapa-manual-sagital">
+          <h2 class="secao-dados__titulo" id="titulo-mapa-manual-sagital">Vista sagital</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="sagital" aria-pressed="false">Editar vista sagital</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="sagital">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapa-base-sagital-visitante.png" data-mapa-base data-src-clinica="assets/mapa-base-sagital.png" data-src-visitante="assets/mapa-base-sagital-visitante.png" alt="Mapa anatômico sagital sem lesões" draggable="false" />
+              <div class="mapa-editor__camada" data-camada-editor="sagital" aria-label="Lesões adicionadas ao mapa sagital"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
       </section>
 
       <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
@@ -713,11 +735,11 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="app-auth.js?v=manual-integrado-1"></script>
-    <script src="prototipo.js?v=manual-integrado-1"></script>
+    <script src="prototipo.js?v=manual-vistas-1"></script>
     <script src="mapas.js"></script>
     <script src="voz.js"></script>
     <script src="ia.js"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
-    <script src="editor-manual.js?v=manual-integrado-1"></script>
+    <script src="editor-manual.js?v=manual-vistas-1"></script>
   </body>
 </html>

@@ -87,6 +87,28 @@
       elemento.value = valor;
       elemento.dispatchEvent(new janela.Event('input', { bubbles: true }));
     };
+    const escolherVistas = (grupo, valor) => {
+      const opcao = buscar('input[name="' + grupo + '"][value="' + valor + '"]');
+      opcao.checked = true;
+      opcao.dispatchEvent(new janela.Event('change', { bubbles: true }));
+    };
+    const conferirVistas = valor => {
+      ['vistas', 'vistas-editor'].forEach(grupo => {
+        verificar(buscar('input[name="' + grupo + '"]:checked').value === valor, 'Seleção de vistas deve acompanhar ' + valor + ' em ' + grupo);
+      });
+      ['coronal', 'sagital'].forEach(vista => {
+        const painel = buscar('[data-vista-manual="' + vista + '"]');
+        const visivel = valor === 'ambas' || valor === vista;
+        verificar(buscar('[data-vista="' + vista + '"]').hidden === !visivel, 'Revisão do ditado deve acompanhar a visibilidade da vista ' + vista + ' em ' + valor);
+        verificar(painel.hidden === !visivel, 'Visibilidade da vista ' + vista + ' deve acompanhar ' + valor);
+        verificar((janela.getComputedStyle(painel).display !== 'none') === visivel, 'CSS deve respeitar a visibilidade da vista ' + vista);
+      });
+    };
+    const conferirVistaAtiva = vista => {
+      ['coronal', 'sagital'].forEach(opcao => {
+        verificar(buscar('[data-editar-vista="' + opcao + '"]').getAttribute('aria-pressed') === String(opcao === vista), 'Botão de editar deve identificar a vista ativa ' + vista);
+      });
+    };
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
       detail: { id: 'medico-do-teste', titulo: 'Dra.', nome: 'Médica de Teste', assinatura: 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
     }));
@@ -98,12 +120,23 @@
     const botaoBaixar = buscar('[data-baixar-mapa-manual]');
     perfil(false);
     verificar(editor.hidden && janela.getComputedStyle(editor).display === 'none', 'Editor inicia oculto, inclusive com a regra de grade do CSS');
+    if (!somenteNomes) {
+      conferirVistaAtiva('coronal');
+      escolherVistas('vistas', 'sagital');
+    }
     botaoAbrir.click();
     verificar(!editor.hidden && buscar('[data-tela="novo-mapa"]').hidden, 'Botão abre editor dentro do Endomapa');
     verificar(janela.__teste.destinos.some(destino => destino.endsWith('#editor-manual')), 'Navegação deve registrar o endereço do editor');
     verificar(new URL(mapaBase.src).pathname === new URL(mapaBase.dataset.srcVisitante, doc.baseURI).pathname, 'Visitante deve usar anatomia sem marca da clínica');
 
     if (!somenteNomes) {
+      conferirVistas('sagital');
+      conferirVistaAtiva('sagital');
+      escolherVistas('vistas-editor', 'ambas');
+      conferirVistas('ambas');
+      escolherVistas('vistas-editor', 'coronal');
+      conferirVistas('coronal');
+      conferirVistaAtiva('coronal');
       botaoBaixar.click();
       const estadoVazio = buscar('[data-estado-mapa-manual]');
       await aguardar(() => !estadoVazio.hidden && /adicione|informe/i.test(estadoVazio.textContent) && /lesão|lesões|achado/i.test(estadoVazio.textContent), 'Mapa vazio deve mostrar uma orientação');
@@ -151,6 +184,99 @@
     verificar(textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Nomes e medidas recolocados pelo editor');
 
     if (!somenteNomes) {
+      const camadaCoronal = buscar('[data-camada-editor="coronal"]');
+      const camadaSagital = buscar('[data-camada-editor="sagital"]');
+      const baseSagital = buscar('[data-mapa-editor="sagital"] [data-mapa-base]');
+      const estadoCoronal = JSON.stringify(Array.from(camadaCoronal.querySelectorAll('.lesao-editavel'), item => item.dataset));
+      escolherVistas('vistas-editor', 'ambas');
+      conferirVistas('ambas');
+      verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'As duas vistas devem caber em 390 pixels sem rolagem lateral');
+      buscar('[data-editar-vista="sagital"]').click();
+      conferirVistaAtiva('sagital');
+      buscar('[data-modelo][data-nome="Endometrioma"]').click();
+      const lesaoSagital = buscar('[data-camada-editor="sagital"] .lesao-editavel');
+      preencher(campo, 'Lesão sagital');
+      preencher(medida, '1,7');
+      verificar(camadaSagital.querySelectorAll('.lesao-editavel').length === 1, 'Nova lesão deve entrar somente na vista sagital ativa');
+      verificar(JSON.stringify(Array.from(camadaCoronal.querySelectorAll('.lesao-editavel'), item => item.dataset)) === estadoCoronal, 'Adicionar na sagital deve preservar posição, nomes e medidas coronais');
+      const conferirMovimentoEntreVistas = (elemento, chaveX, chaveY, descricao) => {
+        // Eventos criados pelo teste não registram um toque físico para capturar.
+        const capturaAnterior = Object.getOwnPropertyDescriptor(elemento, 'setPointerCapture');
+        elemento.setPointerCapture = function () {};
+        try {
+          elemento.dispatchEvent(new janela.PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch' }));
+          buscar('[data-editar-vista="coronal"]').click();
+          conferirVistaAtiva('coronal');
+          const area = camadaSagital.getBoundingClientRect();
+          verificar(area.width > 0 && area.height > 0, 'Camada sagital deve estar visível durante ' + descricao);
+          elemento.dispatchEvent(new janela.PointerEvent('pointermove', {
+            bubbles: true, pointerId: 7, pointerType: 'touch',
+            clientX: area.left + area.width / 2, clientY: area.top + area.height / 2,
+          }));
+          elemento.dispatchEvent(new janela.PointerEvent('pointerup', { bubbles: true, pointerId: 7, pointerType: 'touch' }));
+          verificar(Math.abs(Number(lesaoSagital.dataset[chaveX]) - 50) < 0.2 && Math.abs(Number(lesaoSagital.dataset[chaveY]) - 50) < 0.2, descricao + ' deve usar as coordenadas da camada sagital mesmo após ativar Coronal');
+          verificar(JSON.stringify(Array.from(camadaCoronal.querySelectorAll('.lesao-editavel'), item => item.dataset)) === estadoCoronal, descricao + ' não deve alterar as lesões coronais');
+        } finally {
+          if (capturaAnterior) Object.defineProperty(elemento, 'setPointerCapture', capturaAnterior);
+          else delete elemento.setPointerCapture;
+        }
+      };
+      conferirMovimentoEntreVistas(lesaoSagital, 'x', 'y', 'Arrastar a lesão sagital');
+      conferirMovimentoEntreVistas(buscar('[data-medida-id="' + lesaoSagital.dataset.id + '"]'), 'medidaX', 'medidaY', 'Arrastar o rótulo sagital');
+      primeira.click();
+      conferirVistaAtiva('coronal');
+      verificar(campo.value === 'Endometrioma esquerdo' && medida.value === '2,5', 'Selecionar a lesão coronal deve recuperar seus controles');
+      lesaoSagital.click();
+      conferirVistaAtiva('sagital');
+      verificar(campo.value === 'Lesão sagital' && medida.value === '1,7', 'Selecionar a lesão sagital deve recuperar seus controles');
+      escolherVistas('vistas-editor', 'coronal');
+      conferirVistas('coronal');
+      conferirVistaAtiva('coronal');
+      verificar(primeira.classList.contains('lesao-editavel--selecionada') && campo.value === 'Endometrioma esquerdo' && medida.value === '2,5', 'Voltar à coronal deve preservar sua seleção, nome e medida');
+      escolherVistas('vistas-editor', 'sagital');
+      conferirVistas('sagital');
+      conferirVistaAtiva('sagital');
+      verificar(lesaoSagital.classList.contains('lesao-editavel--selecionada') && campo.value === 'Lesão sagital' && medida.value === '1,7', 'Voltar à sagital deve preservar sua seleção, nome e medida');
+      verificar(new URL(baseSagital.src).pathname === new URL(baseSagital.dataset.srcVisitante, doc.baseURI).pathname, 'Sagital visitante deve usar anatomia sem marca da clínica');
+      const figuraSagital = baseSagital.getBoundingClientRect();
+      const areaSagital = camadaSagital.getBoundingClientRect();
+      verificar(figuraSagital.width > 0 && Math.abs(figuraSagital.width - areaSagital.width) < 1 && Math.abs(figuraSagital.height - areaSagital.height) < 1 && Math.abs(figuraSagital.top - areaSagital.top) < 1, 'Camada sagital deve coincidir com sua anatomia');
+      escolherVistas('vistas-editor', 'ambas');
+      conferirVistas('ambas');
+      buscar('[data-editar-vista="sagital"]').click();
+      conferirVistaAtiva('sagital');
+      textos.length = 0;
+      bases.length = 0;
+      await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+      verificar(bases[0] === baseSagital.src && !bases.includes(mapaBase.src), 'Captura ativa deve usar somente a base sagital');
+      verificar(textos.some(item => item.texto === 'Lesão sagital') && textos.some(item => item.texto === '1,7 cm'), 'Captura sagital deve preservar seu nome e sua medida');
+      verificar(!textos.some(item => item.texto === 'Endometrioma esquerdo' || item.texto === 'Adenomiose'), 'Captura sagital não deve incluir rótulos coronais');
+      textos.length = 0;
+      bases.length = 0;
+      const downloadsAntesSagital = janela.__teste.downloads.length;
+      botaoBaixar.click();
+      await aguardar(() => janela.__teste.downloads.length === downloadsAntesSagital + 1, 'Download da sagital não concluiu');
+      verificar(janela.__teste.downloads[downloadsAntesSagital].nome === 'endomapa-manual-sagital.png', 'Nome do arquivo deve identificar a vista sagital');
+      verificar(bases[0] === baseSagital.src && textos.some(item => item.texto === 'Lesão sagital') && textos.some(item => item.texto === '1,7 cm') && !textos.some(item => item.texto === 'Endometrioma esquerdo'), 'Download deve usar anatomia e rótulos somente da vista sagital ativa');
+      perfil(true);
+      [mapaBase, baseSagital].forEach(basePerfil => {
+        verificar(new URL(basePerfil.src).pathname === new URL(basePerfil.dataset.srcClinica, doc.baseURI).pathname, 'Perfil da clínica deve aplicar sua anatomia às duas vistas');
+      });
+      bases.length = 0;
+      await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+      verificar(bases[0] === baseSagital.src, 'Captura sagital deve acompanhar o perfil da clínica');
+      perfil(false);
+      [mapaBase, baseSagital].forEach(basePerfil => {
+        verificar(new URL(basePerfil.src).pathname === new URL(basePerfil.dataset.srcVisitante, doc.baseURI).pathname, 'Retornar ao perfil visitante deve retirar a marca nas duas vistas');
+      });
+      buscar('[data-limpar-mapa]').click();
+      verificar(!camadaSagital.querySelector('.lesao-editavel') && !camadaSagital.querySelector('[data-medida-id]'), 'Limpar sagital deve remover suas lesões e seus rótulos');
+      verificar(JSON.stringify(Array.from(camadaCoronal.querySelectorAll('.lesao-editavel'), item => item.dataset)) === estadoCoronal, 'Limpar sagital deve preservar todas as lesões coronais');
+      escolherVistas('vistas-editor', 'coronal');
+      conferirVistas('coronal');
+      conferirVistaAtiva('coronal');
+      verificar(primeira.classList.contains('lesao-editavel--selecionada') && campo.value === 'Endometrioma esquerdo' && medida.value === '2,5', 'Limpar a outra vista deve preservar a seleção coronal');
+
       const estado = Array.from(doc.querySelectorAll('.lesao-editavel'), item => JSON.stringify(item.dataset));
       const voltar = buscar('.editor-manual [data-tela-alvo="novo-mapa"]');
       const conferirToque = (botao, descricao) => {
@@ -175,10 +301,11 @@
       verificar(Math.abs(figura.width - camada.width) < 1 && Math.abs(figura.height - camada.height) < 1 && Math.abs(figura.top - camada.top) < 1, 'Camada de lesões deve coincidir com a anatomia exibida');
       textos.length = 0;
       bases.length = 0;
+      const downloadsAntesCoronal = janela.__teste.downloads.length;
       botaoBaixar.click();
-      await aguardar(() => janela.__teste.downloads.length === 1, 'Botão não concluiu o download local');
-      verificar(/\.png$/i.test(janela.__teste.downloads[0].nome), 'Arquivo baixado precisa ser PNG');
-      verificar(/^(?:data:image\/png;base64,|blob:)/.test(janela.__teste.downloads[0].endereco), 'Download precisa usar imagem local');
+      await aguardar(() => janela.__teste.downloads.length === downloadsAntesCoronal + 1, 'Botão não concluiu o download local');
+      verificar(janela.__teste.downloads[downloadsAntesCoronal].nome === 'endomapa-manual-coronal.png', 'Arquivo baixado precisa ser PNG e identificar a vista coronal');
+      verificar(/^(?:data:image\/png;base64,|blob:)/.test(janela.__teste.downloads[downloadsAntesCoronal].endereco), 'Download precisa usar imagem local');
       verificar(bases[0] === mapaBase.src && textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Download deve preservar anatomia do perfil, nome e medidas');
       voltar.click();
       verificar(editor.hidden && buscar('[data-controles-lesao]').getClientRects().length === 0, 'Sair do editor também deve ocultar ajustes fixos');
@@ -207,7 +334,7 @@
     verificar(janela.__teste.erros.length === 0, 'Erros no editor: ' + janela.__teste.erros.join('; '));
     saida.textContent = somenteNomes
       ? 'PASSOU: nomes independentes, seleção, texto seguro, capturas JPEG e PNG, rótulos, remoção e medidas no aplicativo integrado. Nenhuma API.'
-      : 'PASSOU: editor integrado, geração de imagens removida, visitante e clínica, nomes, medidas, captura e download PNG locais, mapa vazio, navegação sem perder lesões e celular de 390 pixels. Nenhuma API.';
+      : 'PASSOU: editor integrado, vistas coronal/sagital/ambas sincronizadas, lesões e seleção independentes, limpeza e download da vista ativa, geração de imagens removida, visitante e clínica nas duas vistas, nomes, medidas, captura PNG local, mapa vazio, navegação sem perder lesões e celular de 390 pixels. Nenhuma API.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
   }
