@@ -173,8 +173,9 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
     const modelos = botoes.map((botao) => /^assets\/lesoes\/([a-z0-9-]+)\.png(?:\?v=[a-z0-9-]+)?$/.exec(botao.dataset.modelo)?.[1]);
     verificar(modelos.every(Boolean) && new Set(modelos).size === modelos.length, 'Os caminhos da biblioteca identificam modelos únicos');
     // O refinamento por IA está pausado; figuras novas podem ser somente manuais.
-    const modelosCatalogados = Object.keys(CATALOGO_REFINAMENTO);
-    verificar(modelosCatalogados.length > 0 && modelosCatalogados.every((modelo) => modelos.includes(modelo)), 'Todos os modelos do catálogo histórico continuam na biblioteca real');
+    // Aderência 4 foi retirada da biblioteca; seu registro histórico permanece arquivado.
+    const modelosCatalogados = Object.keys(CATALOGO_REFINAMENTO).filter((modelo) => modelo !== 'aderencia-4-marrom-escuro');
+    verificar(modelosCatalogados.length > 0 && modelosCatalogados.every((modelo) => modelos.includes(modelo)), 'Os demais modelos do catálogo histórico continuam na biblioteca real');
     modelosCatalogados.forEach((modelo) => {
       const botao = botoes[modelos.indexOf(modelo)];
       const item = CATALOGO_REFINAMENTO[modelo];
