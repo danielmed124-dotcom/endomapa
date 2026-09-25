@@ -30,7 +30,7 @@
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial);
+      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial);
     });
   });
   giro.addEventListener("input", aplicarControles);
@@ -127,7 +127,7 @@
     atualizarTodasAsLinhas();
   }
 
-  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100") {
+  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0") {
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
@@ -139,7 +139,7 @@
     lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
     lesao.dataset.y = String(45 + deslocamento);
-    lesao.dataset.giro = "0";
+    lesao.dataset.giro = giroInicial;
     lesao.dataset.tamanho = tamanhoInicial;
     lesao.dataset.eixoX = "100";
     lesao.dataset.eixoY = "100";
