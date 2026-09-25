@@ -170,7 +170,7 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
     const paginaEditor = new DOMParser().parseFromString(await respostaEditor.text(), 'text/html');
     const botoes = [...paginaEditor.querySelectorAll('[data-modelo]')];
     verificar(botoes.length > 0, 'Exercitar todos os elementos reais da biblioteca');
-    const modelos = botoes.map((botao) => /^assets\/lesoes\/([a-z0-9-]+)\.png$/.exec(botao.dataset.modelo)?.[1]);
+    const modelos = botoes.map((botao) => /^assets\/lesoes\/([a-z0-9-]+)\.png(?:\?v=[a-z0-9-]+)?$/.exec(botao.dataset.modelo)?.[1]);
     verificar(modelos.every(Boolean) && new Set(modelos).size === modelos.length, 'Os caminhos da biblioteca identificam modelos únicos');
     // O refinamento por IA está pausado; figuras novas podem ser somente manuais.
     const modelosCatalogados = Object.keys(CATALOGO_REFINAMENTO);
@@ -191,7 +191,10 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
         semRecorte: botao.dataset.semRecorte,
       });
       const imagem = document.createElement('img');
-      imagem.src = `${botao.dataset.modelo}?versao=teste-local#ignorar`;
+      const enderecoImagem = new URL(botao.dataset.modelo, document.baseURI);
+      enderecoImagem.searchParams.set('versao', 'teste-local');
+      enderecoImagem.hash = 'ignorar';
+      imagem.src = enderecoImagem.href;
       elemento.append(imagem);
       camada.append(elemento);
     });
