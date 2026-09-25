@@ -169,14 +169,19 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
     verificar(respostaEditor.ok, 'Página real do editor deve estar disponível para conferir a biblioteca');
     const paginaEditor = new DOMParser().parseFromString(await respostaEditor.text(), 'text/html');
     const botoes = [...paginaEditor.querySelectorAll('[data-modelo]')];
-    verificar(botoes.length === 18, 'Exercitar os 18 elementos reais da biblioteca');
+    verificar(botoes.length > 0, 'Exercitar todos os elementos reais da biblioteca');
     const modelos = botoes.map((botao) => /^assets\/lesoes\/([a-z0-9-]+)\.png$/.exec(botao.dataset.modelo)?.[1]);
     verificar(modelos.every(Boolean) && new Set(modelos).size === modelos.length, 'Os caminhos da biblioteca identificam modelos únicos');
-    verificar(Object.keys(CATALOGO_REFINAMENTO).sort().join() === modelos.slice().sort().join(), 'Catálogo deve cobrir exatamente a biblioteca real');
-    botoes.forEach((botao, indice) => {
-      const item = CATALOGO_REFINAMENTO[modelos[indice]];
+    // O refinamento por IA está pausado; figuras novas podem ser somente manuais.
+    const modelosCatalogados = Object.keys(CATALOGO_REFINAMENTO);
+    verificar(modelosCatalogados.length > 0 && modelosCatalogados.every((modelo) => modelos.includes(modelo)), 'Todos os modelos do catálogo histórico continuam na biblioteca real');
+    modelosCatalogados.forEach((modelo) => {
+      const botao = botoes[modelos.indexOf(modelo)];
+      const item = CATALOGO_REFINAMENTO[modelo];
       verificar(item.nome === botao.dataset.nome && typeof item.tipo_visual === 'string' && item.tipo_visual.length > 20 && typeof item.preservar === 'string' && item.preservar.length > 20, 'Catálogo contém nome da biblioteca e descrições visuais explícitas');
-      verificar(item.editavel === !modelos[indice].startsWith('diu-'), 'DIUs são preservados; as 16 lesões são elegíveis para acabamento');
+      verificar(item.editavel === !modelo.startsWith('diu-'), 'Catálogo histórico mantém DIUs protegidos e lesões elegíveis para acabamento');
+    });
+    botoes.forEach((botao, indice) => {
       const elemento = document.createElement('button');
       elemento.className = 'lesao-editavel';
       Object.assign(elemento.dataset, {
@@ -191,14 +196,14 @@ import { CATALOGO_REFINAMENTO } from './supabase/functions/_shared/catalogo-refi
       camada.append(elemento);
     });
     const bibliotecaCapturada = await window.endomapaCapturarIntegracaoManual({ comInventario: true });
-    verificar(bibliotecaCapturada.inventario.lesoes.length === 18 && bibliotecaCapturada.lesoes.length === 18, 'Figuras reais produzem uma entrada e uma máscara na mesma ordem');
+    verificar(bibliotecaCapturada.inventario.lesoes.length === botoes.length && bibliotecaCapturada.lesoes.length === botoes.length, 'Todas as figuras reais produzem uma entrada e uma máscara na mesma ordem');
     bibliotecaCapturada.inventario.lesoes.forEach((lesao, indice) => {
       verificar(lesao.id === `L${indice + 1}` && lesao.modelo === modelos[indice], 'Nome do modelo vem somente do caminho da imagem; consulta e fragmento são removidos');
       verificar(bibliotecaCapturada.lesoes[indice].alfa.some((alfa) => alfa > 0), 'Cada PNG real produz uma máscara não vazia');
     });
     const serializado = JSON.stringify(bibliotecaCapturada.inventario);
     verificar(!/Paciente|Dado livre|https?:|versao|ignorar|interno-/.test(serializado), 'Inventário final não contém textos livres, URLs, consultas, fragmentos ou IDs internos');
-    resultado.textContent = 'PASSOU: PNG original idêntico, máscaras locais alinhadas, escala, rotação, recorte elíptico, transparência, vazados, superposição, bordas, captura e inventário atômicos, mapa vazio, catálogo dos 18 PNGs reais, DIUs preservados e ausência de texto livre; nenhuma API.';
+    resultado.textContent = 'PASSOU: PNG original idêntico, máscaras locais alinhadas, escala, rotação, recorte elíptico, transparência, vazados, superposição, bordas, captura e inventário atômicos, mapa vazio, todos os PNGs reais da biblioteca, catálogo histórico preservado, DIUs protegidos e ausência de texto livre; nenhuma API.';
   } catch (erro) {
     resultado.textContent = 'FALHOU: ' + erro.message;
   }
