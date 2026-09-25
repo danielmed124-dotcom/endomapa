@@ -1,0 +1,2 @@
+# Preserve o arquivo oficial da biblioteca, incluindo os espaços nas licenças.
+assets/vendor/jspdf-4.2.1.umd.min.js -whitespace

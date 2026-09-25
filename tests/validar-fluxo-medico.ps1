@@ -1,4 +1,4 @@
-param([string[]]$Testes = @('editor-manual-integrado', 'editor-manual-nomes', 'captura-integracao-manual'), [int]$TempoVirtual = 15000, [switch]$Captura)
+param([string[]]$Testes = @('editor-manual-integrado', 'editor-manual-nomes', 'captura-integracao-manual', 'pdf-manual'), [int]$TempoVirtual = 15000, [switch]$Captura)
 $ErrorActionPreference = 'Stop'
 # O ambiente do aplicativo pode trazer Path e PATH. O Start-Process do Windows
 # exige uma única entrada; a normalização vale somente para este processo.
@@ -41,7 +41,10 @@ try {
     $arquivoSaida = Join-Path $env:TEMP "endomapa-$nome-dom.html"
     $arquivoErro = Join-Path $env:TEMP "endomapa-$nome-erros.txt"
     $rota = if ($nome -eq 'preparo-teste-unico-sucesso') { 'preparo-teste-unico.html#sucesso' } else { "$nome.html" }
-    $argumentos = @('--headless=new', '--disable-gpu', '--no-first-run', "--user-data-dir=$env:TEMP\endomapa-fluxo-medico-$nome", "--virtual-time-budget=$TempoVirtual", '--dump-dom', "http://localhost:8766/tests/$rota")
+    # O teste de PDF abre cinco arquivos binários; o relógio virtual avança
+    # durante as leituras assíncronas. Este limite não é uma espera real.
+    $tempoDoTeste = if ($nome -eq 'pdf-manual') { [Math]::Max($TempoVirtual, 360000) } else { $TempoVirtual }
+    $argumentos = @('--headless=new', '--disable-gpu', '--no-first-run', "--user-data-dir=$env:TEMP\endomapa-fluxo-medico-$nome", "--virtual-time-budget=$tempoDoTeste", '--dump-dom', "http://localhost:8766/tests/$rota")
     if ($Captura) {
       $argumentos = @('--window-size=1440,1100', "--screenshot=$env:TEMP\endomapa-$nome.png") + $argumentos
     }

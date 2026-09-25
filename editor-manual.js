@@ -58,8 +58,11 @@
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
+  const botaoPdf = document.querySelector("[data-baixar-pdf-manual]");
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
+  let exportacaoEmAndamento = false;
   botaoBaixar?.addEventListener("click", baixarMontagemManual);
+  botaoPdf?.addEventListener("click", baixarPdfManual);
   document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
     botao.addEventListener("click", function () { ativarVista(botao.dataset.editarVista); });
   });
@@ -97,6 +100,8 @@
     });
     const destino = escolha === "ambas" ? vistaAtiva : escolha;
     ativarVista(destino);
+    if (botaoPdf) botaoPdf.textContent = escolha === "ambas"
+      ? "Gerar PDF A4 (2 páginas)" : `Gerar PDF A4 (${escolha})`;
     atualizarTodasAsLinhas();
   }
 
@@ -122,7 +127,7 @@
     });
     const indicacao = document.querySelector("[data-vista-em-edicao]");
     if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${vistaAtiva}.`;
-    if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${vistaAtiva}`;
+    if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${vistaAtiva} (PNG)`;
     document.querySelector("[data-limpar-mapa]").textContent = `Limpar vista ${vistaAtiva}`;
     atualizarTodasAsLinhas();
   }
@@ -369,22 +374,22 @@
   function mostrar(texto) { mensagem.textContent = texto; }
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
 
-  function fotografarLesoes() {
+  function fotografarLesoes(camadaDaCaptura = camada) {
     // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
-    return Array.from(camada.querySelectorAll(".lesao-editavel"), function (lesao) {
+    return Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
       return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src };
     });
   }
 
   async function baixarMontagemManual() {
-    if (botaoBaixar.disabled) return;
+    if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
     estadoMapa.hidden = false;
     if (!camada.querySelector(".lesao-editavel")) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão à vista ${vistaDaCaptura} antes de baixar a montagem.`;
       return;
     }
-    botaoBaixar.disabled = true;
+    definirExportacaoEmAndamento(true);
     estadoMapa.textContent = "Preparando a montagem com os nomes e as medidas…";
     try {
       const imagem = await capturarMapa({ formato: "image/png" });
@@ -400,7 +405,66 @@
       estadoMapa.hidden = false;
       estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
     } finally {
-      botaoBaixar.disabled = false;
+      definirExportacaoEmAndamento(false);
+    }
+  }
+
+  function definirExportacaoEmAndamento(ocupado) {
+    exportacaoEmAndamento = ocupado;
+    if (botaoBaixar) botaoBaixar.disabled = ocupado;
+    if (botaoPdf) botaoPdf.disabled = ocupado;
+  }
+
+  function obterFonteDaBase(camadaDaCaptura = camada) {
+    const mapa = camadaDaCaptura.closest("[data-mapa-editor]");
+    return mapa?.querySelector("[data-mapa-base], :scope > img")?.src || "assets/mapa-base-coronal.png";
+  }
+
+  async function baixarPdfManual() {
+    if (exportacaoEmAndamento) return;
+    const escolha = document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva;
+    const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
+    estadoMapa.hidden = false;
+    definirExportacaoEmAndamento(true);
+    estadoMapa.textContent = "Preparando o PDF A4 com os nomes e as medidas…";
+    try {
+      // Todas as páginas conservam base, lesões e textos do instante do clique.
+      // Não é preciso trocar a vista ativa nem alterar a montagem do usuário.
+      const capturas = vistas.map(function (vista) {
+        const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
+        const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
+        return { vista, base: obterFonteDaBase(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura) };
+      });
+      if (!capturas.some(function (captura) { return captura.lesoes.length; })) {
+        estadoMapa.textContent = "Adicione pelo menos uma lesão às vistas selecionadas antes de gerar o PDF.";
+        return;
+      }
+      const paginas = [];
+      for (const captura of capturas) {
+        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base);
+        desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
+        paginas.push({ vista: captura.vista, canvas });
+      }
+      const arquivo = window.endomapaGerarPdfA4(paginas);
+      const endereco = URL.createObjectURL(arquivo);
+      const link = document.createElement("a");
+      try {
+        link.href = endereco;
+        link.download = `endomapa-manual-${escolha}-a4.pdf`;
+        document.body.append(link);
+        link.click();
+      } finally {
+        link.remove();
+        // O aparelho precisa de tempo para abrir ou salvar o arquivo antes da liberação.
+        window.setTimeout(function () { URL.revokeObjectURL(endereco); }, 60000);
+      }
+      estadoMapa.hidden = false;
+      estadoMapa.textContent = `PDF A4 preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}. Salve o arquivo para imprimir em papel A4.`;
+    } catch (erro) {
+      estadoMapa.hidden = false;
+      estadoMapa.textContent = "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
+    } finally {
+      definirExportacaoEmAndamento(false);
     }
   }
 
@@ -456,10 +520,8 @@
     }
   }
 
-  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false) {
-    const mapa = camada.closest("[data-mapa-editor]");
-    const imagemBase = mapa?.querySelector("[data-mapa-base], :scope > img");
-    const base = await carregarImagem(imagemBase?.src || "assets/mapa-base-coronal.png");
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase()) {
+    const base = await carregarImagem(fonteBase);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;

@@ -701,11 +701,12 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
-        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar a montagem.</p>
+        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao ditado</button>
         <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
-        <button class="botao" type="button" data-baixar-mapa-manual>Baixar montagem manual</button>
+        <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
+        <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
       </div>
       </section>
     </main>
@@ -740,6 +741,8 @@
     <script src="voz.js"></script>
     <script src="ia.js"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
-    <script src="editor-manual.js?v=retrocervical-ajuste-1"></script>
+    <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
+    <script src="pdf-manual.js?v=a4-1"></script>
+    <script src="editor-manual.js?v=pdf-a4-1"></script>
   </body>
 </html>

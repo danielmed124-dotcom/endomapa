@@ -1,0 +1,307 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação do PDF A4 da montagem manual</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 240; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-manual.js'];
+    dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
+    const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
+    verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');
+    verificar(origem.querySelector('[data-baixar-pdf-manual]'), 'Botão de PDF ausente no aplicativo real');
+
+    // O teste mantém o HTML, CSS, imagens, navegação, editor e gerador reais.
+    // Somente autenticação, serviços externos e o download no aparelho são isolados.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], blobs: new Map(), liberacoes: [], temporizadoresLongos: new Map() };
+      history.replaceState = function () {};
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste de PDF'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste de PDF');
+      };
+      window.addEventListener('error', evento => { if (evento.message) window.__teste.erros.push(evento.message); });
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const criarEndereco = URL.createObjectURL;
+      URL.createObjectURL = function (blob) {
+        const endereco = criarEndereco.call(this, blob);
+        window.__teste.blobs.set(endereco, blob);
+        return endereco;
+      };
+      const liberarEndereco = URL.revokeObjectURL;
+      URL.revokeObjectURL = function (endereco) {
+        window.__teste.liberacoes.push(endereco);
+        return liberarEndereco.call(this, endereco);
+      };
+      // Avançamos a limpeza tardia manualmente após conferir todos os PDFs.
+      // O relógio virtual do Chrome não deve saltar 60 segundos enquanto
+      // FileReader e Blob ainda estão concluindo suas leituras assíncronas.
+      const agendar = window.setTimeout;
+      const cancelar = window.clearTimeout;
+      let proximoTemporizador = -1;
+      window.setTimeout = function (callback, atraso, ...argumentos) {
+        if (Number(atraso) >= 60000 && typeof callback === 'function') {
+          const identificador = proximoTemporizador--;
+          window.__teste.temporizadoresLongos.set(identificador, () => callback(...argumentos));
+          return identificador;
+        }
+        return agendar.call(window, callback, atraso, ...argumentos);
+      };
+      window.clearTimeout = function (identificador) {
+        if (!window.__teste.temporizadoresLongos.delete(identificador)) cancelar.call(window, identificador);
+      };
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    dependencias.forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    const teste = janela.__teste;
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    const botaoPdf = buscar('[data-baixar-pdf-manual]');
+    const botaoPng = buscar('[data-baixar-mapa-manual]');
+    const estado = buscar('[data-estado-mapa-manual]');
+    const campoNome = buscar('[data-controle-nome-lesao]');
+    const campoMedida = buscar('[data-medida="1"]');
+    const baseDaVista = vista => buscar('[data-mapa-editor="' + vista + '"] [data-mapa-base]');
+    const camadaDaVista = vista => buscar('[data-camada-editor="' + vista + '"]');
+    const preencher = (campo, valor) => {
+      campo.value = valor;
+      campo.dispatchEvent(new janela.Event('input', { bubbles: true }));
+    };
+    const escolher = valor => {
+      const opcao = buscar('input[name="vistas-editor"][value="' + valor + '"]');
+      opcao.checked = true;
+      opcao.dispatchEvent(new janela.Event('change', { bubbles: true }));
+    };
+    const editar = vista => buscar('[data-editar-vista="' + vista + '"]').click();
+    const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
+      detail: { id: 'medico-do-teste', titulo: 'Dra.', nome: 'Médica de Teste', assinatura: 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
+    }));
+    const fotografarEstado = () => JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), lesao => ({ dataset: { ...lesao.dataset }, src: lesao.querySelector('img').src })));
+    const operacoes = new WeakMap();
+    const operacoesDaTela = canvas => {
+      if (!operacoes.has(canvas)) operacoes.set(canvas, { textos: [], imagens: [] });
+      return operacoes.get(canvas);
+    };
+    const contexto = janela.CanvasRenderingContext2D.prototype;
+    const escrever = contexto.fillText;
+    const desenhar = contexto.drawImage;
+    contexto.fillText = function (texto) {
+      operacoesDaTela(this.canvas).textos.push(texto);
+      return escrever.apply(this, arguments);
+    };
+    contexto.drawImage = function (imagem) {
+      if (imagem instanceof janela.HTMLImageElement) operacoesDaTela(this.canvas).imagens.push(imagem.src);
+      return desenhar.apply(this, arguments);
+    };
+    const geracoes = [];
+    const geradorOriginal = janela.endomapaGerarPdfA4;
+    janela.endomapaGerarPdfA4 = function (paginas) {
+      const registro = paginas.map(pagina => ({
+        vista: pagina.vista, largura: pagina.canvas.width, altura: pagina.canvas.height,
+        png: pagina.canvas.toDataURL('image/png'), ...operacoesDaTela(pagina.canvas),
+      }));
+      const blob = geradorOriginal.apply(this, arguments);
+      verificar(blob instanceof janela.Blob, 'Gerador deve devolver um Blob real, sem promessa');
+      geracoes.push(registro);
+      return blob;
+    };
+    const conferirPdf = async (indice, nome, vistas, imagensEsperadas) => {
+      saida.dataset.etapa = 'Conferindo ' + nome + ' (' + indice + ')';
+      await aguardar(() => teste.downloads.length > indice && !botaoPdf.disabled && !botaoPng.disabled, 'Download PDF não concluiu: ' + nome);
+      const download = teste.downloads[indice];
+      verificar(download.nome === nome, 'Nome de download incorreto: ' + download.nome);
+      const blob = teste.blobs.get(download.endereco);
+      verificar(blob && blob.type === 'application/pdf', 'Download precisa conter arquivo application/pdf');
+      if (indice === 0) {
+        const leitor = new FileReader();
+        const dados = await new Promise((resolve, reject) => {
+          leitor.onload = () => resolve(leitor.result);
+          leitor.onerror = reject;
+          leitor.readAsDataURL(blob);
+        });
+        const amostra = document.createElement('script');
+        amostra.id = 'pdf-amostra';
+        amostra.type = 'application/octet-stream';
+        amostra.dataset.paginas = String(vistas.length);
+        amostra.textContent = dados.slice(dados.indexOf(',') + 1);
+        document.body.append(amostra);
+      }
+      const conteudo = new TextDecoder('latin1').decode(await blob.arrayBuffer());
+      saida.dataset.etapa = 'Lendo ' + nome + ' (' + indice + ')';
+      verificar(conteudo.startsWith('%PDF-') && conteudo.trimEnd().endsWith('%%EOF'), 'Arquivo precisa ser um PDF completo');
+      verificar(new RegExp('/Count\\s+' + vistas.length + '\\b').test(conteudo), 'Quantidade de páginas incorreta no PDF');
+      const caixas = Array.from(conteudo.matchAll(/\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/g));
+      verificar(caixas.length === vistas.length, 'Cada página precisa declarar suas dimensões');
+      caixas.forEach(caixa => verificar(Math.abs(Number(caixa[1]) - 595.28) < 0.05 && Math.abs(Number(caixa[2]) - 841.89) < 0.05, 'Páginas devem ser A4 em retrato, 210 × 297 mm'));
+      verificar(!/\/DCTDecode\b/.test(conteudo), 'PDF não deve converter os mapas para JPEG com perda de qualidade');
+      const paginas = geracoes[geracoes.length - 1];
+      verificar(JSON.stringify(paginas.map(pagina => pagina.vista)) === JSON.stringify(vistas), 'Ordem das páginas deve corresponder às vistas selecionadas');
+      paginas.forEach((pagina, posicao) => {
+        verificar(pagina.png === imagensEsperadas[posicao], 'Mapa, fibras, nomes e medidas foram alterados na página ' + pagina.vista);
+        verificar(conteudo.includes('/Width ' + pagina.largura) && conteudo.includes('/Height ' + pagina.altura), 'PDF deve guardar a imagem na resolução original da vista ' + pagina.vista);
+      });
+      return paginas;
+    };
+    const capturarVista = async vista => {
+      editar(vista);
+      return janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+    };
+    perfil(false);
+    buscar('[data-tela-alvo="editor-manual"]').click();
+    escolher('ambas');
+    botaoPdf.click();
+    await aguardar(() => !estado.hidden && /adicione|informe/i.test(estado.textContent), 'PDF vazio deve orientar a informar achados');
+    verificar(teste.downloads.length === 0 && geracoes.length === 0, 'Nenhuma vista com achados: não deve gerar PDF');
+    verificar(!botaoPdf.disabled && !botaoPng.disabled, 'Mapa vazio não deve bloquear os botões');
+
+    editar('coronal');
+    buscar('[data-modelo][data-nome="Endometrioma"]').click();
+    preencher(campoNome, 'Endometrioma coronal');
+    preencher(campoMedida, '2,5');
+    editar('sagital');
+    buscar('[data-modelo][data-nome="Adenomiose 1"]').click();
+    preencher(campoNome, 'Adenomiose sagital');
+    preencher(campoMedida, '1,7');
+    const esperadoCoronal = await capturarVista('coronal');
+    const esperadoSagital = await capturarVista('sagital');
+    const basesVisitante = ['coronal', 'sagital'].map(vista => baseDaVista(vista).src);
+    const dimensoesOriginais = ['coronal', 'sagital'].map(vista => [baseDaVista(vista).naturalWidth, baseDaVista(vista).naturalHeight]);
+    // O painel de ajustes ocupa a parte inferior; o editor reserva espaço
+    // para alcançar os downloads ao rolar até o final, como no uso por toque.
+    janela.scrollTo({ top: doc.documentElement.scrollHeight, behavior: 'instant' });
+    const areaBotao = botaoPdf.getBoundingClientRect();
+    verificar(areaBotao.width > 0 && areaBotao.left >= 0 && areaBotao.right <= janela.innerWidth && areaBotao.top >= 0 && areaBotao.bottom <= janela.innerHeight, 'Botão de PDF deve caber na tela de 390 pixels');
+    verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'PDF não pode causar rolagem lateral no celular');
+    const alvoToque = doc.elementFromPoint(areaBotao.left + areaBotao.width / 2, areaBotao.top + areaBotao.height / 2);
+    verificar(alvoToque && (alvoToque === botaoPdf || botaoPdf.contains(alvoToque)), 'Botão de PDF deve poder receber o toque sem ser encoberto pelos ajustes');
+
+    botaoPdf.click();
+    verificar(botaoPdf.disabled && botaoPng.disabled, 'PNG e PDF devem ficar bloqueados durante a preparação');
+    // dispatchEvent também alcança o tratador mesmo quando o botão está desabilitado.
+    botaoPdf.dispatchEvent(new janela.MouseEvent('click', { bubbles: true }));
+    botaoPng.dispatchEvent(new janela.MouseEvent('click', { bubbles: true }));
+    // Tudo abaixo ocorre no mesmo turno do clique, antes do primeiro carregamento.
+    ['coronal', 'sagital'].forEach(vista => {
+      const lesao = camadaDaVista(vista).querySelector('.lesao-editavel');
+      lesao.dataset.x = '10';
+      lesao.dataset.y = '15';
+      lesao.dataset.nomeNoMapa = 'Mudança posterior ' + vista;
+      lesao.dataset.medida1 = '9,9';
+    });
+    escolher('coronal');
+    perfil(true);
+    const paginasIniciais = await conferirPdf(0, 'endomapa-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronal, esperadoSagital]);
+    verificar(geracoes.length === 1 && teste.downloads.length === 1, 'Dois toques e tentativa de PNG durante PDF devem gerar apenas um arquivo');
+    paginasIniciais.forEach((pagina, indice) => {
+      verificar(pagina.imagens[0] === basesVisitante[indice], 'Base do perfil deve ser congelada antes de carregar as imagens');
+      verificar(pagina.largura === dimensoesOriginais[indice][0] && pagina.altura === dimensoesOriginais[indice][1], 'Captura precisa manter todas as dimensões originais');
+    });
+    verificar(paginasIniciais[0].textos.includes('Endometrioma coronal') && paginasIniciais[0].textos.includes('2,5 cm') && !paginasIniciais[0].textos.includes('Adenomiose sagital'), 'Coronal deve levar somente seus nomes e medidas');
+    verificar(paginasIniciais[1].textos.includes('Adenomiose sagital') && paginasIniciais[1].textos.includes('1,7 cm') && !paginasIniciais[1].textos.includes('Endometrioma coronal'), 'Sagital deve levar somente seus nomes e medidas');
+    verificar(!estado.hidden, 'Resultado do PDF deve aparecer mesmo após mudar a vista durante sua preparação');
+
+    // A próxima exportação precisa refletir as mudanças, inclusive a identidade da clínica.
+    const esperadoClinica = await capturarVista('coronal');
+    const baseClinica = baseDaVista('coronal').src;
+    verificar(baseClinica !== basesVisitante[0], 'Perfil da clínica deve ter uma base diferente do visitante');
+    botaoPdf.click();
+    const paginasClinica = await conferirPdf(1, 'endomapa-manual-coronal-a4.pdf', ['coronal'], [esperadoClinica]);
+    verificar(paginasClinica[0].imagens[0] === baseClinica && paginasClinica[0].textos.includes('Mudança posterior coronal'), 'Nova exportação deve refletir o perfil e a montagem atuais');
+    perfil(false);
+    escolher('sagital');
+    const esperadoSagitalUnica = await capturarVista('sagital');
+    botaoPdf.click();
+    await conferirPdf(2, 'endomapa-manual-sagital-a4.pdf', ['sagital'], [esperadoSagitalUnica]);
+
+    buscar('[data-limpar-mapa]').click();
+    botaoPdf.click();
+    await aguardar(() => !estado.hidden && /adicione|informe/i.test(estado.textContent), 'Vista selecionada vazia deve impedir exportação mesmo com achados na outra vista');
+    verificar(teste.downloads.length === 3, 'Sagital vazia não pode gerar PDF com os achados coronais ocultos');
+    escolher('ambas');
+    const esperadoCoronalAtual = await capturarVista('coronal');
+    const esperadoSagitalVazia = await capturarVista('sagital');
+    botaoPdf.click();
+    await conferirPdf(3, 'endomapa-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronalAtual, esperadoSagitalVazia]);
+
+    // Uma imagem realmente inválida deve acionar o caminho de erro, sem substituir o gerador.
+    escolher('coronal');
+    const imagemLesao = buscar('[data-camada-editor="coronal"] .lesao-editavel img');
+    const srcValido = imagemLesao.src;
+    imagemLesao.src = 'data:image/png;base64,AAAA';
+    const estadoAntesFalha = fotografarEstado();
+    const geracoesAntesFalha = geracoes.length;
+    botaoPdf.click();
+    await aguardar(() => !botaoPdf.disabled && !botaoPng.disabled && !estado.hidden && /não foi possível|não.*preparar/i.test(estado.textContent), 'Falha de imagem deve orientar nova tentativa e reabilitar os botões');
+    verificar(teste.downloads.length === 4 && geracoes.length === geracoesAntesFalha, 'Uma falha de captura não pode baixar PDF incompleto');
+    verificar(fotografarEstado() === estadoAntesFalha, 'Erro de exportação deve preservar toda a montagem');
+    imagemLesao.src = srcValido;
+    botaoPdf.click();
+    await conferirPdf(4, 'endomapa-manual-coronal-a4.pdf', ['coronal'], [esperadoCoronalAtual]);
+    verificar(teste.liberacoes.length === 0, 'Endereços de download não devem ser liberados antes do prazo de salvamento');
+    const limpezas = Array.from(teste.temporizadoresLongos.values());
+    teste.temporizadoresLongos.clear();
+    limpezas.forEach(executar => executar());
+    verificar(teste.liberacoes.length === teste.downloads.length && new Set(teste.liberacoes).size === teste.downloads.length, 'Cada endereço PDF deve ser liberado uma única vez após o prazo de salvamento');
+    verificar(teste.downloads.every(download => teste.liberacoes.includes(download.endereco)), 'Nenhum endereço temporário de PDF deve permanecer sem liberação');
+    verificar(teste.chamadas.length === 0, 'PDF local não pode enviar dados a serviços externos');
+    verificar(teste.erros.length === 0, 'Erros no aplicativo: ' + teste.erros.join('; '));
+    saida.textContent = 'PASSOU: PDF real A4, duas páginas coronal/sagital em ordem, exportação de cada vista, resolução original sem JPEG, nomes e medidas sem misturar vistas, captura imutável mesmo com edição e troca de perfil, duas identidades, prevenção de toque duplo, mapas vazios, recuperação após falha e botão utilizável em 390 pixels. Nenhuma API.';
+  } catch (erro) {
+    saida.textContent = 'FALHOU: ' + erro.message;
+  }
+})();
+</script>
+</html>
