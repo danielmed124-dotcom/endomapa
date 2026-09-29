@@ -1823,8 +1823,8 @@ h1 span {
 .linha-medida-editavel {
   position: absolute;
   z-index: 6;
-  height: 1.5px;
-  background: #000;
+  height: 0;
+  border-top: 1.5px dotted #000;
   transform-origin: left center;
   pointer-events: none;
 }

@@ -650,9 +650,12 @@
   }
 
   function desenharRotulos(contexto, canvas, lesoes = camada.querySelectorAll(".lesao-editavel")) {
+    contexto.save();
     contexto.strokeStyle = "#000";
     contexto.fillStyle = "#000";
     contexto.lineWidth = Math.max(1.5, canvas.width / 700);
+    contexto.lineCap = "round";
+    contexto.setLineDash([0, contexto.lineWidth * 3]);
     contexto.font = `700 ${Math.max(15, canvas.width / 58)}px Arial`;
     contexto.textAlign = "center";
     contexto.textBaseline = "middle";
@@ -680,6 +683,7 @@
       });
       contexto.fillStyle = "#000";
     }
+    contexto.restore();
   }
 
   function carregarImagem(src) {
