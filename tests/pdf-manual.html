@@ -127,7 +127,7 @@
     };
     const editar = vista => buscar('[data-editar-vista="' + vista + '"]').click();
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
-      detail: { id: 'medico-do-teste', titulo: 'Dra.', nome: 'Médica de Teste', assinatura: 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
+      detail: { id: 'medico-do-teste', titulo: clinica ? 'Dr.' : 'Dra.', nome: clinica ? 'Daniel de Souza Carneiro' : 'Médica de Teste', assinatura: clinica ? 'Daniel' : 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
     }));
     const fotografarEstado = () => JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), lesao => ({ dataset: { ...lesao.dataset }, src: lesao.querySelector('img').src })));
     const operacoes = new WeakMap();

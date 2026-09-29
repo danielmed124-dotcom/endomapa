@@ -420,6 +420,16 @@
     return mapa?.querySelector("[data-mapa-base], :scope > img")?.src || "assets/mapa-base-coronal.png";
   }
 
+  function fotografarAssinatura(camadaDaCaptura = camada) {
+    const assinatura = camadaDaCaptura.closest("[data-mapa-editor]")?.querySelector("[data-assinatura-manual]");
+    if (!assinatura || assinatura.hidden) return null;
+    const copia = document.createElement("canvas");
+    copia.width = assinatura.width;
+    copia.height = assinatura.height;
+    copia.getContext("2d").drawImage(assinatura, 0, 0);
+    return copia;
+  }
+
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
     const escolha = document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva;
@@ -433,7 +443,7 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, base: obterFonteDaBase(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura) };
+        return { vista, base: obterFonteDaBase(camadaDaCaptura), assinatura: fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura) };
       });
       if (!capturas.some(function (captura) { return captura.lesoes.length; })) {
         estadoMapa.textContent = "Adicione pelo menos uma lesão às vistas selecionadas antes de gerar o PDF.";
@@ -441,7 +451,7 @@
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base);
+        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base, captura.assinatura);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         paginas.push({ vista: captura.vista, canvas });
       }
@@ -520,13 +530,14 @@
     }
   }
 
-  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase()) {
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura()) {
     const base = await carregarImagem(fonteBase);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
+    if (assinatura) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
     const mascaras = [];
     // Uma única tela reutilizada mantém a rasterização nas coordenadas absolutas
     // originais. O resultado guarda somente os recortes alfa, nunca a anatomia.

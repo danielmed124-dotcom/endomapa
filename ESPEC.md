@@ -28,6 +28,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Restauração das assinaturas no editor manual (28/09/2026): a identidade original do cadastro passa a aparecer também na assinatura das duas vistas do editor manual e nos arquivos PNG/PDF. A conta `danielmed124@gmail.com` mantém as bases com logo e marca-d'água Centrus e a assinatura Daniel; os demais médicos mantêm bases neutras e a assinatura com o primeiro nome salvo no cadastro. A assinatura usa o estilo cursivo dourado original e é capturada junto com a base no instante da exportação, inclusive quando o perfil muda durante a preparação. O ajuste do PDF A4 é preservado.
+
 Ajuste do PDF A4 (28/09/2026): por escolha de Daniel, a margem mínima de 10 mm descrita abaixo é retirada. O mapa ocupa o maior espaço possível no A4, centralizado, preservando as proporções e todo o conteúdo, sem cortes nem deformação. Nas bases atuais, ocupa toda a largura da folha e deixa aproximadamente 8,5 mm acima e abaixo pela diferença de proporções. A alteração se aplica às duas vistas do editor manual.
 
 Ajuste das cores sagitais (24/09/2026): a pedido de Daniel, as bases sagitais da clínica e de visitantes recebem redução suave de saturação e contraste por código, aproximando sua aparência das bases coronais. As versões ajustadas são usadas na tela, no PNG e no PDF. Permanecem as dimensões, posições e transparência de cada imagem, o cabeçalho com logomarca e os pixels neutros do fundo/marca-d'água. Lesões e rótulos continuam com suas cores. Os arquivos originais são preservados; `output/estudos-realismo/ajustar-cor-sagital.ps1` reproduz o ajuste sem IA.

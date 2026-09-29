@@ -95,9 +95,49 @@ function aplicarPerfilMedico(perfil) {
 
   assinaturasDosMapas.forEach(desenharAssinatura);
 
+  document.querySelectorAll("[data-assinatura-manual]").forEach((canvas) => {
+    desenharAssinaturaManual(canvas, primeiroNome);
+  });
+
   if (assinaturaFinal) {
     desenharAssinatura(assinaturaFinal);
   }
+}
+
+// A mesma assinatura desenhada na tela é copiada para o PNG e para o PDF.
+function desenharAssinaturaManual(canvas, nome) {
+  const contexto = canvas.getContext("2d");
+  contexto.clearRect(0, 0, canvas.width, canvas.height);
+  canvas.hidden = !nome;
+  canvas.setAttribute("aria-label", `Assinatura: ${nome}`);
+  if (!nome) return;
+
+  contexto.save();
+  contexto.translate(canvas.width * 0.06, canvas.height * 0.94);
+  contexto.rotate(-3 * Math.PI / 180);
+  contexto.fillStyle = "rgba(161, 111, 32, 0.62)";
+  const fonte = '"Segoe Script", "Lucida Handwriting", "Brush Script MT", cursive';
+  contexto.font = `italic 49px ${fonte}`;
+  const larguraInicial = contexto.measureText(nome.charAt(0)).width - 6;
+  contexto.font = `italic 28px ${fonte}`;
+  const largura = larguraInicial + contexto.measureText(nome.slice(1)).width;
+  const escala = Math.min(1, canvas.width * 0.6 / Math.max(largura, 1));
+  contexto.scale(escala, escala);
+  contexto.font = `italic 49px ${fonte}`;
+  contexto.fillText(nome.charAt(0), 0, 0);
+  contexto.font = `italic 28px ${fonte}`;
+  contexto.fillText(nome.slice(1), larguraInicial, 0);
+  const traco = contexto.createLinearGradient(0, 0, largura * 1.28, 0);
+  traco.addColorStop(0, "rgba(161, 111, 32, 0.58)");
+  traco.addColorStop(0.72, "rgba(161, 111, 32, 0.5)");
+  traco.addColorStop(1, "rgba(161, 111, 32, 0)");
+  contexto.strokeStyle = traco;
+  contexto.lineWidth = 2;
+  contexto.beginPath();
+  contexto.moveTo(largura * 0.08, 10);
+  contexto.lineTo(largura * 1.28, 5);
+  contexto.stroke();
+  contexto.restore();
 }
 
 function aplicarVistas() {

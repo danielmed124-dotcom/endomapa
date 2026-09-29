@@ -110,7 +110,7 @@
       });
     };
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
-      detail: { id: 'medico-do-teste', titulo: 'Dra.', nome: 'Médica de Teste', assinatura: 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
+      detail: { id: 'medico-do-teste', titulo: clinica ? 'Dr.' : 'Dra.', nome: clinica ? 'Daniel de Souza Carneiro' : 'Médica de Teste', assinatura: clinica ? 'Daniel' : 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
     }));
     const editor = buscar('.editor-manual[data-tela="editor-manual"]');
     const campo = buscar('[data-controle-nome-lesao]');
@@ -119,6 +119,8 @@
     const botaoAbrir = buscar('[data-tela-alvo="editor-manual"]');
     const botaoBaixar = buscar('[data-baixar-mapa-manual]');
     perfil(false);
+    const assinaturas = Array.from(doc.querySelectorAll('[data-assinatura-manual]'));
+    verificar(assinaturas.length === 2 && assinaturas.every(item => !item.hidden && item.getAttribute('aria-label') === 'Assinatura: Teste'), 'As duas vistas devem mostrar a assinatura do cadastro');
     verificar(editor.hidden && janela.getComputedStyle(editor).display === 'none', 'Editor inicia oculto, inclusive com a regra de grade do CSS');
     if (!somenteNomes) {
       conferirVistaAtiva('coronal');
@@ -180,6 +182,15 @@
     const capturaPng = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
     verificar(capturaPng.startsWith('data:image/png;base64,'), 'Captura PNG local');
     verificar(textos.length === 0, 'Opção sem rótulos respeitada');
+    assinaturas.forEach(item => { item.hidden = true; });
+    const semAssinatura = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    verificar(semAssinatura !== capturaPng, 'A assinatura deve fazer parte dos pixels do PNG exportado');
+    assinaturas.forEach(item => { item.hidden = false; });
+    const capturaEmAndamento = janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
+    perfil(true);
+    verificar(assinaturas.every(item => item.getAttribute('aria-label') === 'Assinatura: Daniel'), 'Perfil Centrus deve aplicar Daniel às duas assinaturas');
+    verificar(await capturaEmAndamento === capturaPng, 'Trocar perfil durante a captura deve preservar a base e assinatura do instante do clique');
+    perfil(false);
     await janela.endomapaAdicionarRotulos(capturaPng);
     verificar(textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Nomes e medidas recolocados pelo editor');
 
@@ -259,6 +270,7 @@
       verificar(janela.__teste.downloads[downloadsAntesSagital].nome === 'endomapa-manual-sagital.png', 'Nome do arquivo deve identificar a vista sagital');
       verificar(bases[0] === baseSagital.src && textos.some(item => item.texto === 'Lesão sagital') && textos.some(item => item.texto === '1,7 cm') && !textos.some(item => item.texto === 'Endometrioma esquerdo'), 'Download deve usar anatomia e rótulos somente da vista sagital ativa');
       perfil(true);
+      verificar(assinaturas.every(item => item.getAttribute('aria-label') === 'Assinatura: Daniel'), 'Assinatura Daniel nas duas vistas Centrus');
       [mapaBase, baseSagital].forEach(basePerfil => {
         verificar(new URL(basePerfil.src).pathname === new URL(basePerfil.dataset.srcClinica, doc.baseURI).pathname, 'Perfil da clínica deve aplicar sua anatomia às duas vistas');
       });
@@ -266,6 +278,7 @@
       await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
       verificar(bases[0] === baseSagital.src, 'Captura sagital deve acompanhar o perfil da clínica');
       perfil(false);
+      verificar(assinaturas.every(item => item.getAttribute('aria-label') === 'Assinatura: Teste'), 'Trocar o perfil deve retirar a assinatura anterior');
       [mapaBase, baseSagital].forEach(basePerfil => {
         verificar(new URL(basePerfil.src).pathname === new URL(basePerfil.dataset.srcVisitante, doc.baseURI).pathname, 'Retornar ao perfil visitante deve retirar a marca nas duas vistas');
       });
