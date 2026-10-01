@@ -12,6 +12,8 @@ O médico radiologista entra no sistema para ditar os achados de um exame e sair
 
 Cada médico cria sua conta com nome completo, título profissional, e-mail e senha. Depois do login, entra diretamente na própria área de trabalho; o nome e o primeiro nome usado na assinatura vêm do perfil autenticado, sem seleção manual. A conta `danielmed124@gmail.com` usa a identidade Centrus MG, e os demais médicos usam mapas neutros, sem logomarca nem marca-d'água.
 
+Recuperação de senha (01/10/2026): o e-mail abre uma página com **Continuar recuperação**. O link só é validado após esse clique, evitando seu consumo pela simples abertura automática do e-mail. A sessão de recuperação fica isolada do login comum e pode ser retomada ao atualizar a mesma aba. A nova senha vale no celular e no computador. Envios duplicados são bloqueados e falhas de conexão não são apresentadas como expiração do link. O modelo do e-mail fica em `supabase/templates/recuperar-senha.html` e deve acompanhar a publicação da tela no Supabase.
+
 ## 3. O QUE A PESSOA FAZ HOJE
 
 O médico realiza o exame, identifica as lesões e depois as desenha manualmente, com canetinhas, sobre uma figura anatômica já impressa. Essa confecção leva de dois a três minutos e produz um resultado com pouca definição anatômica e aparência pouco profissional.

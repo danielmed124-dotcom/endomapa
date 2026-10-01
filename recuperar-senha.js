@@ -11,6 +11,13 @@
   const botaoEnviar = document.querySelector("[data-enviar-recuperacao]");
   const botaoAtualizar = document.querySelector("[data-atualizar-senha]");
   const mensagem = document.querySelector("[data-mensagem-recuperacao]");
+  const etapaConfirmar = document.querySelector("[data-etapa-confirmar]");
+  const botaoConfirmar = document.querySelector("[data-confirmar-recuperacao]");
+  const parametrosHash = new URLSearchParams(window.location.hash.slice(1));
+  const parametrosBusca = new URLSearchParams(window.location.search);
+  const parametro = (nome) => parametrosHash.get(nome) || parametrosBusca.get(nome);
+  let recuperacaoValidada = false;
+  let senhaSalva = false;
 
   if (!window.supabase || !window.ENDOMAPA_SUPABASE) {
     mostrarMensagem(
@@ -25,6 +32,12 @@
   const clienteSupabase = window.supabase.createClient(
     window.ENDOMAPA_SUPABASE.projectUrl,
     window.ENDOMAPA_SUPABASE.publicAnonKey,
+    { auth: {
+      detectSessionInUrl: false,
+      storageKey: "endomapa-recuperacao",
+      storage: window.sessionStorage,
+      flowType: "implicit",
+    } },
   );
 
   botaoEnviar.addEventListener("click", enviarRecuperacao);
@@ -32,42 +45,72 @@
   blocoSolicitar.addEventListener("keydown", tratarEnter);
   blocoAlterar.addEventListener("keydown", tratarEnter);
 
-  clienteSupabase.auth.onAuthStateChange(function (evento, sessao) {
-    if (evento === "PASSWORD_RECOVERY" && sessao) {
-      mostrarEtapaDeNovaSenha();
-    }
-  });
+  botaoConfirmar.addEventListener("click", confirmarRecuperacao);
 
   verificarRetornoDeRecuperacao();
 
   async function verificarRetornoDeRecuperacao() {
-    const parametrosHash = new URLSearchParams(window.location.hash.slice(1));
-    const parametrosBusca = new URLSearchParams(window.location.search);
-    const retornoDeRecuperacao =
-      parametrosHash.get("type") === "recovery"
-      || parametrosBusca.get("type") === "recovery"
-      || parametrosBusca.has("code");
-
-    if (!retornoDeRecuperacao) {
+    if (parametro("error") || parametro("error_code")) {
+      mostrarMensagem(traduzirErro({ code: parametro("error_code") }), true);
+      limparEndereco();
       return;
     }
-
-    const { data, error } = await clienteSupabase.auth.getSession();
-
-    if (error) {
-      mostrarMensagem(
-        "O link de recuperação não pôde ser confirmado. Solicite um novo link.",
-        true,
-      );
+    if (parametro("type") === "recovery" && parametro("token_hash")) {
+      etapaSolicitar.hidden = true;
+      etapaConfirmar.hidden = false;
+      // Apenas uma ação da pessoa consome o link; abrir a página não o valida.
       return;
     }
+    try {
+      let resultado;
+      if (parametro("type") === "recovery" && parametro("access_token") && parametro("refresh_token")) {
+        // Compatibilidade com os e-mails enviados antes da correção.
+        resultado = await clienteSupabase.auth.setSession({
+          access_token: parametro("access_token"), refresh_token: parametro("refresh_token"),
+        });
+        limparEndereco();
+      } else if (parametro("code") || parametro("type")) {
+        mostrarMensagem("Este link não pôde ser confirmado. Solicite um novo e-mail de recuperação.", true);
+        limparEndereco();
+        return;
+      } else {
+        // Esta sessão pertence somente à recuperação nesta aba, nunca ao login comum.
+        resultado = await clienteSupabase.auth.getSession();
+      }
+      if (resultado.error) mostrarMensagem(traduzirErro(resultado.error), true);
+      else if (resultado.data.session) mostrarEtapaDeNovaSenha();
+    } catch (erro) {
+      mostrarMensagem("Não foi possível conferir o link. Confira sua internet e abra o link novamente.", true);
+    }
+  }
 
-    if (data.session) {
+  async function confirmarRecuperacao() {
+    if (botaoConfirmar.disabled) return;
+    definirCarregamento(botaoConfirmar, true, "Confirmando...");
+    limparMensagem();
+    try {
+      const { data, error } = await clienteSupabase.auth.verifyOtp({
+        token_hash: parametro("token_hash"), type: "recovery",
+      });
+      if (error || !data.session) {
+        mostrarMensagem(traduzirErro(error || {}), true);
+        if (error?.code === "otp_expired") {
+          etapaConfirmar.hidden = true;
+          etapaSolicitar.hidden = false;
+          limparEndereco();
+        }
+        return;
+      }
       mostrarEtapaDeNovaSenha();
+    } catch (erro) {
+      mostrarMensagem("Não foi possível confirmar o link. Confira sua internet e tente novamente.", true);
+    } finally {
+      definirCarregamento(botaoConfirmar, false, "Continuar recuperação");
     }
   }
 
   async function enviarRecuperacao() {
+    if (botaoEnviar.disabled) return;
     const email = campoEmail.value.trim();
     limparMensagem();
 
@@ -90,7 +133,7 @@
       }
 
       mostrarMensagem(
-        "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha.",
+        "Se o e-mail estiver cadastrado, você receberá um link para criar uma nova senha. Use o e-mail mais recente; ele pode ser aberto no celular ou no computador.",
         false,
       );
     } catch (erro) {
@@ -104,6 +147,7 @@
   }
 
   async function atualizarSenha() {
+    if (botaoAtualizar.disabled || !recuperacaoValidada || senhaSalva) return;
     const novaSenha = campoNovaSenha.value;
     const confirmacao = campoConfirmarSenha.value;
     limparMensagem();
@@ -132,6 +176,11 @@
         return;
       }
 
+      senhaSalva = true;
+      recuperacaoValidada = false;
+      etapaAlterar.hidden = true;
+      campoNovaSenha.value = "";
+      campoConfirmarSenha.value = "";
       const { error: erroSaida } = await clienteSupabase.auth.signOut();
 
       if (erroSaida) {
@@ -142,12 +191,14 @@
         return;
       }
 
-      window.history.replaceState({}, "", "recuperar-senha");
+      limparEndereco();
       etapaAlterar.hidden = true;
       mostrarMensagem("Senha alterada com segurança. Volte ao login para entrar.", false);
     } catch (erro) {
       mostrarMensagem(
-        "Não foi possível falar com o Supabase. Confira sua internet e tente novamente.",
+        senhaSalva
+          ? "Sua senha foi alterada. Volte ao login para entrar com a nova senha."
+          : "Não foi possível salvar a senha. Confira sua internet e tente novamente.",
         true,
       );
     } finally {
@@ -156,10 +207,16 @@
   }
 
   function mostrarEtapaDeNovaSenha() {
+    recuperacaoValidada = true;
+    etapaConfirmar.hidden = true;
     etapaSolicitar.hidden = true;
     etapaAlterar.hidden = false;
-    window.history.replaceState({}, "", "recuperar-senha");
+    limparEndereco();
     campoNovaSenha.focus();
+  }
+
+  function limparEndereco() {
+    window.history.replaceState({}, "", window.location.pathname);
   }
 
   function tratarEnter(evento) {
@@ -194,6 +251,13 @@
 
   function traduzirErro(erro) {
     const textoErro = String(erro.message || "").toLowerCase();
+    if (erro.code === "otp_expired") {
+      return "Este link já foi usado ou perdeu a validade. Solicite um novo e-mail e use apenas o link mais recente.";
+    }
+    if (["session_not_found", "refresh_token_not_found", "refresh_token_already_used"].includes(erro.code)
+      || erro.name === "AuthSessionMissingError") {
+      return "A sessão de recuperação foi encerrada. Solicite um novo link para continuar.";
+    }
 
     if (textoErro.includes("rate limit")) {
       return "Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.";
@@ -201,10 +265,6 @@
 
     if (textoErro.includes("password")) {
       return "A nova senha não foi aceita. Escolha outra senha e tente novamente.";
-    }
-
-    if (textoErro.includes("session") || textoErro.includes("token")) {
-      return "O link expirou ou já foi usado. Solicite um novo link de recuperação.";
     }
 
     return "Não foi possível concluir a recuperação. Tente novamente.";

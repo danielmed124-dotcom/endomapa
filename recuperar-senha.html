@@ -45,10 +45,16 @@
           </div>
         </div>
 
+        <div data-etapa-confirmar hidden>
+          <h1 class="titulo-tela">Confirme a recuperação</h1>
+          <p class="texto-apoio">Toque no botão para validar seu link e criar uma nova senha.</p>
+          <button class="botao" type="button" data-confirmar-recuperacao>Continuar recuperação</button>
+        </div>
+
         <div data-etapa-alterar hidden>
           <h1 class="titulo-tela">Crie uma nova senha</h1>
           <p class="texto-apoio">
-            Use uma senha nova, diferente daquela que foi exposta.
+            Escolha uma senha com pelo menos 8 caracteres. Ela valerá no celular e no computador.
           </p>
 
           <div class="formulario-autenticacao bloco-recuperacao" data-bloco-alterar>
@@ -96,6 +102,6 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="recuperar-senha.js"></script>
+    <script src="recuperar-senha.js?v=20261001"></script>
   </body>
 </html>
