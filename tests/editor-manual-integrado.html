@@ -353,11 +353,17 @@
       preencher(buscar('[data-controle-giro]'), '15');
       verificar(foliculo.dataset.tamanho === '25', 'Editar rotação e medidas não deve aumentar o folículo');
       buscar('[data-redimensionar="-10"]').click();
-      verificar(foliculo.dataset.tamanho === '25', 'Botão de diminuir deve respeitar o mínimo do folículo');
+      verificar(foliculo.dataset.tamanho === '20', 'Botão deve reduzir folículo em cinco pontos');
+      for (let i = 0; i < 5; i++) buscar('[data-redimensionar="-10"]').click();
+      verificar(foliculo.dataset.tamanho === '5', 'Folículo pode chegar a 5%, sem desaparecer');
+      buscar('[data-redimensionar="10"]').click();
+      verificar(foliculo.dataset.tamanho === '10', 'Folículo pode voltar a crescer');
+      preencher(tamanho, '5');
+      verificar(foliculo.dataset.tamanho === '5', 'Controle deslizante também permite 5%');
       buscar('[data-modelo][data-nome="Cisto"]').click();
       verificar(tamanho.min === '40', 'Outros modelos mantêm o limite anterior');
       foliculo.click();
-      verificar(tamanho.value === '25' && tamanho.min === '25', 'Resselecionar restaura tamanho reduzido');
+      verificar(tamanho.value === '5' && tamanho.min === '5', 'Resselecionar restaura tamanho reduzido');
       await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
     }
     verificar(janela.__teste.chamadas.length === 0, 'Montagem e download não podem solicitar serviços externos');

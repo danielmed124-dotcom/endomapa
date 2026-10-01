@@ -30,7 +30,7 @@
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial);
+      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, botao.dataset.tamanhoMinimo);
     });
   });
   giro.addEventListener("input", aplicarControles);
@@ -144,7 +144,7 @@
     atualizarTodasAsLinhas();
   }
 
-  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0") {
+  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40") {
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
@@ -158,7 +158,7 @@
     lesao.dataset.y = String(45 + deslocamento);
     lesao.dataset.giro = giroInicial;
     lesao.dataset.tamanho = tamanhoInicial;
-    lesao.dataset.tamanhoMinimo = String(Math.min(40, Number(tamanhoInicial)));
+    lesao.dataset.tamanhoMinimo = tamanhoMinimo;
     lesao.dataset.eixoX = "100";
     lesao.dataset.eixoY = "100";
     lesao.dataset.medida1 = "";
@@ -243,6 +243,7 @@
 
   function alterarTamanho(passo) {
     if (!selecionada) return;
+    if (Number(tamanho.min) < 40) passo = Math.sign(passo) * Number(tamanho.step);
     tamanho.value = String(limitar(Number(tamanho.value) + passo, Number(tamanho.min), 250));
     aplicarControles();
   }
