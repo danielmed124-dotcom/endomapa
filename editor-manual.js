@@ -95,14 +95,26 @@
 
   function aplicarVistasManuais(escolha) {
     if (!mapasManuais.length) return;
+    escolha = resolverVista(escolha);
     document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
-      vista.hidden = escolha !== "ambas" && vista.dataset.vistaManual !== escolha;
+      vista.hidden = escolha === "ambas"
+        ? !["coronal", "sagital"].includes(vista.dataset.vistaManual)
+        : vista.dataset.vistaManual !== escolha;
     });
-    const destino = escolha === "ambas" ? vistaAtiva : escolha;
+    const destino = escolha === "ambas"
+      ? (["coronal", "sagital"].includes(vistaAtiva) ? vistaAtiva : "coronal") : escolha;
     ativarVista(destino);
     if (botaoPdf) botaoPdf.textContent = escolha === "ambas"
-      ? "Gerar PDF A4 (2 páginas)" : `Gerar PDF A4 (${escolha})`;
+      ? "Gerar PDF A4 (2 páginas)" : `Gerar PDF A4 (${nomeDaVista(escolha)})`;
     atualizarTodasAsLinhas();
+  }
+
+  function resolverVista(escolha) {
+    return escolha === "especiais" ? document.querySelector('[data-mapa-especial]').value : escolha;
+  }
+
+  function nomeDaVista(vista) {
+    return document.querySelector(`[data-mapa-especial] option[value="${vista}"]`)?.textContent || vista;
   }
 
   function ativarVista(vista, restaurarSelecao = true) {
@@ -126,9 +138,9 @@
       item.classList.toggle("vista-manual--ativa", item.dataset.vistaManual === vistaAtiva);
     });
     const indicacao = document.querySelector("[data-vista-em-edicao]");
-    if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${vistaAtiva}.`;
-    if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${vistaAtiva} (PNG)`;
-    document.querySelector("[data-limpar-mapa]").textContent = `Limpar vista ${vistaAtiva}`;
+    if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${nomeDaVista(vistaAtiva)}.`;
+    if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${nomeDaVista(vistaAtiva)} (PNG)`;
+    document.querySelector("[data-limpar-mapa]").textContent = `Limpar vista ${nomeDaVista(vistaAtiva)}`;
     atualizarTodasAsLinhas();
   }
 
@@ -368,7 +380,7 @@
     selecionada = null;
     controles.hidden = true;
     selecoesPorVista.delete(vistaAtiva);
-    mostrar(`Vista ${vistaAtiva} limpa. Escolha uma lesão para começar novamente.`);
+    mostrar(`Vista ${nomeDaVista(vistaAtiva)} limpa. Escolha uma lesão para começar novamente.`);
   }
 
   function mostrar(texto) { mensagem.textContent = texto; }
@@ -386,7 +398,7 @@
     const vistaDaCaptura = vistaAtiva;
     estadoMapa.hidden = false;
     if (!camada.querySelector(".lesao-editavel")) {
-      estadoMapa.textContent = `Adicione pelo menos uma lesão à vista ${vistaDaCaptura} antes de baixar a montagem.`;
+      estadoMapa.textContent = `Adicione pelo menos uma lesão à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
     definirExportacaoEmAndamento(true);
@@ -400,7 +412,7 @@
       link.click();
       link.remove();
       estadoMapa.hidden = false;
-      estadoMapa.textContent = `Vista ${vistaDaCaptura} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
+      estadoMapa.textContent = `Vista ${nomeDaVista(vistaDaCaptura)} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
     } catch (erro) {
       estadoMapa.hidden = false;
       estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
@@ -432,7 +444,7 @@
 
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
-    const escolha = document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva;
+    const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
     const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
     estadoMapa.hidden = false;
     definirExportacaoEmAndamento(true);

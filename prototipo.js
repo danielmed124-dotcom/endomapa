@@ -155,6 +155,10 @@ function aplicarVistas() {
 document.querySelectorAll('input[name="vistas-editor"]').forEach((campo) => {
   campo.addEventListener("change", aplicarVistas);
 });
+document.querySelector('[data-mapa-especial]')?.addEventListener('change', () => {
+  document.querySelector('input[name="vistas-editor"][value="especiais"]').checked = true;
+  aplicarVistas();
+});
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
     abrirTela(elemento.dataset.telaAlvo);

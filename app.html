@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=linhas-pontilhadas-1" />
+    <link rel="stylesheet" href="styles.css?v=mapas-especiais-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -386,6 +386,16 @@
           <label class="opcao-vista">Coronal <input type="radio" name="vistas-editor" value="coronal" /></label>
           <label class="opcao-vista">Sagital <input type="radio" name="vistas-editor" value="sagital" /></label>
           <label class="opcao-vista">Ambas <input type="radio" name="vistas-editor" value="ambas" checked /></label>
+          <div class="opcao-vista opcao-vista--especiais">
+            <label class="opcao-vista__titulo">Mapas especiais <input type="radio" name="vistas-editor" value="especiais" aria-controls="mapa-especial" /></label>
+            <label class="rotulo-mapa-especial" for="mapa-especial">Selecione o mapa</label>
+            <select id="mapa-especial" data-mapa-especial>
+              <option value="utero-retrofletido">Útero Retrofletido</option>
+              <option value="ooforectomia-direita">Ooforectomia à direita</option>
+              <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
+              <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
+            </select>
+          </div>
         </fieldset>
         <p class="texto-apoio">Em ambas, selecione a vista que deseja editar. Monte e baixe cada vista separadamente.</p>
         <p class="mensagem-formulario" data-vista-em-edicao role="status">Adicionando lesões à vista coronal.</p>
@@ -495,6 +505,54 @@
             <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
           </figure>
         </section>
+        <section class="vista-manual" data-vista-manual="utero-retrofletido" aria-labelledby="titulo-utero-retrofletido" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-utero-retrofletido">Útero Retrofletido</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="utero-retrofletido" aria-pressed="false">Editar Útero Retrofletido</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="utero-retrofletido">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/utero-retrofletido-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/utero-retrofletido-centrus.png" data-src-visitante="assets/mapas-especiais/utero-retrofletido-neutro.png" alt="Mapa anatômico: Útero Retrofletido" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="utero-retrofletido" aria-label="Lesões adicionadas ao mapa Útero Retrofletido"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-direita" aria-labelledby="titulo-ooforectomia-direita" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-direita">Ooforectomia à direita</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-direita" aria-pressed="false">Editar Ooforectomia à direita</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-direita">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/ooforectomia-direita-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/ooforectomia-direita-centrus.png" data-src-visitante="assets/mapas-especiais/ooforectomia-direita-neutro.png" alt="Mapa anatômico: Ooforectomia à direita" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-direita" aria-label="Lesões adicionadas ao mapa Ooforectomia à direita"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-esquerda" aria-labelledby="titulo-ooforectomia-esquerda" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-esquerda">Ooforectomia à esquerda</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-esquerda" aria-pressed="false">Editar Ooforectomia à esquerda</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-esquerda">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/ooforectomia-esquerda-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/ooforectomia-esquerda-centrus.png" data-src-visitante="assets/mapas-especiais/ooforectomia-esquerda-neutro.png" alt="Mapa anatômico: Ooforectomia à esquerda" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-esquerda" aria-label="Lesões adicionadas ao mapa Ooforectomia à esquerda"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-bilateral" aria-labelledby="titulo-ooforectomia-bilateral" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-bilateral">Ooforectomia bilateral</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-bilateral" aria-pressed="false">Editar Ooforectomia bilateral</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-bilateral">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/ooforectomia-bilateral-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/ooforectomia-bilateral-centrus.png" data-src-visitante="assets/mapas-especiais/ooforectomia-bilateral-neutro.png" alt="Mapa anatômico: Ooforectomia bilateral" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-bilateral" aria-label="Lesões adicionadas ao mapa Ooforectomia bilateral"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
       </section>
 
       <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
@@ -585,11 +643,11 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="app-auth.js?v=manual-integrado-1"></script>
-    <script src="prototipo.js?v=inicio-manual-1"></script>
+    <script src="prototipo.js?v=mapas-especiais-1"></script>
     <script src="mapas.js?v=inicio-manual-1"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=inicio-manual-1"></script>
+    <script src="editor-manual.js?v=mapas-especiais-1"></script>
   </body>
 </html>

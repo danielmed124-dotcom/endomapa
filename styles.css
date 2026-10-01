@@ -1560,6 +1560,44 @@ h1 span {
   gap: 22px;
 }
 
+.opcao-vista--especiais {
+  display: block;
+  min-width: 0;
+  padding: 0 16px 16px;
+  cursor: default;
+}
+
+.opcao-vista__titulo {
+  position: relative;
+  display: flex;
+  min-height: 56px;
+  padding-right: 40px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.opcao-vista .opcao-vista__titulo input { right: 0; }
+
+.rotulo-mapa-especial {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.84rem;
+  font-weight: 400;
+}
+
+[data-mapa-especial] {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid var(--dourado);
+  border-radius: 8px;
+  color: var(--texto);
+  background: #19211c;
+  font: inherit;
+  font-size: 1rem;
+}
+
 .conteudo:has(> .editor-manual:not([hidden])) {
   width: min(100%, 1600px);
   padding: 0;

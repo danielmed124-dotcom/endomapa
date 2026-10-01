@@ -120,7 +120,7 @@
     const botaoBaixar = buscar('[data-baixar-mapa-manual]');
     perfil(false);
     const assinaturas = Array.from(doc.querySelectorAll('[data-assinatura-manual]'));
-    verificar(assinaturas.length === 2 && assinaturas.every(item => !item.hidden && item.getAttribute('aria-label') === 'Assinatura: Teste'), 'As duas vistas devem mostrar a assinatura do cadastro');
+    verificar(assinaturas.length === 6 && assinaturas.every(item => !item.hidden && item.getAttribute('aria-label') === 'Assinatura: Teste'), 'As seis vistas devem mostrar a assinatura do cadastro');
     verificar(editor.hidden && janela.getComputedStyle(editor).display === 'none', 'Editor inicia oculto, inclusive com a regra de grade do CSS');
     if (!somenteNomes) {
       conferirVistaAtiva('coronal');
