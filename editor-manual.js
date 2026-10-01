@@ -91,7 +91,7 @@
     return canvas.toDataURL("image/png");
   };
 
-  aplicarVistasManuais(document.querySelector('input[name="vistas"]:checked')?.value || "coronal");
+  aplicarVistasManuais(document.querySelector('input[name="vistas-editor"]:checked')?.value || "coronal");
 
   function aplicarVistasManuais(escolha) {
     if (!mapasManuais.length) return;

@@ -93,7 +93,7 @@
       opcao.dispatchEvent(new janela.Event('change', { bubbles: true }));
     };
     const conferirVistas = valor => {
-      ['vistas', 'vistas-editor'].forEach(grupo => {
+      ['vistas-editor'].forEach(grupo => {
         verificar(buscar('input[name="' + grupo + '"]:checked').value === valor, 'Seleção de vistas deve acompanhar ' + valor + ' em ' + grupo);
       });
       ['coronal', 'sagital'].forEach(vista => {
@@ -124,7 +124,7 @@
     verificar(editor.hidden && janela.getComputedStyle(editor).display === 'none', 'Editor inicia oculto, inclusive com a regra de grade do CSS');
     if (!somenteNomes) {
       conferirVistaAtiva('coronal');
-      escolherVistas('vistas', 'sagital');
+      escolherVistas('vistas-editor', 'sagital');
     }
     botaoAbrir.click();
     verificar(!editor.hidden && buscar('[data-tela="novo-mapa"]').hidden, 'Botão abre editor dentro do Endomapa');

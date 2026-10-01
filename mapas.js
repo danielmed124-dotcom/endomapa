@@ -26,12 +26,12 @@
   let mapasDoPainel = [];
   let statusFiltradoNoPainel = "";
 
-  if (!clienteSupabase || !botaoSalvar || !mensagem || !campoTexto) {
+  if (!clienteSupabase) {
     return;
   }
 
-  botaoSalvar.addEventListener("click", salvarMapa);
-  campoTexto.addEventListener("input", marcarComoAlterado);
+  botaoSalvar?.addEventListener("click", salvarMapa);
+  campoTexto?.addEventListener("input", marcarComoAlterado);
   camposVista.forEach(function (campo) {
     campo.addEventListener("change", marcarComoAlterado);
   });

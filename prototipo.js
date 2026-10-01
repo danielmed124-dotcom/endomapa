@@ -141,7 +141,7 @@ function desenharAssinaturaManual(canvas, nome) {
 }
 
 function aplicarVistas() {
-  const vistaSelecionada = document.querySelector('input[name="vistas"]:checked')?.value || "ambas";
+  const vistaSelecionada = document.querySelector('input[name="vistas-editor"]:checked')?.value || "ambas";
 
   imagensPorVista.forEach((imagem) => {
     imagem.hidden = vistaSelecionada !== "ambas" && imagem.dataset.vista !== vistaSelecionada;
@@ -152,19 +152,9 @@ function aplicarVistas() {
   window.dispatchEvent(new CustomEvent("endomapa:vistas-alteradas", { detail: vistaSelecionada }));
 }
 
-document.querySelectorAll('input[name="vistas"]').forEach((campo) => {
+document.querySelectorAll('input[name="vistas-editor"]').forEach((campo) => {
   campo.addEventListener("change", aplicarVistas);
 });
-
-document.querySelectorAll('input[name="vistas-editor"]').forEach((campo) => {
-  campo.addEventListener("change", () => {
-    const escolha = document.querySelector(`input[name="vistas"][value="${campo.value}"]`);
-    if (!escolha) return;
-    escolha.checked = true;
-    escolha.dispatchEvent(new Event("change", { bubbles: true }));
-  });
-});
-
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
     abrirTela(elemento.dataset.telaAlvo);

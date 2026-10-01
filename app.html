@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Monte mapas anatômicos manualmente ou dite os achados no Endomapa."
+      content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
     <link rel="stylesheet" href="styles.css?v=linhas-pontilhadas-1" />
@@ -28,171 +28,18 @@
         aria-labelledby="titulo-novo-mapa"
       >
         <header class="cabecalho-tela">
-          <div class="selo">Novo mapa</div>
-          <h1 class="titulo-tela" id="titulo-novo-mapa">Dite os achados</h1>
-          <p class="texto-apoio">
-            Use o microfone para transcrever os achados ao vivo e confira o texto antes de salvar.
-          </p>
+          <h1 class="titulo-tela" id="titulo-novo-mapa">Novo mapa</h1>
           <div class="acoes">
-            <button class="botao botao--secundario" type="button" data-tela-alvo="editor-manual">Montar mapa manualmente</button>
+            <button class="botao" type="button" data-tela-alvo="editor-manual">Montar mapa manualmente</button>
           </div>
         </header>
 
-        <div class="resumo-contexto" aria-label="Dados do mapa demonstrativo">
+        <div class="resumo-contexto" aria-label="Médico responsável pelo mapa">
           <div class="resumo-contexto__linha" data-identificacao-medico>
             <span class="resumo-contexto__rotulo">Médico responsável</span>
-            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
-          </div>
-          <div class="resumo-contexto__linha">
-            <span class="resumo-contexto__rotulo">Status</span>
-            <strong class="resumo-contexto__valor estado">Em revisão</strong>
-          </div>
-          <div class="resumo-contexto__linha">
-            <span class="resumo-contexto__rotulo">Criado em</span>
-            <strong class="resumo-contexto__valor">23/07/2026, 09:40</strong>
+            <strong class="resumo-contexto__valor" data-medico-selecionado></strong>
           </div>
         </div>
-
-        <div class="campo">
-          <label class="campo__rotulo" for="texto_bruto">Texto bruto do ditado</label>
-          <p class="campo__ajuda">
-            O conteúdo ditado aparecerá aqui. Não informe nome, CPF, telefone, e-mail ou outro identificador da paciente.
-          </p>
-          <textarea
-            id="texto_bruto"
-            name="texto_bruto"
-            maxlength="4000"
-            autocomplete="off"
-            placeholder="Nenhum ditado informado."
-          ></textarea>
-        </div>
-
-        <section class="controle-ditado" aria-labelledby="titulo-controle-ditado">
-          <div>
-            <h2 class="controle-ditado__titulo" id="titulo-controle-ditado">Comando de voz</h2>
-            <p class="controle-ditado__ajuda">
-              Fale em português e acompanhe a transcrição na caixa acima.
-            </p>
-          </div>
-
-          <div class="controle-ditado__acoes">
-            <button class="botao" type="button" data-iniciar-ditado>
-              <span aria-hidden="true">●</span>
-              Iniciar ditado
-            </button>
-            <button class="botao botao--secundario" type="button" data-parar-ditado disabled>
-              Parar ditado
-            </button>
-          </div>
-
-          <p
-            class="estado-ditado"
-            role="status"
-            aria-live="polite"
-            data-estado-ditado
-          >
-            Microfone pronto.
-          </p>
-        </section>
-
-        <fieldset class="opcoes-vistas">
-          <legend>Vistas do mapa</legend>
-
-          <label class="opcao-vista">
-            Coronal
-            <input type="radio" name="vistas" value="coronal" />
-          </label>
-
-          <label class="opcao-vista">
-            Sagital
-            <input type="radio" name="vistas" value="sagital" />
-          </label>
-
-          <label class="opcao-vista">
-            Ambas
-            <input type="radio" name="vistas" value="ambas" checked />
-          </label>
-        </fieldset>
-
-        <div class="acoes">
-          <p
-            class="mensagem-formulario mensagem-salvamento"
-            role="status"
-            aria-live="polite"
-            data-mensagem-salvamento
-            hidden
-          ></p>
-          <button class="botao" type="button" data-salvar-mapa>
-            Salvar mapa
-          </button>
-          <button
-            class="botao botao--secundario"
-            type="button"
-            data-interpretar-ditado
-          >
-            Interpretar e continuar
-          </button>
-          <button
-            class="botao botao--secundario"
-            type="button"
-            data-tela-alvo="duvidas"
-          >
-            Ver demonstração com dados fixos
-          </button>
-        </div>
-
-        <section
-          class="resultado-ia"
-          aria-labelledby="titulo-resultado-ia"
-          data-resultado-ia
-          hidden
-        >
-          <header class="resultado-ia__cabecalho">
-            <div>
-              <span class="selo">Sugestão da IA</span>
-              <h2 class="resultado-ia__titulo" id="titulo-resultado-ia">
-                Confira antes de salvar
-              </h2>
-            </div>
-            <strong class="resultado-ia__confianca" data-confianca-ia></strong>
-          </header>
-
-          <p class="texto-apoio">
-            A inteligência artificial pode errar. Confira categoria, localização, lado e medidas.
-          </p>
-
-          <p
-            class="mensagem-formulario"
-            role="status"
-            aria-live="polite"
-            data-estado-ia
-            hidden
-          ></p>
-
-          <div class="resultado-ia__grupo">
-            <h3>Lesões sugeridas</h3>
-            <div class="lista-achados" data-lesoes-ia></div>
-          </div>
-
-          <div class="resultado-ia__grupo" data-grupo-relacoes-ia hidden>
-            <h3>Relações anatômicas sugeridas</h3>
-            <div class="lista-achados" data-relacoes-ia></div>
-          </div>
-
-          <div class="resultado-ia__grupo" data-grupo-duvidas-ia hidden>
-            <h3>Dúvidas que impedem o salvamento</h3>
-            <div class="lista-achados" data-duvidas-ia></div>
-          </div>
-
-          <div class="acoes resultado-ia__acoes">
-            <button class="botao" type="button" data-confirmar-ia>
-              Conferi e salvar lesões
-            </button>
-            <button class="botao botao--secundario" type="button" data-fechar-ia>
-              Corrigir o ditado
-            </button>
-          </div>
-        </section>
       </section>
 
       <section
@@ -250,7 +97,7 @@
             Confirmar resposta e revisar mapas
           </button>
           <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">
-            Voltar ao ditado
+            Voltar ao início
           </button>
         </div>
       </section>
@@ -705,7 +552,7 @@
       <div class="acoes editor-manual__acoes">
         <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
-        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao ditado</button>
+        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
         <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
         <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
@@ -738,13 +585,11 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="app-auth.js?v=manual-integrado-1"></script>
-    <script src="prototipo.js?v=assinaturas-manuais-1"></script>
-    <script src="mapas.js"></script>
-    <script src="voz.js"></script>
-    <script src="ia.js"></script>
+    <script src="prototipo.js?v=inicio-manual-1"></script>
+    <script src="mapas.js?v=inicio-manual-1"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=linhas-pontilhadas-1"></script>
+    <script src="editor-manual.js?v=inicio-manual-1"></script>
   </body>
 </html>
