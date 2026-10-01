@@ -343,6 +343,23 @@
       buscar('[data-remover-lesao]').click();
       verificar(!doc.querySelector('[data-medida-id="' + primeira.dataset.id + '"]'), 'Excluir lesão remove rótulo');
     }
+    if (!manterVisual) {
+      buscar('[data-modelo][data-nome="Folículo"]').click();
+      const foliculo = buscar('.lesao-editavel--selecionada');
+      const tamanho = buscar('[data-controle-tamanho]');
+      verificar(foliculo.dataset.tamanho === '25' && tamanho.value === '25', 'Folículo deve começar com redução de 75%, sem subir ao mínimo antigo');
+      preencher(campo, 'Folículo');
+      preencher(medida, '1,2');
+      preencher(buscar('[data-controle-giro]'), '15');
+      verificar(foliculo.dataset.tamanho === '25', 'Editar rotação e medidas não deve aumentar o folículo');
+      buscar('[data-redimensionar="-10"]').click();
+      verificar(foliculo.dataset.tamanho === '25', 'Botão de diminuir deve respeitar o mínimo do folículo');
+      buscar('[data-modelo][data-nome="Cisto"]').click();
+      verificar(tamanho.min === '40', 'Outros modelos mantêm o limite anterior');
+      foliculo.click();
+      verificar(tamanho.value === '25' && tamanho.min === '25', 'Resselecionar restaura tamanho reduzido');
+      await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+    }
     verificar(janela.__teste.chamadas.length === 0, 'Montagem e download não podem solicitar serviços externos');
     verificar(janela.__teste.erros.length === 0, 'Erros no editor: ' + janela.__teste.erros.join('; '));
     saida.textContent = somenteNomes

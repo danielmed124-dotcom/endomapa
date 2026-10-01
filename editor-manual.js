@@ -158,6 +158,7 @@
     lesao.dataset.y = String(45 + deslocamento);
     lesao.dataset.giro = giroInicial;
     lesao.dataset.tamanho = tamanhoInicial;
+    lesao.dataset.tamanhoMinimo = String(Math.min(40, Number(tamanhoInicial)));
     lesao.dataset.eixoX = "100";
     lesao.dataset.eixoY = "100";
     lesao.dataset.medida1 = "";
@@ -188,6 +189,7 @@
     selecionada = lesao;
     controles.hidden = false;
     giro.value = lesao.dataset.giro;
+    tamanho.min = lesao.dataset.tamanhoMinimo || "40";
     tamanho.value = lesao.dataset.tamanho;
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
@@ -241,7 +243,7 @@
 
   function alterarTamanho(passo) {
     if (!selecionada) return;
-    tamanho.value = String(limitar(Number(tamanho.value) + passo, 40, 250));
+    tamanho.value = String(limitar(Number(tamanho.value) + passo, Number(tamanho.min), 250));
     aplicarControles();
   }
 
