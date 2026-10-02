@@ -1617,24 +1617,36 @@ h1 span {
 }
 
 .caneta-manual {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
+  display: grid;
+  min-width: 0;
   gap: 8px;
 }
-.caneta-manual label { display: grid; gap: 4px; font-size: 0.85rem; }
-.caneta-manual select {
-  min-height: 44px;
-  padding: 8px;
-  color: var(--texto);
-  background: var(--superficie-alta);
+.caneta-manual__acoes { display: grid; grid-template-columns: 0.8fr 1.4fr 1.1fr; gap: 6px; }
+.caneta-manual .botao { min-width: 0; min-height: 44px; padding: 8px; white-space: normal; font-size: 0.82rem; }
+.caneta-manual [aria-pressed="true"] { outline: 2px solid var(--dourado); }
+.caneta-manual__opcoes { display: grid; gap: 10px; padding: 12px; border: 1px solid var(--borda); border-radius: 12px; }
+.caneta-manual__opcoes[hidden] { display: none; }
+.caneta-manual__cores { display: flex; flex-wrap: wrap; gap: 4px; padding: 0; margin: 0; border: 0; min-width: 0; }
+.caneta-manual__cores legend { margin-bottom: 6px; font-size: 0.85rem; }
+.caneta-manual__cor { position: relative; display: grid; width: 44px; height: 44px; place-items: center; cursor: pointer; }
+.caneta-manual__cor input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.caneta-manual__cor span { width: 28px; height: 28px; border-radius: 50%; background: var(--cor-caneta); border: 1px solid #999; pointer-events: none; }
+.caneta-manual__cor:has(input:checked) span { outline: 3px solid var(--dourado); outline-offset: 3px; }
+.caneta-manual__cor:has(input:focus-visible) { outline: 2px solid var(--texto); border-radius: 6px; }
+.caneta-manual__personalizada { display: flex; align-items: center; gap: 12px; font-size: 0.85rem; }
+.caneta-manual__personalizada input { width: 56px; height: 44px; padding: 3px; cursor: pointer; }
+.caneta-manual__espessura { display: grid; grid-template-columns: 1fr auto; gap: 4px; font-size: 0.85rem; }
+.caneta-manual__espessura input { grid-column: 1 / -1; width: 100%; min-width: 0; height: 44px; margin: 0; accent-color: var(--dourado); }
+.caneta-manual__previa {
+  display: grid;
+  place-items: center;
+  height: 38px;
+  background: #ddd;
   border: 1px solid var(--borda);
   border-radius: 8px;
-  font: inherit;
 }
-.caneta-manual .botao { min-height: 44px; white-space: normal; }
-.caneta-manual [aria-pressed="true"] { outline: 2px solid var(--dourado); }
-.caneta-manual p { flex-basis: 100%; margin: 0; font-size: 0.85rem; }
+.caneta-manual__previa span { display: block; width: 70%; border-radius: 99px; }
+.caneta-manual p { margin: 0; font-size: 0.85rem; }
 .mapa-editor__caneta {
   position: absolute;
   inset: 0;

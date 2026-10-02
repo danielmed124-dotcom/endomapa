@@ -24,12 +24,38 @@
     const barra = document.createElement("div");
     barra.className = "caneta-manual";
     barra.setAttribute("aria-label", "Desenho à mão livre");
-    barra.innerHTML = `<button type="button" class="botao botao--secundario" data-caneta-alternar aria-pressed="false">Caneta livre</button>
-      <label>Cor <select data-caneta-cor aria-label="Cor da caneta"><option value="#9b2424">Vermelho</option><option value="#202020">Preto</option><option value="#1956ad">Azul</option></select></label>
-      <label>Espessura <select data-caneta-espessura aria-label="Espessura da caneta"><option value="3">Fina</option><option value="6" selected>Média</option><option value="12">Grossa</option></select></label>
-      <button type="button" class="botao botao--secundario" data-caneta-desfazer disabled>Desfazer traço</button>
-      <button type="button" class="botao botao--secundario" data-caneta-limpar disabled>Apagar desenhos</button>
-      <p data-caneta-aviso role="status">Ative a caneta para desenhar neste mapa.</p>`;
+    const idOpcoes = `caneta-opcoes-${mapa.dataset.mapaEditor}`;
+    const cores = [["#9b2424", "Vermelho"], ["#202020", "Preto"], ["#1956ad", "Azul"], ["#23864b", "Verde"], ["#e29318", "Laranja"], ["#e2c52c", "Amarelo"], ["#873db0", "Roxo"], ["#dc518d", "Rosa"], ["#785039", "Marrom"], ["#ffffff", "Branco"]];
+    barra.innerHTML = `<div class="caneta-manual__acoes">
+      <button type="button" class="botao botao--secundario" data-caneta-alternar aria-pressed="false" aria-expanded="false" aria-controls="${idOpcoes}">Caneta</button>
+      <button type="button" class="botao botao--secundario" data-caneta-desfazer disabled>Desfazer último traço</button>
+      <button type="button" class="botao botao--secundario" data-caneta-limpar disabled>Apagar traços</button></div>
+      <div class="caneta-manual__opcoes" id="${idOpcoes}" data-caneta-opcoes hidden>
+        <fieldset class="caneta-manual__cores"><legend>Cor</legend>
+          ${cores.map(([cor, nome], indice) => `<label class="caneta-manual__cor" title="${nome}" style="--cor-caneta: ${cor}"><input type="radio" name="cor-${idOpcoes}" value="${cor}" aria-label="${nome}" data-caneta-paleta ${indice === 0 ? "checked" : ""} /><span aria-hidden="true"></span></label>`).join("")}
+        </fieldset>
+        <label class="caneta-manual__personalizada">Outra cor <input type="color" value="#9b2424" data-caneta-cor aria-label="Escolher outra cor da caneta" /></label>
+        <label class="caneta-manual__espessura">Espessura <output data-caneta-valor>6</output>
+          <input type="range" min="1" max="30" step="1" value="6" data-caneta-espessura aria-label="Espessura da caneta" />
+        </label>
+        <div class="caneta-manual__previa" aria-label="Prévia da cor e espessura"><span data-caneta-previa></span></div>
+        <p data-caneta-aviso role="status">Toque em Caneta novamente para voltar a mover lesões.</p>
+      </div>`;
+    const corAtual = barra.querySelector("[data-caneta-cor]");
+    const espessuraAtual = barra.querySelector("[data-caneta-espessura]");
+    const atualizarPrevia = () => {
+      barra.querySelector("[data-caneta-valor]").textContent = espessuraAtual.value;
+      const previa = barra.querySelector("[data-caneta-previa]");
+      previa.style.backgroundColor = corAtual.value;
+      previa.style.height = `${espessuraAtual.value}px`;
+      barra.querySelectorAll("[data-caneta-paleta]").forEach(campo => { campo.checked = campo.value === corAtual.value; });
+    };
+    barra.querySelectorAll("[data-caneta-paleta]").forEach(campo => campo.addEventListener("change", () => {
+      corAtual.value = campo.value; atualizarPrevia();
+    }));
+    corAtual.addEventListener("input", atualizarPrevia);
+    espessuraAtual.addEventListener("input", atualizarPrevia);
+    atualizarPrevia();
     mapa.before(barra);
     const tela = document.createElement("canvas");
     tela.className = "mapa-editor__caneta";
@@ -100,10 +126,8 @@
       const ativa = item === estado;
       item.tela.classList.toggle("mapa-editor__caneta--ativa", ativa);
       item.barra.querySelector("[data-caneta-alternar]").setAttribute("aria-pressed", String(ativa));
-      item.barra.querySelector("[data-caneta-alternar]").textContent = ativa ? "Concluir desenho" : "Caneta livre";
-      item.barra.querySelector("[data-caneta-aviso]").textContent = ativa
-        ? "Desenhe com o dedo ou o mouse. Conclua para voltar a mover lesões."
-        : "Ative a caneta para desenhar neste mapa.";
+      item.barra.querySelector("[data-caneta-alternar]").setAttribute("aria-expanded", String(ativa));
+      item.barra.querySelector("[data-caneta-opcoes]").hidden = !ativa;
     });
   }
 
