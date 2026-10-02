@@ -16,6 +16,119 @@
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
   const selecoesPorVista = new Map();
   let vistaAtiva = camada.dataset.camadaEditor || "coronal";
+  const canetas = new Map();
+  let canetaAtiva = null;
+  mapasManuais.forEach(prepararCaneta);
+
+  function prepararCaneta(mapa) {
+    const barra = document.createElement("div");
+    barra.className = "caneta-manual";
+    barra.setAttribute("aria-label", "Desenho à mão livre");
+    barra.innerHTML = `<button type="button" class="botao botao--secundario" data-caneta-alternar aria-pressed="false">Caneta livre</button>
+      <label>Cor <select data-caneta-cor aria-label="Cor da caneta"><option value="#9b2424">Vermelho</option><option value="#202020">Preto</option><option value="#1956ad">Azul</option></select></label>
+      <label>Espessura <select data-caneta-espessura aria-label="Espessura da caneta"><option value="3">Fina</option><option value="6" selected>Média</option><option value="12">Grossa</option></select></label>
+      <button type="button" class="botao botao--secundario" data-caneta-desfazer disabled>Desfazer traço</button>
+      <button type="button" class="botao botao--secundario" data-caneta-limpar disabled>Apagar desenhos</button>
+      <p data-caneta-aviso role="status">Ative a caneta para desenhar neste mapa.</p>`;
+    mapa.before(barra);
+    const tela = document.createElement("canvas");
+    tela.className = "mapa-editor__caneta";
+    tela.dataset.canetaTela = mapa.dataset.mapaEditor;
+    tela.width = 1086;
+    tela.height = 1448;
+    tela.setAttribute("aria-label", "Desenhos à mão livre no mapa");
+    mapa.querySelector(".mapa-editor__desenho").append(tela);
+    const estado = { tela, barra, tracos: [], corrente: null, ponteiro: null };
+    canetas.set(mapa.dataset.mapaEditor, estado);
+    const atualizar = () => {
+      barra.querySelector("[data-caneta-desfazer]").disabled = !estado.tracos.length;
+      barra.querySelector("[data-caneta-limpar]").disabled = !estado.tracos.length;
+    };
+    estado.atualizar = atualizar;
+    barra.querySelector("[data-caneta-alternar]").addEventListener("click", () => {
+      ativarVista(mapa.dataset.mapaEditor);
+      definirCaneta(canetaAtiva === estado ? null : estado);
+    });
+    barra.querySelector("[data-caneta-desfazer]").addEventListener("click", () => {
+      finalizarTraco(estado);
+      estado.tracos.pop(); redesenharCaneta(estado); atualizar();
+    });
+    barra.querySelector("[data-caneta-limpar]").addEventListener("click", () => {
+      finalizarTraco(estado);
+      estado.tracos.length = 0; redesenharCaneta(estado); atualizar();
+    });
+    const ponto = evento => {
+      const area = tela.getBoundingClientRect();
+      return [limitar((evento.clientX - area.left) / area.width, 0, 1), limitar((evento.clientY - area.top) / area.height, 0, 1)];
+    };
+    tela.addEventListener("pointerdown", evento => {
+      if (canetaAtiva !== estado || estado.corrente || evento.button !== 0 || evento.isPrimary === false) return;
+      evento.preventDefault();
+      estado.ponteiro = evento.pointerId;
+      estado.corrente = { cor: barra.querySelector("[data-caneta-cor]").value, largura: Number(barra.querySelector("[data-caneta-espessura]").value), pontos: [ponto(evento)] };
+      estado.tracos.push(estado.corrente);
+      tela.setPointerCapture(evento.pointerId);
+      redesenharCaneta(estado); atualizar();
+    });
+    tela.addEventListener("pointermove", evento => {
+      if (!estado.corrente || estado.ponteiro !== evento.pointerId) return;
+      evento.preventDefault();
+      estado.corrente.pontos.push(ponto(evento));
+      redesenharCaneta(estado);
+    });
+    tela.addEventListener("pointerup", evento => {
+      if (estado.ponteiro !== evento.pointerId) return;
+      estado.corrente.pontos.push(ponto(evento));
+      redesenharCaneta(estado); finalizarTraco(estado);
+    });
+    ["pointercancel", "lostpointercapture"].forEach(tipo => tela.addEventListener(tipo, evento => {
+      if (estado.ponteiro === evento.pointerId) finalizarTraco(estado);
+    }));
+  }
+
+  function finalizarTraco(estado) {
+    const ponteiro = estado.ponteiro;
+    estado.corrente = null; estado.ponteiro = null;
+    if (ponteiro !== null && estado.tela.hasPointerCapture(ponteiro)) estado.tela.releasePointerCapture(ponteiro);
+  }
+
+  function definirCaneta(estado) {
+    if (canetaAtiva) finalizarTraco(canetaAtiva);
+    canetaAtiva = estado;
+    if (estado) controles.hidden = true;
+    canetas.forEach(item => {
+      const ativa = item === estado;
+      item.tela.classList.toggle("mapa-editor__caneta--ativa", ativa);
+      item.barra.querySelector("[data-caneta-alternar]").setAttribute("aria-pressed", String(ativa));
+      item.barra.querySelector("[data-caneta-alternar]").textContent = ativa ? "Concluir desenho" : "Caneta livre";
+      item.barra.querySelector("[data-caneta-aviso]").textContent = ativa
+        ? "Desenhe com o dedo ou o mouse. Conclua para voltar a mover lesões."
+        : "Ative a caneta para desenhar neste mapa.";
+    });
+  }
+
+  function redesenharCaneta(estado) {
+    const ctx = estado.tela.getContext("2d");
+    const { width: w, height: h } = estado.tela;
+    ctx.clearRect(0, 0, w, h);
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    estado.tracos.forEach(traco => {
+      ctx.strokeStyle = traco.cor; ctx.fillStyle = traco.cor; ctx.lineWidth = traco.largura;
+      const primeiro = traco.pontos[0];
+      ctx.beginPath(); ctx.arc(primeiro[0] * w, primeiro[1] * h, traco.largura / 2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(primeiro[0] * w, primeiro[1] * h);
+      traco.pontos.slice(1).forEach(p => ctx.lineTo(p[0] * w, p[1] * h)); ctx.stroke();
+    });
+  }
+
+  function fotografarCaneta(camadaDaCaptura = camada) {
+    const estado = canetas.get(camadaDaCaptura.dataset.camadaEditor);
+    if (!estado?.tracos.length) return null;
+    const copia = document.createElement("canvas");
+    copia.width = estado.tela.width; copia.height = estado.tela.height;
+    copia.getContext("2d").drawImage(estado.tela, 0, 0);
+    return copia;
+  }
 
   alternarControles?.addEventListener("click", function () {
     definirControlesRecolhidos(!controles.classList.contains("controles-lesao--recolhido"));
@@ -121,6 +234,7 @@
     const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
     if (!mapa || mapa.closest("[data-vista-manual]")?.hidden) return;
     if (vista !== vistaAtiva) {
+      definirCaneta(null);
       selecoesPorVista.set(vistaAtiva, selecionada);
       selecionada?.classList.remove("lesao-editavel--selecionada");
       vistaAtiva = vista;
@@ -145,6 +259,7 @@
   }
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40") {
+    definirCaneta(null);
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
@@ -379,6 +494,10 @@
   }
 
   function limparMapa() {
+    const caneta = canetas.get(vistaAtiva);
+    if (caneta) {
+      finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
+    }
     camada.replaceChildren();
     selecionada = null;
     controles.hidden = true;
@@ -400,8 +519,8 @@
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel")) {
-      estadoMapa.textContent = `Adicione pelo menos uma lesão à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length) {
+      estadoMapa.textContent = `Adicione pelo menos uma lesão ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
     definirExportacaoEmAndamento(true);
@@ -458,16 +577,17 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, base: obterFonteDaBase(camadaDaCaptura), assinatura: fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura) };
+        return { vista, base: obterFonteDaBase(camadaDaCaptura), assinatura: fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
-      if (!capturas.some(function (captura) { return captura.lesoes.length; })) {
-        estadoMapa.textContent = "Adicione pelo menos uma lesão às vistas selecionadas antes de gerar o PDF.";
+      if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta; })) {
+        estadoMapa.textContent = "Adicione pelo menos uma lesão ou um desenho às vistas selecionadas antes de gerar o PDF.";
         return;
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base, captura.assinatura);
+        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base, captura.assinatura, captura.caneta);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
+        if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
         paginas.push({ vista: captura.vista, canvas });
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
@@ -495,8 +615,9 @@
 
   async function capturarMapa(opcoes = {}) {
     const lesoes = fotografarLesoes();
-    const { canvas } = await renderizarMontagem(lesoes, opcoes);
+    const { canvas, caneta } = await renderizarMontagem(lesoes, opcoes);
     if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
+    if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
     return opcoes.formato === "image/png"
       ? canvas.toDataURL("image/png")
       : canvas.toDataURL("image/jpeg", 0.9);
@@ -504,7 +625,8 @@
 
   async function capturarIntegracaoManual(opcoes = {}) {
     const lesoes = fotografarLesoes();
-    const { canvas, mascaras } = await renderizarMontagem(lesoes, {}, true);
+    const { canvas, mascaras, caneta } = await renderizarMontagem(lesoes, {}, true);
+    if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
     const captura = {
       imagem: canvas.toDataURL("image/png"),
       largura: canvas.width,
@@ -545,7 +667,7 @@
     }
   }
 
-  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura()) {
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta()) {
     const base = await carregarImagem(fonteBase);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
@@ -572,7 +694,7 @@
         mascaras.push(recortarAlfa(contextoMascara, geometria, canvas.width, canvas.height));
       }
     }
-    return { canvas, mascaras };
+    return { canvas, mascaras, caneta };
   }
 
   function geometriaDaLesao(lesao, larguraMapa, alturaMapa) {

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação da caneta livre</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 240; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-manual.js'];
+    dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
+    const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
+    verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');
+    verificar(origem.querySelector('[data-baixar-pdf-manual]'), 'Botão de PDF ausente no aplicativo real');
+
+    // O teste mantém o HTML, CSS, imagens, navegação, editor e gerador reais.
+    // Somente autenticação, serviços externos e o download no aparelho são isolados.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], blobs: new Map(), liberacoes: [], temporizadoresLongos: new Map() };
+      history.replaceState = function () {};
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste de PDF'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste de PDF');
+      };
+      window.addEventListener('error', evento => { if (evento.message) window.__teste.erros.push(evento.message); });
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const criarEndereco = URL.createObjectURL;
+      URL.createObjectURL = function (blob) {
+        const endereco = criarEndereco.call(this, blob);
+        window.__teste.blobs.set(endereco, blob);
+        return endereco;
+      };
+      const liberarEndereco = URL.revokeObjectURL;
+      URL.revokeObjectURL = function (endereco) {
+        window.__teste.liberacoes.push(endereco);
+        return liberarEndereco.call(this, endereco);
+      };
+      // Avançamos a limpeza tardia manualmente após conferir todos os PDFs.
+      // O relógio virtual do Chrome não deve saltar 60 segundos enquanto
+      // FileReader e Blob ainda estão concluindo suas leituras assíncronas.
+      const agendar = window.setTimeout;
+      const cancelar = window.clearTimeout;
+      let proximoTemporizador = -1;
+      window.setTimeout = function (callback, atraso, ...argumentos) {
+        if (Number(atraso) >= 60000 && typeof callback === 'function') {
+          const identificador = proximoTemporizador--;
+          window.__teste.temporizadoresLongos.set(identificador, () => callback(...argumentos));
+          return identificador;
+        }
+        return agendar.call(window, callback, atraso, ...argumentos);
+      };
+      window.clearTimeout = function (identificador) {
+        if (!window.__teste.temporizadoresLongos.delete(identificador)) cancelar.call(window, identificador);
+      };
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    dependencias.forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    const teste = janela.__teste;
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    janela.endomapaAbrirTela('editor-manual');
+    const escolher = vista => buscar('input[name="vistas-editor"][value="' + vista + '"]').click();
+    const painel = vista => buscar('[data-vista-manual="' + vista + '"]');
+    const tela = vista => painel(vista).querySelector('[data-caneta-tela]');
+    const botao = (vista, acao) => painel(vista).querySelector('[data-caneta-' + acao + ']');
+    const ponto = (vista, tipo, x, y, extra = {}) => {
+      const canvas = tela(vista);
+      // Eventos sintéticos não têm ponteiro físico registrado no navegador.
+      // A captura é simulada aqui; desenho, coordenadas e exportações são reais.
+      canvas.setPointerCapture = () => {};
+      canvas.hasPointerCapture = () => false;
+      const area = canvas.getBoundingClientRect();
+      canvas.dispatchEvent(new janela.PointerEvent(tipo, { bubbles: true, cancelable: true, pointerId: 1, isPrimary: true, pointerType: 'touch', button: 0, clientX: area.left + area.width*x, clientY: area.top + area.height*y, ...extra }));
+    };
+    const desenhar = vista => {
+      ponto(vista, 'pointerdown', .35, .40);
+      ponto(vista, 'pointermove', .45, .50);
+      ponto(vista, 'pointerup', .55, .60);
+    };
+    const pixel = (canvas,x=.45,y=.50) => Array.from(canvas.getContext('2d').getImageData(Math.round(canvas.width*x),Math.round(canvas.height*y),1,1).data);
+    const abrirImagem = src => new Promise((resolve,reject) => {
+      const img = new janela.Image(); img.onload = () => {
+        const canvas = doc.createElement('canvas'); canvas.width=img.width; canvas.height=img.height;
+        canvas.getContext('2d').drawImage(img,0,0); resolve(canvas);
+      }; img.onerror=reject; img.src=src;
+    });
+    escolher('coronal');
+    verificar(janela.getComputedStyle(tela('coronal')).pointerEvents === 'none', 'Caneta desligada deve permitir editar lesões e rolar');
+    botao('coronal','alternar').click();
+    verificar(janela.getComputedStyle(tela('coronal')).touchAction === 'none', 'Toque deve desenhar sem rolar o mapa');
+    desenhar('coronal');
+    verificar(pixel(tela('coronal')).join() === '155,36,36,255', 'Traço vermelho aparece no ponto desenhado');
+    verificar(botao('coronal','desfazer').disabled === false, 'Traço deve poder ser desfeito');
+    ponto('coronal','pointerdown',.2,.2,{pointerId:2,isPrimary:false});
+    verificar(pixel(tela('coronal'),.2,.2)[3] === 0, 'Segundo dedo não deve desenhar');
+    const geracoes=[];
+    const gerar=janela.endomapaGerarPdfA4;
+    janela.endomapaGerarPdfA4 = paginas => { geracoes.push(paginas.map(p=>({vista:p.vista,pixel:pixel(p.canvas)}))); return gerar(paginas); };
+    buscar('[data-baixar-pdf-manual]').click();
+    botao('coronal','limpar').click();
+    await aguardar(()=>teste.downloads.length===1, 'PDF deve funcionar com desenho livre e sem lesões');
+    verificar(geracoes[0][0].pixel.join()==='155,36,36,255', 'PDF congela os traços no clique, mesmo ao apagar durante exportação');
+    verificar(pixel(tela('coronal'))[3]===0, 'Apagar desenhos limpa a tela');
+    desenhar('coronal');
+    const captura=janela.endomapaCapturarMapaManual({formato:'image/png'});
+    escolher('sagital');
+    verificar(janela.getComputedStyle(tela('coronal')).pointerEvents==='none', 'Trocar vista deve desligar caneta anterior');
+    verificar(pixel(tela('sagital'))[3]===0, 'Sagital não recebe traços coronais');
+    verificar(pixel(await abrirImagem(await captura)).join()==='155,36,36,255', 'Captura PNG mantém desenho da vista original');
+    botao('sagital','alternar').click();
+    botao('sagital','cor').value='#1956ad'; botao('sagital','espessura').value='12';
+    desenhar('sagital');
+    verificar(pixel(tela('sagital')).join()==='25,86,173,255', 'Cor azul funciona na sagital');
+    ponto('sagital','pointerdown',.2,.2);
+    ponto('sagital','pointercancel',.2,.2);
+    ponto('sagital','pointermove',.8,.2);
+    verificar(pixel(tela('sagital'),.8,.2)[3]===0, 'Interrupção do toque encerra o traço');
+    botao('sagital','desfazer').click();
+    verificar(pixel(tela('sagital'))[3]===255 && pixel(tela('sagital'),.2,.2)[3]===0, 'Desfazer retira só último traço');
+    escolher('ambas');
+    buscar('[data-baixar-pdf-manual]').click();
+    await aguardar(()=>teste.downloads.length===2, 'PDF de ambas deve concluir');
+    verificar(geracoes[1].length===2 && geracoes[1][0].pixel[0]===155 && geracoes[1][1].pixel[2]===173, 'PDF de ambas preserva desenho próprio de cada vista');
+    escolher('coronal');
+    buscar('[data-modelo]').click();
+    botao('coronal','alternar').click();
+    verificar(buscar('[data-controles-lesao]').hidden, 'Painel da lesão não cobre o desenho');
+    botao('coronal','limpar').click();
+    verificar(painel('coronal').querySelectorAll('.lesao-editavel').length===1, 'Apagar desenhos preserva lesões');
+    desenhar('coronal');
+    buscar('[data-limpar-mapa]').click();
+    verificar(pixel(tela('coronal'))[3]===0 && !painel('coronal').querySelector('.lesao-editavel'), 'Limpar mapa remove desenhos e lesões da vista ativa');
+    verificar(pixel(tela('sagital'))[3]===255, 'Limpar coronal preserva sagital');
+    const select=buscar('[data-mapa-especial]');
+    for(const opcao of select.options) {
+      select.value=opcao.value; select.dispatchEvent(new janela.Event('change',{bubbles:true}));
+      const imagem=painel(opcao.value).querySelector('[data-mapa-base]');
+      await aguardar(()=>imagem.complete && imagem.naturalWidth, 'Base especial deve carregar');
+      botao(opcao.value,'alternar').click(); desenhar(opcao.value);
+      verificar(pixel(tela(opcao.value))[3]===255, 'Caneta funciona no mapa '+opcao.value);
+      botao(opcao.value,'alternar').click();
+      verificar(janela.getComputedStyle(tela(opcao.value)).pointerEvents==='none','Concluir libera edição');
+    }
+    for(const largura of [320,390,768,1280]) {
+      quadro.style.width=largura+'px'; await new Promise(resolve=>setTimeout(resolve,60));
+      verificar(doc.documentElement.scrollWidth<=largura,'Controles cabem na largura '+largura);
+    }
+    verificar(!teste.erros.length,'Sem erros: '+teste.erros.join('; '));
+    verificar(!teste.chamadas.length,'Caneta não usa rede nem IA');
+    quadro.style.width='390px';
+    escolher('coronal');
+    botao('coronal','alternar').click();
+    desenhar('coronal');
+    botao('coronal','alternar').scrollIntoView({block:'start'});
+    saida.textContent='PASSOU: caneta por vista, toque, cores, espessura, desfazer, limpeza, PNG/PDF congelados no clique, seis mapas e celular.';
+  } catch(erro) { saida.textContent='FALHOU: '+erro.message; console.error(erro); }
+})();
+</script>
