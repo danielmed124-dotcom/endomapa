@@ -1,0 +1,5 @@
+Modo: ferramenta integrada imagegen, edição da imagem fornecida Corpo Lúteo.png, transparent_background=true.
+Resultado: assets/lesoes/corpo-luteo.png (1536 x 1024).
+
+Prompt:
+Edit this supplied medical illustration as a faithful cutout asset for a map editor. Preserve the exact corpus luteum subject, its lobulated silhouette, golden orange colors, central depression, tissue texture and orientation. Remove ALL surrounding brown gradient/background to real fully transparent alpha. Only soften the outer contour with a narrow, natural feathered transition, making the outermost tissue rim progressively translucent. Interior tissue and central depression must remain opaque and detailed. No added anatomy, no text, no shadow, no glow, no background. Keep the complete subject uncropped and centered with a small transparent margin. Output transparent PNG.
