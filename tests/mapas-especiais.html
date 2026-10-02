@@ -111,7 +111,7 @@
     verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
     const select = buscar('[data-mapa-especial]');
     const opcoes = Array.from(select.options);
-    verificar(opcoes.map(o => o.textContent).join('|') === 'Útero Retrofletido|Ooforectomia à direita|Ooforectomia à esquerda|Ooforectomia bilateral', 'Nomes devem coincidir com os arquivos');
+    verificar(opcoes.map(o => o.textContent).join('|') === 'Útero Retrofletido|Ooforectomia à direita|Ooforectomia à esquerda|Ooforectomia bilateral|Kissing Ovaries', 'Nomes devem coincidir com os arquivos');
     verificar(select.closest('.opcao-vista').previousElementSibling.querySelector('input').value === 'ambas', 'Caixa deve vir após Ambas');
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
       detail: { id: clinica ? 'daniel' : 'ana', titulo: 'Dr(a).', nome: clinica ? 'Daniel Carneiro' : 'Ana Silva', assinatura: clinica ? 'Daniel' : 'Ana', clinica_id: clinica ? 'centrus' : null },
@@ -187,7 +187,7 @@
       verificar(buscar('[data-controle-nome-lesao]').value === 'Lesão ' + opcao.textContent, 'Seleção e nome devem ser restaurados');
     }
     buscar('[data-limpar-mapa]').click();
-    verificar(!buscar('[data-camada-editor="ooforectomia-bilateral"]').querySelector('.lesao-editavel'), 'Limpar deve atuar no mapa ativo');
+    verificar(!buscar('[data-camada-editor="kissing-ovaries"]').querySelector('.lesao-editavel'), 'Limpar deve atuar no mapa ativo');
     verificar(buscar('[data-camada-editor="ooforectomia-direita"]').querySelector('.lesao-editavel'), 'Limpar não deve afetar outro mapa');
     const antesVazio = teste.downloads.length;
     buscar('[data-baixar-pdf-manual]').click();
@@ -202,7 +202,7 @@
     quadro.style.width = '390px';
     especial('utero-retrofletido');
     buscar('.opcoes-vistas').scrollIntoView();
-    saida.textContent = 'PASSOU: quatro mapas, nomes dos arquivos, montagens independentes, duas identidades, PNG/PDF reais e larguras de 320 a 1280 pixels.';
+    saida.textContent = 'PASSOU: cinco mapas, nomes dos arquivos, montagens independentes, duas identidades, PNG/PDF reais e larguras de 320 a 1280 pixels.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);
