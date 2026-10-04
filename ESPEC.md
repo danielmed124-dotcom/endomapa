@@ -30,6 +30,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Atalhos de imagens (04/10/2026): no editor manual, Ctrl+C copia a imagem selecionada com tamanho, ajustes dos eixos, rotação, nome e medidas do instante da cópia. Ctrl+V insere uma cópia independente na vista ativa, ligeiramente deslocada e selecionada. Delete remove a imagem selecionada e seu rótulo. Os atalhos não interferem na digitação dos campos nem atuam fora do editor. A cópia fica somente na aba e serve para colar dentro do mapa.
+
 Ajuste de cor Kissing Ovaries (01/10/2026): saturação de 0,88 e contraste de 0,97 aproximam os tons alaranjados do coronal de referência. A mesma transformação é aplicada às versões Centrus e neutra, preservando cabeçalho, pixels neutros da marca-d'água, transparência, dimensões e anatomia. Tela, PNG e PDF passam a usar `assets/mapas-especiais/kissing-ovaries-cor-v2`; a assinatura continua sendo a do cadastro. O script `output/estudos-realismo/ajustar-cor-kissing-ovaries.ps1` reproduz o ajuste a partir das bases anteriores preservadas.
 
 Kissing Ovaries (01/10/2026): acrescentado ao final da lista Mapas especiais, com montagem independente e dimensões originais de 1086 × 1448 pixels. A preparação reutiliza as regras determinísticas das bases coronais, retirando a assinatura incorporada sem alterar a anatomia. A versão Centrus conserva logomarca e marca-d'água; a neutra remove ambas. Todos recebem a assinatura do cadastro na tela, PNG e PDF. Bases em `assets/mapas-especiais/kissing-ovaries`; original e script de preparação em `output/estudos-realismo/kissing-ovaries-original.png` e `preparar-kissing-ovaries.ps1`.

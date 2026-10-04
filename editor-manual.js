@@ -10,6 +10,8 @@
   const eixoY = document.querySelector("[data-controle-eixo-y]");
   const nomeNoMapa = document.querySelector("[data-controle-nome-lesao]");
   let selecionada = null;
+  let imagemCopiada = null;
+  let quantidadeDeColagens = 0;
   let proximoId = 1;
   if (!camada || !controles) return;
 
@@ -282,7 +284,37 @@
     atualizarTodasAsLinhas();
   }
 
-  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40") {
+  document.addEventListener("keydown", function (evento) {
+    const editor = camada.closest('[data-tela="editor-manual"]');
+    if (!editor || editor.closest("[hidden], [inert]") || evento.defaultPrevented || evento.isComposing || evento.altKey) return;
+    const alvo = evento.target;
+    if (alvo instanceof Element && (alvo.closest("input, textarea, select, [role='textbox']") || alvo.isContentEditable)) return;
+    const tecla = evento.key.toLowerCase();
+    const comando = evento.ctrlKey || evento.metaKey;
+    if (comando && !evento.shiftKey && tecla === "c" && selecionada?.isConnected) {
+      evento.preventDefault();
+      imagemCopiada = { src: selecionada.querySelector("img").getAttribute("src"), dados: { ...selecionada.dataset } };
+      quantidadeDeColagens = 0;
+      mostrar(`${selecionada.dataset.nome} copiada com os ajustes atuais. Use Ctrl+V para colar.`);
+    } else if (comando && !evento.shiftKey && tecla === "v" && imagemCopiada) {
+      evento.preventDefault();
+      if (evento.repeat) return;
+      const dados = { ...imagemCopiada.dados };
+      delete dados.id;
+      const deslocamento = (++quantidadeDeColagens % 6) * 3;
+      for (const campo of ["x", "y", "medidaX", "medidaY"]) {
+        dados[campo] = String(limitar(Number(dados[campo]) + deslocamento, 4, 96));
+      }
+      adicionarLesao(imagemCopiada.src, dados.nome, dados.proporcao, dados.semRecorte, dados.tamanho, dados.giro, dados.tamanhoMinimo, dados);
+      selecionada.focus({ preventScroll: true });
+      mostrar(`${dados.nome} colada com os ajustes copiados. Arraste para posicioná-la.`);
+    } else if (!comando && !evento.shiftKey && tecla === "delete" && selecionada?.isConnected) {
+      evento.preventDefault();
+      removerSelecionada();
+    }
+  });
+
+  function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40", dadosCopiados = null) {
     definirCaneta(null);
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
@@ -305,6 +337,7 @@
     lesao.dataset.medida3 = "";
     lesao.dataset.medidaX = String(56 + deslocamento);
     lesao.dataset.medidaY = String(52 + deslocamento);
+    if (dadosCopiados) Object.assign(lesao.dataset, dadosCopiados);
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     lesao.style.setProperty("--proporcao-lesao", proporcao);
     lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
@@ -345,6 +378,7 @@
     const camadaDoMovimento = lesao.closest("[data-camada-editor]");
     selecionar(lesao);
     evento.preventDefault();
+    lesao.focus({ preventScroll: true });
     lesao.setPointerCapture(evento.pointerId);
     const mover = function (movimento) {
       const area = camadaDoMovimento.getBoundingClientRect();

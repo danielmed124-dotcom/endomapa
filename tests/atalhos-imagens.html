@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<title>Verificação dos atalhos de imagens</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Editor em celular" style="width:390px;height:844px"></iframe>
+<script>
+(async function () {
+  const resultado = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  try {
+    const origem = new DOMParser().parseFromString(await (await fetch('../app.html')).text(), 'text/html');
+    origem.querySelectorAll('script').forEach(item => item.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    origem.querySelector('[data-tela="editor-manual"]').hidden = false;
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const script = origem.createElement('script');
+    script.src = 'editor-manual.js';
+    origem.body.append(script);
+    const quadro = document.querySelector('iframe');
+    await new Promise(resolve => { quadro.onload = resolve; quadro.srcdoc = origem.documentElement.outerHTML; });
+    const doc = quadro.contentDocument;
+    const win = quadro.contentWindow;
+    const camada = doc.querySelector('[data-camada-editor="coronal"]');
+    const imagens = () => camada.querySelectorAll('.lesao-editavel');
+    const tecla = (key, ctrlKey = false, alvo = doc.body) => {
+      const evento = new win.KeyboardEvent('keydown', { key, ctrlKey, bubbles: true, cancelable: true });
+      alvo.dispatchEvent(evento);
+      return evento.defaultPrevented;
+    };
+    const ajustar = (seletor, valor) => {
+      const campo = doc.querySelector(seletor);
+      campo.value = valor;
+      campo.dispatchEvent(new win.Event('input', { bubbles: true }));
+    };
+    doc.querySelector('[data-modelo]').click();
+    const original = imagens()[0];
+    ajustar('[data-controle-tamanho]', '150');
+    ajustar('[data-controle-eixo-x]', '120');
+    ajustar('[data-controle-eixo-y]', '80');
+    ajustar('[data-controle-giro]', '35');
+    ajustar('[data-controle-nome-lesao]', 'Imagem de teste');
+    ajustar('[data-medida="1"]', '2,5');
+    const dados = { ...original.dataset };
+    verificar(tecla('c', true), 'Copiar não foi reconhecido');
+    ajustar('[data-controle-tamanho]', '200');
+    verificar(tecla('v', true), 'Colar não foi reconhecido');
+    const copia = imagens()[1];
+    verificar(copia && copia.dataset.id !== original.dataset.id, 'A cópia deve ter identidade independente');
+    for (const campo of ['tamanho', 'eixoX', 'eixoY', 'giro', 'nomeNoMapa', 'medida1', 'proporcao', 'semRecorte']) {
+      verificar(copia.dataset[campo] === dados[campo], 'A cópia alterou ' + campo);
+    }
+    verificar(copia.style.getPropertyValue('--tamanho-editor') === '1.5' && original.style.getPropertyValue('--tamanho-editor') === '2', 'A cópia deve manter o tamanho anterior à última edição');
+    const campo = doc.querySelector('[data-controle-nome-lesao]');
+    for (const [key, ctrl] of [['c', true], ['v', true], ['Delete', false]]) {
+      verificar(!tecla(key, ctrl, campo), 'Atalho interferiu no campo de texto');
+    }
+    verificar(imagens().length === 2, 'Digitação alterou as imagens');
+    tecla('Delete');
+    verificar(imagens().length === 1 && original.isConnected, 'Delete removeu a imagem errada');
+    verificar(!camada.querySelector(`[data-medida-id="${copia.dataset.id}"]`) && !camada.querySelector(`[data-linha-id="${copia.dataset.id}"]`), 'Delete deixou rótulo ou linha');
+    tecla('v', true);
+    verificar(imagens().length === 2, 'A exclusão apagou a cópia guardada');
+    win.dispatchEvent(new win.CustomEvent('endomapa:vistas-alteradas', { detail: 'sagital' }));
+    tecla('v', true);
+    verificar(doc.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').length === 1, 'Não colou na vista ativa');
+    doc.querySelector('[data-tela="editor-manual"]').hidden = true;
+    verificar(!tecla('Delete') && !tecla('v', true), 'Atalho atuou fora do editor');
+    resultado.textContent = 'PASSOU: cópia preserva ajustes no instante do Ctrl+C; colagem independente; Delete limpa imagem e rótulo; campos protegidos; vista ativa respeitada; atalhos inativos fora do editor.';
+  } catch (erro) { resultado.textContent = 'FALHOU: ' + erro.message; }
+})();
+</script>
+</html>
