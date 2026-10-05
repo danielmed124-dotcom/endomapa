@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação do histórico manual</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 240; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-manual.js', 'historico-manual.js'];
+    dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
+    const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
+    verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');
+    verificar(origem.querySelector('[data-baixar-pdf-manual]'), 'Botão de PDF ausente no aplicativo real');
+
+    // O teste mantém o HTML, CSS, imagens, navegação, editor e gerador reais.
+    // Somente autenticação, serviços externos e o download no aparelho são isolados.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], blobs: new Map(), liberacoes: [], temporizadoresLongos: new Map() };
+      history.replaceState = function () {};
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste de PDF'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste de PDF');
+      };
+      window.addEventListener('error', evento => { if (evento.message) window.__teste.erros.push(evento.message); });
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const criarEndereco = URL.createObjectURL;
+      URL.createObjectURL = function (blob) {
+        const endereco = criarEndereco.call(this, blob);
+        window.__teste.blobs.set(endereco, blob);
+        return endereco;
+      };
+      const liberarEndereco = URL.revokeObjectURL;
+      URL.revokeObjectURL = function (endereco) {
+        window.__teste.liberacoes.push(endereco);
+        return liberarEndereco.call(this, endereco);
+      };
+      // Avançamos a limpeza tardia manualmente após conferir todos os PDFs.
+      // O relógio virtual do Chrome não deve saltar 60 segundos enquanto
+      // FileReader e Blob ainda estão concluindo suas leituras assíncronas.
+      const agendar = window.setTimeout;
+      const cancelar = window.clearTimeout;
+      let proximoTemporizador = -1;
+      window.setTimeout = function (callback, atraso, ...argumentos) {
+        if (Number(atraso) >= 60000 && typeof callback === 'function') {
+          const identificador = proximoTemporizador--;
+          window.__teste.temporizadoresLongos.set(identificador, () => callback(...argumentos));
+          return identificador;
+        }
+        return agendar.call(window, callback, atraso, ...argumentos);
+      };
+      window.clearTimeout = function (identificador) {
+        if (!window.__teste.temporizadoresLongos.delete(identificador)) cancelar.call(window, identificador);
+      };
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    const simulador = origem.createElement('script');
+    simulador.src = 'tests/simulador-historico.js';
+    origem.head.append(simulador);
+    dependencias.forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    const teste = janela.__teste;
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    janela.endomapaAbrirTela('editor-manual');
+    const h = janela.__historico;
+    verificar(janela.endomapaHistoricoManual, 'Histórico não inicializou');
+    const salvar = buscar('[data-salvar-manual]');
+    const titulo = buscar('[data-titulo-montagem]');
+    const mensagem = buscar('[data-estado-salvar-manual]');
+    const dados = () => janela.endomapaEditorManual.capturar();
+    const esperarSalvo = () => aguardar(() => !salvar.disabled, 'Salvamento não terminou');
+    const mudar = (seletor, valor) => { const campo = buscar(seletor); campo.value = valor; campo.dispatchEvent(new janela.Event('input')); };
+    const escolher = vista => { buscar(`input[name="vistas-editor"][value="${vista}"]`).click(); };
+    salvar.click();
+    verificar(h.mapas.size === 0 && mensagem.textContent.includes('Adicione'), 'Mapa novo vazio não deve salvar');
+    titulo.value = 'Exemplo com medidas';
+    buscar('[data-modelo]').click();
+    mudar('[data-controle-nome-lesao]', 'Lesão de exemplo');
+    mudar('[data-medida="1"]', '2,5');
+    mudar('[data-controle-tamanho]', '150');
+    mudar('[data-controle-giro]', '30');
+    const coronal = buscar('[data-mapa-editor="coronal"]');
+    coronal.closest('[data-vista-manual]').querySelector('[data-caneta-alternar]').click();
+    const caneta = coronal.querySelector('[data-caneta-tela]');
+    caneta.setPointerCapture = () => {}; caneta.hasPointerCapture = () => false;
+    const area = caneta.getBoundingClientRect();
+    for (const [tipo,x] of [['pointerdown',0.3],['pointermove',0.4],['pointerup',0.5]]) caneta.dispatchEvent(new janela.PointerEvent(tipo,{bubbles:true,pointerId:1,button:0,isPrimary:true,clientX:area.left+area.width*x,clientY:area.top+area.height*0.5}));
+    coronal.closest('[data-vista-manual]').querySelector('[data-caneta-alternar]').click();
+    escolher('sagital'); buscar('[data-modelo]').click();
+    for (const especial of Array.from(buscar('[data-mapa-especial]').options)) {
+      escolher('especiais');
+      buscar('[data-mapa-especial]').value = especial.value;
+      buscar('[data-mapa-especial]').dispatchEvent(new janela.Event('change'));
+      buscar('[data-modelo]').click();
+      mudar('[data-controle-nome-lesao]', especial.textContent);
+    }
+    escolher('ambas');
+    const original = JSON.stringify(dados());
+    const imagemOriginal = await janela.endomapaCapturarMapaManual({formato:'image/png'});
+    salvar.click(); salvar.click(); await esperarSalvo();
+    verificar(h.mapas.size === 1, 'Dois cliques duplicaram o mapa');
+    verificar(JSON.stringify(h.mapas.values().next().value.montagem) === original, 'Não guardou todas as vistas');
+    const primeiroId = h.mapas.keys().next().value;
+    // Mudança durante uma gravação lenta deve continuar pendente.
+    let liberar; h.atrasar = new Promise(resolve => { liberar = resolve; });
+    salvar.click(); titulo.value = 'Alterado durante salvamento'; liberar(); await esperarSalvo(); h.atrasar = null;
+    verificar(mensagem.textContent.includes('Há alterações'), 'Mudança durante gravação foi marcada como salva');
+    h.confirmar = false; buscar('[data-novo-manual]').click(); verificar(titulo.value === 'Alterado durante salvamento', 'Novo mapa descartou sem confirmação');
+    h.confirmar = true; buscar('[data-novo-manual]').click(); verificar(!dados().vistas.coronal.lesoes.length && !dados().vistas.sagital.lesoes.length && !dados().vistas.coronal.tracos.length, 'Novo mapa não limpou tudo');
+    janela.endomapaAbrirTela('meus-mapas');
+    await aguardar(() => doc.querySelector('[data-lista-mapas] button'), 'Histórico não carregou');
+    buscar('[data-lista-mapas] button').click();
+    await aguardar(() => !salvar.disabled && titulo.value === 'Exemplo com medidas', 'Não reabriu o mapa');
+    verificar(JSON.stringify(dados()) === original, 'Reabertura mudou posições, medidas ou caneta');
+    verificar(await janela.endomapaCapturarMapaManual({formato:'image/png'}) === imagemOriginal, 'Imagem reaberta difere do original');
+    titulo.value = 'Mapa atualizado'; salvar.click(); await esperarSalvo(); verificar(h.mapas.size === 1 && h.mapas.get(primeiroId).titulo === 'Mapa atualizado', 'Atualização criou outro registro');
+    h.mapas.get(primeiroId).versao++;
+    salvar.click(); await esperarSalvo(); verificar(mensagem.textContent.includes('outra aba'), 'Conflito não foi informado');
+    h.mapas.get(primeiroId).versao--;
+    h.falhar = true; salvar.click(); await esperarSalvo(); verificar(mensagem.textContent.includes('Não foi possível'), 'Falha de rede exibiu sucesso');
+    h.falhar = false;
+    // PDF captura o estado no clique, salva antes de baixar e conta uma geração.
+    const antes = teste.downloads.length;
+    buscar('[data-baixar-pdf-manual]').click(); buscar('[data-baixar-pdf-manual]').click();
+    await aguardar(() => teste.downloads.length > antes && !buscar('[data-baixar-pdf-manual]').disabled, 'PDF não concluiu');
+    verificar(h.pdfs.length === 1 && h.mapas.size === 1, 'PDF duplicou evento ou mapa');
+    h.falhar = true; buscar('[data-baixar-pdf-manual]').click();
+    await aguardar(() => !buscar('[data-baixar-pdf-manual]').disabled, 'Falha de PDF bloqueou editor');
+    verificar(teste.downloads.length === antes+1 && h.pdfs.length === 1, 'Falha no registro baixou ou contou PDF'); h.falhar = false;
+    janela.endomapaAbrirTela('painel-dia');
+    await aguardar(() => !buscar('[data-conteudo-painel]').hidden || buscar('[data-estado-painel]').textContent.startsWith('Não foi possível'), 'Painel não iniciou');
+    verificar(!buscar('[data-conteudo-painel]').hidden, 'Painel não carregou: '+buscar('[data-estado-painel]').textContent+' '+teste.erros.join(';'));
+    verificar(buscar('[data-total-mapas-hoje]').textContent === '1' && buscar('[data-contador-pdf]').textContent === '1', 'Contagem do dia incorreta');
+    mudar('[data-busca-painel]', 'inexistente'); verificar(!doc.querySelector('[data-lista-painel] button'), 'Busca não filtrou');
+    // Paginação deve alcançar mapas além da primeira página.
+    for (let n=0;n<32;n++) { const m = structuredClone(h.mapas.get(primeiroId)); m.id = janela.crypto.randomUUID(); m.titulo = 'Extra '+n; h.mapas.set(m.id,m); }
+    janela.endomapaAbrirTela('meus-mapas');
+    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] button').length === 30, 'Primeira página incorreta');
+    buscar('[data-mais-mapas]').click();
+    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] button').length === 33, 'Paginação não trouxe os restantes');
+    // Dados incompatíveis nunca removem a montagem atual.
+    const snapshot = dados(); const invalida = structuredClone(snapshot); invalida.vistas.coronal.lesoes[0].src = 'https://invalid.example/imagem.png';
+    let rejeitou = false; try { janela.endomapaEditorManual.restaurar(invalida); } catch (_) { rejeitou = true; }
+    verificar(rejeitou && JSON.stringify(dados()) === JSON.stringify(snapshot), 'Montagem inválida apagou dados');
+    for (const largura of [320,390,768,1280]) { quadro.style.width = largura+'px'; await new Promise(resolve=>setTimeout(resolve,60)); verificar(doc.documentElement.scrollWidth <= largura, 'Transbordou em '+largura); }
+    verificar(!teste.erros.length && !teste.chamadas.length, 'Erros inesperados: '+teste.erros.join(';'));
+    saida.textContent = 'PASSOU: salvar/reabrir com imagem idêntica, caneta e sete vistas; salvar atualiza; duplicidade; erro de rede; conflito; alterações pendentes; PDF e contagem; busca e paginação; dados inválidos; celular.';
+  } catch (erro) { saida.textContent = 'FALHOU: '+erro.message; console.error(erro); }
+})();
+</script>

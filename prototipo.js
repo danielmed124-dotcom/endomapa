@@ -43,9 +43,7 @@ function abrirTela(nomeDaTela) {
     const fragmento = nomeDaTela === "editor-manual" ? "#editor-manual" : "";
     window.history.replaceState(null, "", window.location.pathname + window.location.search + fragmento);
   }
-  window.requestAnimationFrame(() => {
-    window.dispatchEvent(new CustomEvent("endomapa:tela-aberta", { detail: nomeDaTela }));
-  });
+  window.dispatchEvent(new CustomEvent("endomapa:tela-aberta", { detail: nomeDaTela }));
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 }

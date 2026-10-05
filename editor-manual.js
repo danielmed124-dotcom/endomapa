@@ -226,6 +226,7 @@
     if (evento.detail === "editor-manual") atualizarTodasAsLinhas();
   });
   window.endomapaCapturarMapaManual = capturarMapa;
+  window.endomapaEditorManual = { capturar: capturarMontagemEditavel, validar: validarMontagemEditavel, restaurar: restaurarMontagemEditavel, ocupado: () => exportacaoEmAndamento };
   window.endomapaCapturarIntegracaoManual = capturarIntegracaoManual;
   window.endomapaAdicionarRotulos = async function (imagem) {
     const lesoes = fotografarLesoes();
@@ -582,6 +583,72 @@
     });
   }
 
+  function capturarMontagemEditavel() {
+    const vistas = {};
+    mapasManuais.forEach(mapa => {
+      const vista = mapa.dataset.mapaEditor;
+      vistas[vista] = {
+        lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
+          const dados = { ...lesao.dataset }; delete dados.id;
+          return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
+        }),
+        tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
+      };
+    });
+    return { versao: 1, escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, ativa: vistaAtiva, vistas };
+  }
+
+  function validarMontagemEditavel(montagem) {
+    const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [botao.dataset.modelo, botao.dataset]));
+    const ids = mapasManuais.map(m => m.dataset.mapaEditor);
+    const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
+    const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
+    if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
+    // Valida tudo antes de remover a montagem aberta. Fontes vêm somente da biblioteca.
+    for (const id of ids) {
+      const vista = montagem.vistas[id];
+      if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
+      vista.lesoes.forEach(l => {
+        if (!modelos.has(l.src) || !l.dados) falhar();
+        for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',10,300],['eixoY',10,300]]) {
+          if (!Number.isFinite(Number(l.dados[campo])) || Number(l.dados[campo]) < min || Number(l.dados[campo]) > max) falhar();
+        }
+        for (const campo of ['nomeNoMapa','medida1','medida2','medida3']) if (typeof l.dados[campo] !== 'string' || l.dados[campo].length > 1000) falhar();
+      });
+      vista.tracos.forEach(t => {
+        if (!/^#[a-f0-9]{6}$/i.test(t.cor) || !Number.isFinite(t.largura) || t.largura < 1 || t.largura > 30 || !Array.isArray(t.pontos) || !t.pontos.length || t.pontos.length > 100000) falhar();
+        if (t.pontos.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !Number.isFinite(n) || n < 0 || n > 1))) falhar();
+      });
+    }
+    return { modelos, ids };
+  }
+
+  function restaurarMontagemEditavel(montagem) {
+    if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
+    const { modelos, ids } = validarMontagemEditavel(montagem);
+    definirCaneta(null);
+    selecionada = null; selecoesPorVista.clear(); imagemCopiada = null;
+    mapasManuais.forEach(mapa => {
+      mapa.querySelector('[data-camada-editor]').replaceChildren();
+      const c = canetas.get(mapa.dataset.mapaEditor); c.tracos = []; c.atualizar(); redesenharCaneta(c);
+    });
+    ids.forEach(id => {
+      aplicarVistasManuais(id);
+      montagem.vistas[id].lesoes.forEach(l => {
+        const modelo = modelos.get(l.src);
+        const dados = {};
+        for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
+        adicionarLesao(l.src, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
+      });
+      const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(montagem.vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
+    });
+    document.querySelector('[data-mapa-especial]').value = montagem.especial;
+    document.querySelector(`input[name="vistas-editor"][value="${montagem.escolha}"]`).checked = true;
+    aplicarVistasManuais(montagem.escolha); ativarVista(montagem.ativa);
+    controles.hidden = !selecionada;
+    mostrar('Montagem aberta. Você pode continuar editando.');
+  }
+
   async function baixarMontagemManual() {
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
@@ -643,6 +710,8 @@
 
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
+    if (window.endomapaHistoricoManual?.ocupado()) return;
+    const registroPdf = window.endomapaHistoricoManual?.prepararPdf();
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
     const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
@@ -669,6 +738,7 @@
         paginas.push({ vista: captura.vista, canvas });
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
+      if (registroPdf) await window.endomapaHistoricoManual.salvarPdf(registroPdf);
       const endereco = URL.createObjectURL(arquivo);
       const link = document.createElement("a");
       try {
@@ -687,7 +757,7 @@
         : `PDF A4 preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}. Salve o arquivo para imprimir em papel A4.`;
     } catch (erro) {
       estadoMapa.hidden = false;
-      estadoMapa.textContent = "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
+      estadoMapa.textContent = erro.historico ? erro.message : "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
     } finally {
       definirExportacaoEmAndamento(false);
     }

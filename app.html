@@ -263,7 +263,7 @@
           <div class="selo">Histórico protegido</div>
           <h1 class="titulo-tela" id="titulo-meus-mapas">Meus mapas</h1>
           <p class="texto-apoio">
-            O Supabase mostra somente os mapas pertencentes ao usuário que está logado.
+            Suas montagens manuais salvas, disponíveis para reabrir e continuar editando.
           </p>
         </header>
 
@@ -286,6 +286,7 @@
         </button>
 
         <div class="lista-mapas-salvos" data-lista-mapas></div>
+        <button class="botao botao--secundario" type="button" data-mais-mapas hidden>Carregar mais mapas</button>
 
         <div class="acoes">
           <button class="botao" type="button" data-tela-alvo="novo-mapa">
@@ -304,7 +305,7 @@
           <div class="selo">Visão de hoje</div>
           <h1 class="titulo-tela" id="titulo-painel-dia">Painel do dia</h1>
           <p class="texto-apoio">
-            Acompanhe somente os seus mapas criados hoje, sem alterar nenhum registro.
+            Montagens salvas ou atualizadas hoje e PDFs gerados na sua conta. O dia segue o horário do seu aparelho.
           </p>
         </header>
 
@@ -327,50 +328,26 @@
         </button>
 
         <div data-conteudo-painel hidden>
-          <section class="painel-total" aria-label="Total de mapas criados hoje">
-            <span class="painel-total__rotulo">Mapas criados hoje</span>
+          <section class="painel-total" aria-label="Total de mapas salvos hoje">
+            <span class="painel-total__rotulo">Mapas salvos hoje</span>
             <strong class="painel-total__numero" data-total-mapas-hoje>0</strong>
             <span class="painel-total__data" data-data-painel></span>
           </section>
 
-          <div class="painel-contadores" aria-label="Mapas de hoje por status">
-            <button class="painel-contador" type="button" data-filtro-status="em revisão">
-              <strong data-contador-revisao>0</strong>
-              <span>Em revisão</span>
-            </button>
-            <button class="painel-contador" type="button" data-filtro-status="aguardando confirmação">
-              <strong data-contador-aguardando>0</strong>
-              <span>Aguardando</span>
-            </button>
-            <button class="painel-contador" type="button" data-filtro-status="confirmado">
-              <strong data-contador-confirmados>0</strong>
-              <span>Confirmados</span>
-            </button>
-            <button class="painel-contador" type="button" data-filtro-status="PDF gerado">
-              <strong data-contador-pdf>0</strong>
-              <span>PDFs gerados</span>
-            </button>
-          </div>
-
-          <p class="painel-lesoes">
-            <strong data-total-lesoes-hoje>0</strong>
-            <span>lesões estruturadas nos mapas de hoje</span>
-          </p>
-
+          <section class="painel-total" aria-label="PDFs preparados hoje">
+            <span class="painel-total__rotulo">PDFs gerados hoje</span>
+            <strong class="painel-total__numero" data-contador-pdf>0</strong>
+            <p class="texto-apoio">Cada geração concluída conta uma vez, inclusive novas cópias. Não confirma impressão ou salvamento no aparelho.</p>
+          </section>
           <label class="campo painel-busca">
-            <span class="campo__rotulo">Buscar nos achados de hoje</span>
+            <span class="campo__rotulo">Buscar mapas pelo nome</span>
             <input
               type="search"
               inputmode="search"
-              placeholder="Ex.: ligamento uterossacro"
+              placeholder="Ex.: exemplo coronal"
               data-busca-painel
             />
           </label>
-
-          <div class="painel-filtro-atual" data-filtro-atual hidden>
-            <span data-texto-filtro-atual></span>
-            <button type="button" data-limpar-filtro>Mostrar todos</button>
-          </div>
 
           <p class="mensagem-formulario" data-estado-lista-painel hidden></p>
           <div class="lista-mapas-salvos" data-lista-painel></div>
@@ -629,6 +606,14 @@
       </section>
 
       <div class="acoes editor-manual__acoes">
+        <label class="campo">
+          <span class="campo__rotulo">Nome da montagem</span>
+          <input type="text" maxlength="100" data-titulo-montagem placeholder="Ex.: exemplo coronal" />
+        </label>
+        <button class="botao" type="button" data-salvar-manual>Salvar mapa</button>
+        <button class="botao botao--secundario" type="button" data-novo-manual>Iniciar novo mapa</button>
+        <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
+        <p class="texto-apoio">Salvar guarda todas as vistas da montagem na sua conta. Gerar PDF também salva; baixar PNG não salva no histórico.</p>
         <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
@@ -669,11 +654,11 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="app-auth.js?v=divulgacao-exclusiva-1"></script>
-    <script src="prototipo.js?v=mapas-especiais-1"></script>
-    <script src="mapas.js?v=inicio-manual-1"></script>
+    <script src="prototipo.js?v=historico-1"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=divulgacao-exclusiva-1"></script>
+    <script src="editor-manual.js?v=historico-1"></script>
+    <script src="historico-manual.js?v=historico-1"></script>
   </body>
 </html>
