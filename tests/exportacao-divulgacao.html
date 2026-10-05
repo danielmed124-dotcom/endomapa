@@ -1,0 +1,224 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação da exportação para divulgação</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 240; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-manual.js'];
+    dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
+    const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
+    verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');
+    verificar(origem.querySelector('[data-baixar-pdf-manual]'), 'Botão de PDF ausente no aplicativo real');
+
+    // O teste mantém o HTML, CSS, imagens, navegação, editor e gerador reais.
+    // Somente autenticação, serviços externos e o download no aparelho são isolados.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], blobs: new Map(), liberacoes: [], temporizadoresLongos: new Map() };
+      history.replaceState = function () {};
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste de PDF'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste de PDF');
+      };
+      window.addEventListener('error', evento => { if (evento.message) window.__teste.erros.push(evento.message); });
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const criarEndereco = URL.createObjectURL;
+      URL.createObjectURL = function (blob) {
+        const endereco = criarEndereco.call(this, blob);
+        window.__teste.blobs.set(endereco, blob);
+        return endereco;
+      };
+      const liberarEndereco = URL.revokeObjectURL;
+      URL.revokeObjectURL = function (endereco) {
+        window.__teste.liberacoes.push(endereco);
+        return liberarEndereco.call(this, endereco);
+      };
+      // Avançamos a limpeza tardia manualmente após conferir todos os PDFs.
+      // O relógio virtual do Chrome não deve saltar 60 segundos enquanto
+      // FileReader e Blob ainda estão concluindo suas leituras assíncronas.
+      const agendar = window.setTimeout;
+      const cancelar = window.clearTimeout;
+      let proximoTemporizador = -1;
+      window.setTimeout = function (callback, atraso, ...argumentos) {
+        if (Number(atraso) >= 60000 && typeof callback === 'function') {
+          const identificador = proximoTemporizador--;
+          window.__teste.temporizadoresLongos.set(identificador, () => callback(...argumentos));
+          return identificador;
+        }
+        return agendar.call(window, callback, atraso, ...argumentos);
+      };
+      window.clearTimeout = function (identificador) {
+        if (!window.__teste.temporizadoresLongos.delete(identificador)) cancelar.call(window, identificador);
+      };
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    dependencias.forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    const teste = janela.__teste;
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    janela.endomapaAbrirTela('editor-manual');
+    const opcao = buscar('[data-exportar-divulgacao]');
+    verificar(!opcao.checked, 'Divulgação deve começar desmarcada');
+    const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
+      detail: { id: 'teste', titulo: 'Dr(a).', nome: 'Daniel Carneiro', assinatura: 'Daniel', clinica_id: clinica ? 'centrus' : null },
+    }));
+    const escolher = vista => {
+      if (['coronal', 'sagital', 'ambas'].includes(vista)) buscar(`input[name="vistas-editor"][value="${vista}"]`).click();
+      else {
+        buscar('input[name="vistas-editor"][value="especiais"]').click();
+        const select = buscar('[data-mapa-especial]');
+        select.value = vista;
+        select.dispatchEvent(new janela.Event('change', { bubbles: true }));
+      }
+    };
+    const geracoes = [];
+    const gerarPdf = janela.endomapaGerarPdfA4;
+    janela.endomapaGerarPdfA4 = paginas => {
+      geracoes.push(paginas.map(p => ({ vista: p.vista, imagem: p.canvas.toDataURL('image/png') })));
+      return gerarPdf(paginas);
+    };
+    const exportar = async (pdf, divulgacao, vista) => {
+      opcao.checked = divulgacao;
+      const antes = teste.downloads.length;
+      buscar(pdf ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
+      verificar(opcao.disabled, 'Opção deve ficar bloqueada durante a exportação');
+      await aguardar(() => teste.downloads.length > antes && !opcao.disabled, 'Exportação não terminou: ' + vista);
+      const arquivo = teste.downloads.at(-1);
+      verificar(arquivo.nome === `endomapa-${divulgacao ? 'divulgacao' : 'manual'}-${vista}${pdf ? '-a4.pdf' : '.png'}`, 'Nome incorreto: ' + arquivo.nome);
+      if (pdf) verificar(teste.blobs.get(arquivo.endereco)?.type === 'application/pdf', 'PDF real ausente');
+      return pdf ? geracoes.at(-1) : arquivo.endereco;
+    };
+    const esperadas = new Map();
+    for (const vista of Array.from(doc.querySelectorAll('[data-mapa-editor]'), m => m.dataset.mapaEditor)) {
+      saida.dataset.etapa = vista + ': início';
+      escolher(vista);
+      perfil(true);
+      const mapa = buscar(`[data-mapa-editor="${vista}"]`);
+      const base = mapa.querySelector('[data-mapa-base]');
+      const assinatura = mapa.querySelector('[data-assinatura-manual]');
+      await aguardar(() => base.complete && base.naturalWidth > 0 && !assinatura.hidden, 'Base ou assinatura ausente');
+      buscar('[data-modelo]').click();
+      const nome = buscar('[data-controle-nome-lesao]');
+      nome.value = 'Exemplo ilustrativo'; nome.dispatchEvent(new janela.Event('input'));
+      const medida = buscar('[data-medida="1"]');
+      medida.value = '2,5'; medida.dispatchEvent(new janela.Event('input'));
+      const tamanho = buscar('[data-controle-tamanho]');
+      tamanho.value = '150'; tamanho.dispatchEvent(new janela.Event('input'));
+      // Um traço real testa que a exportação preserva a caneta junto às lesões e rótulos.
+      const painel = mapa.closest('[data-vista-manual]');
+      painel.querySelector('[data-caneta-alternar]').click();
+      const tela = mapa.querySelector('[data-caneta-tela]');
+      tela.setPointerCapture = () => {};
+      tela.hasPointerCapture = () => false;
+      const area = tela.getBoundingClientRect();
+      for (const [tipo, x] of [['pointerdown', 0.25], ['pointermove', 0.35], ['pointerup', 0.4]]) {
+        tela.dispatchEvent(new janela.PointerEvent(tipo, { bubbles: true, pointerId: 1, button: 0, isPrimary: true, clientX: area.left + area.width * x, clientY: area.top + area.height * 0.6 }));
+      }
+      painel.querySelector('[data-caneta-alternar]').click();
+      const estadoAntes = mapa.querySelector('[data-camada-editor]').innerHTML;
+      const fonteAntes = base.src;
+      const assinaturaAntes = assinatura.toDataURL();
+      // A referência usa a mesma montagem sobre a base neutra, sem assinatura.
+      base.src = base.dataset.srcVisitante;
+      assinatura.hidden = true;
+      const esperada = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+      saida.dataset.etapa = vista + ': referência';
+      base.src = fonteAntes;
+      assinatura.hidden = false;
+      esperadas.set(vista, esperada);
+      const png = await exportar(false, true, vista);
+      saida.dataset.etapa = vista + ': PNG';
+      verificar(png === esperada, 'PNG deve coincidir com a montagem neutra: ' + vista);
+      const pdf = await exportar(true, true, vista);
+      verificar(pdf.length === 1 && pdf[0].imagem === esperada, 'PDF deve coincidir com PNG neutro: ' + vista);
+      verificar(base.src === fonteAntes && !assinatura.hidden && assinatura.toDataURL() === assinaturaAntes, 'Exportação alterou a identidade na tela');
+      verificar(mapa.querySelector('[data-camada-editor]').innerHTML === estadoAntes, 'Exportação alterou a montagem');
+      const comum = await exportar(false, false, vista);
+      verificar(comum !== esperada, 'Exportação comum perdeu a identidade');
+      perfil(false);
+      verificar(await exportar(false, true, vista) === esperada, 'Divulgação deve ser igual para outro perfil');
+    }
+    escolher('ambas');
+    perfil(true);
+    const ambas = await exportar(true, true, 'ambas');
+    verificar(ambas.length === 2 && ambas.every(p => p.imagem === esperadas.get(p.vista)), 'Ambas deve exportar duas páginas neutras');
+    // Falta da base neutra deve impedir a saída, nunca expor a identidade da clínica.
+    const baseCoronal = buscar('[data-mapa-editor="coronal"] [data-mapa-base]');
+    const neutra = baseCoronal.dataset.srcVisitante;
+    delete baseCoronal.dataset.srcVisitante;
+    const antes = teste.downloads.length;
+    buscar('[data-baixar-mapa-manual]').click();
+    await aguardar(() => !opcao.disabled, 'Falha deve desbloquear os controles');
+    verificar(teste.downloads.length === antes && buscar('[data-estado-mapa-manual]').textContent.includes('Não foi possível'), 'Falta de base neutra não pode baixar a base da clínica');
+    baseCoronal.dataset.srcVisitante = neutra;
+    buscar('[data-limpar-mapa]').click();
+    buscar('[data-baixar-mapa-manual]').click();
+    verificar(teste.downloads.length === antes, 'Mapa vazio não deve exportar');
+    for (const largura of [320, 390, 768, 1280]) {
+      quadro.style.width = largura + 'px';
+      await new Promise(resolve => setTimeout(resolve, 60));
+      verificar(doc.documentElement.scrollWidth <= largura, 'Transbordou em ' + largura);
+      verificar(opcao.closest('label').getBoundingClientRect().height >= 44, 'Área de toque pequena');
+    }
+    verificar(!teste.erros.length && !teste.chamadas.length, 'Erros ou chamadas externas inesperados');
+    saida.textContent = 'PASSOU: PNG e PDF reais nas sete vistas, duas identidades, PDF Ambas, lesões e rótulos e caneta preservados, identidade original intacta, bloqueio sem base neutra e mapa vazio, celular de 320px.';
+  } catch (erro) {
+    saida.textContent = 'FALHOU: ' + erro.message;
+    console.error(erro);
+  }
+})();
+</script>
+

@@ -198,6 +198,7 @@
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
   const botaoPdf = document.querySelector("[data-baixar-pdf-manual]");
+  const exportarDivulgacao = document.querySelector("[data-exportar-divulgacao]");
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
   let exportacaoEmAndamento = false;
   botaoBaixar?.addEventListener("click", baixarMontagemManual);
@@ -576,6 +577,7 @@
   async function baixarMontagemManual() {
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
+    const divulgacao = Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
     if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
@@ -584,15 +586,17 @@
     definirExportacaoEmAndamento(true);
     estadoMapa.textContent = "Preparando a montagem com os nomes e as medidas…";
     try {
-      const imagem = await capturarMapa({ formato: "image/png" });
+      const imagem = await capturarMapa({ formato: "image/png", divulgacao });
       const link = document.createElement("a");
       link.href = imagem;
-      link.download = `endomapa-manual-${vistaDaCaptura}.png`;
+      link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.png`;
       document.body.append(link);
       link.click();
       link.remove();
       estadoMapa.hidden = false;
-      estadoMapa.textContent = `Vista ${nomeDaVista(vistaDaCaptura)} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
+      estadoMapa.textContent = divulgacao
+        ? `Vista ${nomeDaVista(vistaDaCaptura)} preparada para divulgação, sem logo, marca-d’água e assinatura. Confira o arquivo nos downloads.`
+        : `Vista ${nomeDaVista(vistaDaCaptura)} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
     } catch (erro) {
       estadoMapa.hidden = false;
       estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
@@ -605,11 +609,18 @@
     exportacaoEmAndamento = ocupado;
     if (botaoBaixar) botaoBaixar.disabled = ocupado;
     if (botaoPdf) botaoPdf.disabled = ocupado;
+    if (exportarDivulgacao) exportarDivulgacao.disabled = ocupado;
   }
 
-  function obterFonteDaBase(camadaDaCaptura = camada) {
+  function obterFonteDaBase(camadaDaCaptura = camada, divulgacao = false) {
     const mapa = camadaDaCaptura.closest("[data-mapa-editor]");
-    return mapa?.querySelector("[data-mapa-base], :scope > img")?.src || "assets/mapa-base-coronal.png";
+    const base = mapa?.querySelector("[data-mapa-base], :scope > img");
+    if (divulgacao) {
+      // Não usar a base da clínica como alternativa se faltar a versão neutra.
+      if (!base?.dataset.srcVisitante) throw new Error("Base neutra indisponível para divulgação.");
+      return base.dataset.srcVisitante;
+    }
+    return base?.src || "assets/mapa-base-coronal.png";
   }
 
   function fotografarAssinatura(camadaDaCaptura = camada) {
@@ -624,6 +635,7 @@
 
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
+    const divulgacao = Boolean(exportarDivulgacao?.checked);
     const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
     const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
     estadoMapa.hidden = false;
@@ -635,7 +647,7 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, base: obterFonteDaBase(camadaDaCaptura), assinatura: fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
+        return { vista, base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
       if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta; })) {
         estadoMapa.textContent = "Adicione pelo menos uma lesão ou um desenho às vistas selecionadas antes de gerar o PDF.";
@@ -653,7 +665,7 @@
       const link = document.createElement("a");
       try {
         link.href = endereco;
-        link.download = `endomapa-manual-${escolha}-a4.pdf`;
+        link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`;
         document.body.append(link);
         link.click();
       } finally {
@@ -662,7 +674,9 @@
         window.setTimeout(function () { URL.revokeObjectURL(endereco); }, 60000);
       }
       estadoMapa.hidden = false;
-      estadoMapa.textContent = `PDF A4 preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}. Salve o arquivo para imprimir em papel A4.`;
+      estadoMapa.textContent = divulgacao
+        ? `PDF A4 para divulgação preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}, sem logo, marca-d’água e assinatura.`
+        : `PDF A4 preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}. Salve o arquivo para imprimir em papel A4.`;
     } catch (erro) {
       estadoMapa.hidden = false;
       estadoMapa.textContent = "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
@@ -673,7 +687,8 @@
 
   async function capturarMapa(opcoes = {}) {
     const lesoes = fotografarLesoes();
-    const { canvas, caneta } = await renderizarMontagem(lesoes, opcoes);
+    const { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
+      obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());
     if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
     if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
     return opcoes.formato === "image/png"

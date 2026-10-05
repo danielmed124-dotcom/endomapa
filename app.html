@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=caneta-2" />
+    <link rel="stylesheet" href="styles.css?v=divulgacao-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -633,6 +633,11 @@
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
         <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
+        <label class="exportacao-divulgacao">
+          <input type="checkbox" data-exportar-divulgacao aria-describedby="ajuda-exportar-divulgacao" />
+          <span>Exportar para divulgação</span>
+        </label>
+        <p class="texto-apoio" id="ajuda-exportar-divulgacao">Marque para baixar PNG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
         <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
       </div>
@@ -669,6 +674,6 @@
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=atalhos-imagens-1"></script>
+    <script src="editor-manual.js?v=divulgacao-1"></script>
   </body>
 </html>

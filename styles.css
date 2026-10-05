@@ -1947,6 +1947,21 @@ h1 span {
   background: rgba(120, 35, 27, 0.5);
 }
 
+.exportacao-divulgacao {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.exportacao-divulgacao input {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .editor-manual__acoes {
   margin-top: 0;
 }
