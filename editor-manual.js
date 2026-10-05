@@ -201,6 +201,14 @@
   const exportarDivulgacao = document.querySelector("[data-exportar-divulgacao]");
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
   let exportacaoEmAndamento = false;
+  let podeExportarDivulgacao = false;
+  function atualizarPermissaoDivulgacao(perfil) {
+    podeExportarDivulgacao = perfil?.pode_exportar_divulgacao === true;
+    document.querySelectorAll('[data-opcao-divulgacao]').forEach(item => { item.hidden = !podeExportarDivulgacao; });
+    if (!podeExportarDivulgacao && exportarDivulgacao) exportarDivulgacao.checked = false;
+  }
+  atualizarPermissaoDivulgacao(window.endomapaMedico);
+  window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoDivulgacao(evento.detail));
   botaoBaixar?.addEventListener("click", baixarMontagemManual);
   botaoPdf?.addEventListener("click", baixarPdfManual);
   document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
@@ -577,7 +585,7 @@
   async function baixarMontagemManual() {
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
-    const divulgacao = Boolean(exportarDivulgacao?.checked);
+    const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
     if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
@@ -635,7 +643,7 @@
 
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
-    const divulgacao = Boolean(exportarDivulgacao?.checked);
+    const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
     const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
     estadoMapa.hidden = false;
@@ -686,6 +694,7 @@
   }
 
   async function capturarMapa(opcoes = {}) {
+    opcoes = { ...opcoes, divulgacao: podeExportarDivulgacao && Boolean(opcoes.divulgacao) };
     const lesoes = fotografarLesoes();
     const { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
       obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());

@@ -633,11 +633,11 @@
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
         <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
-        <label class="exportacao-divulgacao">
+        <label class="exportacao-divulgacao" data-opcao-divulgacao hidden>
           <input type="checkbox" data-exportar-divulgacao aria-describedby="ajuda-exportar-divulgacao" />
           <span>Exportar para divulgação</span>
         </label>
-        <p class="texto-apoio" id="ajuda-exportar-divulgacao">Marque para baixar PNG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
+        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para baixar PNG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
         <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
       </div>
@@ -668,12 +668,12 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js"></script>
-    <script src="app-auth.js?v=manual-integrado-1"></script>
+    <script src="app-auth.js?v=divulgacao-exclusiva-1"></script>
     <script src="prototipo.js?v=mapas-especiais-1"></script>
     <script src="mapas.js?v=inicio-manual-1"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=divulgacao-1"></script>
+    <script src="editor-manual.js?v=divulgacao-exclusiva-1"></script>
   </body>
 </html>

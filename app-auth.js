@@ -46,6 +46,7 @@
         return;
       }
 
+      perfil.pode_exportar_divulgacao = String(data.user.email || "").trim().toLowerCase() === "danielmed124@gmail.com";
       window.endomapaMedico = perfil;
       window.dispatchEvent(
         new CustomEvent("endomapa:perfil-carregado", {

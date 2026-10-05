@@ -112,8 +112,9 @@
     janela.endomapaAbrirTela('editor-manual');
     const opcao = buscar('[data-exportar-divulgacao]');
     verificar(!opcao.checked, 'Divulgação deve começar desmarcada');
-    const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
-      detail: { id: 'teste', titulo: 'Dr(a).', nome: 'Daniel Carneiro', assinatura: 'Daniel', clinica_id: clinica ? 'centrus' : null },
+    verificar(Array.from(doc.querySelectorAll('[data-opcao-divulgacao]')).every(item => item.hidden), 'Opção deve começar oculta');
+    const perfil = (clinica, autorizado = true) => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
+      detail: { id: 'teste', titulo: 'Dr(a).', nome: 'Daniel Carneiro', assinatura: 'Daniel', clinica_id: clinica ? 'centrus' : null, pode_exportar_divulgacao: autorizado },
     }));
     const escolher = vista => {
       if (['coronal', 'sagital', 'ambas'].includes(vista)) buscar(`input[name="vistas-editor"][value="${vista}"]`).click();
@@ -195,6 +196,22 @@
     perfil(true);
     const ambas = await exportar(true, true, 'ambas');
     verificar(ambas.length === 2 && ambas.every(p => p.imagem === esperadas.get(p.vista)), 'Ambas deve exportar duas páginas neutras');
+    perfil(true, false);
+    verificar(!opcao.checked && Array.from(doc.querySelectorAll('[data-opcao-divulgacao]')).every(item => item.hidden && janela.getComputedStyle(item).display === 'none'), 'Outro perfil deve ocultar e desmarcar a opção');
+    const normal = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+    verificar(await janela.endomapaCapturarMapaManual({ formato: 'image/png', divulgacao: true }) === normal, 'Captura não autorizada deve manter identidade');
+    for (const pdf of [false, true]) {
+      opcao.checked = true;
+      const inicio = teste.downloads.length;
+      buscar(pdf ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
+      await aguardar(() => teste.downloads.length > inicio && !opcao.disabled, 'Download comum não concluiu');
+      verificar(teste.downloads.at(-1).nome.startsWith('endomapa-manual-'), 'Outro perfil não pode exportar divulgação');
+      if (!pdf) verificar(teste.downloads.at(-1).endereco === normal, 'PNG comum alterado');
+      else verificar(geracoes.at(-1)[0].imagem === normal, 'PDF comum alterado');
+    }
+    perfil(true);
+    verificar(!opcao.closest('label').hidden, 'Daniel deve ver a opção');
+    opcao.checked = true;
     // Falta da base neutra deve impedir a saída, nunca expor a identidade da clínica.
     const baseCoronal = buscar('[data-mapa-editor="coronal"] [data-mapa-base]');
     const neutra = baseCoronal.dataset.srcVisitante;
@@ -214,7 +231,23 @@
       verificar(opcao.closest('label').getBoundingClientRect().height >= 44, 'Área de toque pequena');
     }
     verificar(!teste.erros.length && !teste.chamadas.length, 'Erros ou chamadas externas inesperados');
-    saida.textContent = 'PASSOU: PNG e PDF reais nas sete vistas, duas identidades, PDF Ambas, lesões e rótulos e caneta preservados, identidade original intacta, bloqueio sem base neutra e mapa vazio, celular de 320px.';
+    // Executa o código real de autenticação com respostas locais controladas.
+    for (const email of ['danielmed124@gmail.com', 'andreneide@gmail.com', 'andreneide@yahoo.com.br', 'outro@example.com', '']) {
+      const quadroAuth = document.createElement('iframe');
+      document.body.append(quadroAuth);
+      quadroAuth.srcdoc = `<html><head><base href="${new URL('../', location.href).href}"></head><body>
+        <script>
+          window.ENDOMAPA_SUPABASE = { projectUrl: 'teste', publicAnonKey: 'teste' };
+          window.supabase = { createClient: () => ({
+            auth: { getUser: async () => ({ data: { user: { id: 'teste', email: ${JSON.stringify(email)} } } }) },
+            from: () => ({ select() { return this; }, eq() { return this; }, single: async () => ({ data: { ativo: 'sim', nome: 'Daniel', clinica_id: 'centrus' } }) })
+          }) };
+        <\/script><script src="app-auth.js"><\/script></body></html>`;
+      await aguardar(() => quadroAuth.contentWindow.endomapaMedico, 'Autenticação de teste não concluiu');
+      verificar(quadroAuth.contentWindow.endomapaMedico.pode_exportar_divulgacao === (email === 'danielmed124@gmail.com'), 'Permissão incorreta para ' + email);
+      quadroAuth.remove();
+    }
+    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/PDF nas sete vistas, PDF Ambas, montagem preservada e celular de 320px.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);

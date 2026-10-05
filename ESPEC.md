@@ -30,6 +30,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Restrição da divulgação (05/10/2026): a opção **Exportar para divulgação** fica disponível somente para `danielmed124@gmail.com`, identificada pelo e-mail retornado na autenticação. Começa oculta; outros perfis, inclusive demais contas Centrus, não veem a opção nem sua explicação. O editor também ignora o modo de divulgação nas exportações desses perfis. Esta é uma restrição do fluxo da interface; a geração e as bases neutras continuam no navegador.
+
 Exportação para divulgação (05/10/2026): a opção desmarcada por padrão **Exportar para divulgação** aplica-se aos downloads PNG e PDF A4 do editor manual. Quando marcada, usa a base neutra da vista e omite a assinatura do médico, retirando logo e marca-d’água da clínica sem IA. Preserva as lesões, posições, tamanhos, rotações, nomes, medidas e traços da caneta. Funciona nas vistas coronal, sagital e mapas especiais; o PDF de Ambas inclui as duas vistas. A montagem na tela e o perfil permanecem iguais. Os arquivos usam o prefixo `endomapa-divulgacao`; ao desmarcar, os downloads normais mantêm a identidade e a assinatura do perfil. A exportação captura a opção no instante do clique e não usa a base da clínica como alternativa se a base neutra falhar.
 
 Atalhos de imagens (04/10/2026): no editor manual, Ctrl+C copia a imagem selecionada com tamanho, ajustes dos eixos, rotação, nome e medidas do instante da cópia. Ctrl+V insere uma cópia independente na vista ativa, ligeiramente deslocada e selecionada. Delete remove a imagem selecionada e seu rótulo. Os atalhos não interferem na digitação dos campos nem atuam fora do editor. A cópia fica somente na aba e serve para colar dentro do mapa.
