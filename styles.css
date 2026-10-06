@@ -1585,7 +1585,7 @@ h1 span {
   font-weight: 400;
 }
 
-[data-mapa-especial] {
+[data-mapa-especial], [data-lado-hidrosalpinge] {
   width: 100%;
   min-width: 0;
   min-height: 44px;
@@ -1597,6 +1597,8 @@ h1 span {
   font: inherit;
   font-size: 1rem;
 }
+
+[data-opcoes-hidrosalpinge] { margin-top: 12px; }
 
 .conteudo:has(> .editor-manual:not([hidden])) {
   width: min(100%, 1600px);

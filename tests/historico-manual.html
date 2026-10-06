@@ -139,11 +139,18 @@
     coronal.closest('[data-vista-manual]').querySelector('[data-caneta-alternar]').click();
     escolher('sagital'); buscar('[data-modelo]').click();
     for (const especial of Array.from(buscar('[data-mapa-especial]').options)) {
+      if (especial.value === 'hidrosalpinge') continue;
       escolher('especiais');
       buscar('[data-mapa-especial]').value = especial.value;
       buscar('[data-mapa-especial]').dispatchEvent(new janela.Event('change'));
       buscar('[data-modelo]').click();
       mudar('[data-controle-nome-lesao]', especial.textContent);
+    }
+    for (const lado of Array.from(buscar('[data-lado-hidrosalpinge]').options)) {
+      buscar('[data-lado-hidrosalpinge]').value = lado.value;
+      buscar('[data-lado-hidrosalpinge]').dispatchEvent(new janela.Event('change'));
+      buscar('[data-modelo]').click();
+      mudar('[data-controle-nome-lesao]', 'Hidrosalpinge ' + lado.textContent);
     }
     escolher('ambas');
     const original = JSON.stringify(dados());
@@ -193,9 +200,21 @@
     const snapshot = dados(); const invalida = structuredClone(snapshot); invalida.vistas.coronal.lesoes[0].src = 'https://invalid.example/imagem.png';
     let rejeitou = false; try { janela.endomapaEditorManual.restaurar(invalida); } catch (_) { rejeitou = true; }
     verificar(rejeitou && JSON.stringify(dados()) === JSON.stringify(snapshot), 'Montagem inválida apagou dados');
+    const legado = structuredClone(snapshot);
+    legado.especial = 'kissing-ovaries'; legado.escolha = 'ambas'; legado.ativa = 'coronal';
+    delete legado.hidrosalpinge;
+    for (const lado of ['direita','esquerda','bilateral']) delete legado.vistas['hidrosalpinge-'+lado];
+    janela.endomapaEditorManual.restaurar(legado);
+    verificar(JSON.stringify(dados().vistas.coronal) === JSON.stringify(legado.vistas.coronal), 'Histórico antigo perdeu lesões ou caneta');
+    verificar(!dados().vistas['hidrosalpinge-direita'].lesoes.length, 'Histórico antigo deve iniciar novas vistas vazias');
+    janela.endomapaEditorManual.restaurar(snapshot);
+    const hidro = structuredClone(snapshot); hidro.escolha = 'especiais'; hidro.especial = 'hidrosalpinge'; hidro.hidrosalpinge = 'hidrosalpinge-esquerda'; hidro.ativa = hidro.hidrosalpinge;
+    janela.endomapaEditorManual.restaurar(hidro);
+    verificar(dados().ativa === 'hidrosalpinge-esquerda' && !buscar('[data-opcoes-hidrosalpinge]').hidden, 'Histórico não restaurou o lado escolhido');
+    janela.endomapaEditorManual.restaurar(snapshot);
     for (const largura of [320,390,768,1280]) { quadro.style.width = largura+'px'; await new Promise(resolve=>setTimeout(resolve,60)); verificar(doc.documentElement.scrollWidth <= largura, 'Transbordou em '+largura); }
     verificar(!teste.erros.length && !teste.chamadas.length, 'Erros inesperados: '+teste.erros.join(';'));
-    saida.textContent = 'PASSOU: salvar/reabrir com imagem idêntica, caneta e sete vistas; salvar atualiza; duplicidade; erro de rede; conflito; alterações pendentes; PDF e contagem; busca e paginação; dados inválidos; celular.';
+    saida.textContent = 'PASSOU: salvar/reabrir com imagem idêntica, caneta e dez vistas; histórico antigo compatível; lado da hidrosalpinge restaurado; salvar atualiza; duplicidade; erro de rede; conflito; alterações pendentes; PDF e contagem; busca e paginação; dados inválidos; celular.';
   } catch (erro) { saida.textContent = 'FALHOU: '+erro.message; console.error(erro); }
 })();
 </script>

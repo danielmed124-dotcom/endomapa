@@ -110,8 +110,10 @@
     verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
     verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
     const select = buscar('[data-mapa-especial]');
-    const opcoes = Array.from(select.options);
-    verificar(opcoes.map(o => o.textContent).join('|') === 'Útero Retrofletido|Ooforectomia à direita|Ooforectomia à esquerda|Ooforectomia bilateral|Kissing Ovaries', 'Nomes devem coincidir com os arquivos');
+    const ladoHidro = buscar('[data-lado-hidrosalpinge]');
+    const opcoes = [...Array.from(select.options).filter(o => o.value !== 'hidrosalpinge'), ...Array.from(ladoHidro.options, o => ({ value: o.value, textContent: 'Hidrosalpinge ' + o.textContent.toLowerCase() }))];
+    verificar(Array.from(select.options, o => o.textContent).join('|') === 'Útero Retrofletido|Ooforectomia à direita|Ooforectomia à esquerda|Ooforectomia bilateral|Kissing Ovaries|Hidrosalpinge', 'Lista de mapas especiais incorreta');
+    verificar(Array.from(ladoHidro.options, o => o.textContent).join('|') === 'Direita|Esquerda|Bilateral', 'Três lados dentro de Hidrosalpinge');
     verificar(select.closest('.opcao-vista').previousElementSibling.querySelector('input').value === 'ambas', 'Caixa deve vir após Ambas');
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
       detail: { id: clinica ? 'daniel' : 'ana', titulo: 'Dr(a).', nome: clinica ? 'Daniel Carneiro' : 'Ana Silva', assinatura: clinica ? 'Daniel' : 'Ana', clinica_id: clinica ? 'centrus' : null },
@@ -120,8 +122,10 @@
       buscar('input[name="vistas-editor"][value="' + valor + '"]').click();
     };
     const especial = valor => {
-      select.value = valor;
+      select.value = valor.startsWith('hidrosalpinge-') ? 'hidrosalpinge' : valor;
+      if (valor.startsWith('hidrosalpinge-')) ladoHidro.value = valor;
       select.dispatchEvent(new janela.Event('change', { bubbles: true }));
+      verificar(buscar('[data-opcoes-hidrosalpinge]').hidden === !valor.startsWith('hidrosalpinge-'), 'Escolha de lado visível somente em Hidrosalpinge');
     };
     const visiveis = () => Array.from(doc.querySelectorAll('[data-vista-manual]')).filter(p => !p.hidden).map(p => p.dataset.vistaManual);
     const geracoes = [];
@@ -178,6 +182,7 @@
       verificar(camada.querySelectorAll('.lesao-editavel').length === 1, 'Troca de perfil não deve duplicar lesões');
     }
     escolher('ambas');
+    verificar(buscar('[data-opcoes-hidrosalpinge]').hidden, 'Ambas deve recolher a escolha de lado');
     verificar(visiveis().join() === 'coronal,sagital', 'Ambas deve mostrar somente as duas vistas convencionais');
     buscar('[data-modelo]').click();
     verificar(buscar('[data-camada-editor="coronal"]').querySelectorAll('.lesao-editavel').length === 1, 'Voltar de especial para Ambas deve ativar a vista coronal');
@@ -186,6 +191,7 @@
       verificar(buscar('[data-camada-editor="' + opcao.value + '"]').querySelectorAll('.lesao-editavel').length === 1, 'Montagem deve ser preservada ao retornar');
       verificar(buscar('[data-controle-nome-lesao]').value === 'Lesão ' + opcao.textContent, 'Seleção e nome devem ser restaurados');
     }
+    especial('kissing-ovaries');
     buscar('[data-limpar-mapa]').click();
     verificar(!buscar('[data-camada-editor="kissing-ovaries"]').querySelector('.lesao-editavel'), 'Limpar deve atuar no mapa ativo');
     verificar(buscar('[data-camada-editor="ooforectomia-direita"]').querySelector('.lesao-editavel'), 'Limpar não deve afetar outro mapa');
@@ -202,7 +208,7 @@
     quadro.style.width = '390px';
     especial('utero-retrofletido');
     buscar('.opcoes-vistas').scrollIntoView();
-    saida.textContent = 'PASSOU: cinco mapas, nomes dos arquivos, montagens independentes, duas identidades, PNG/PDF reais e larguras de 320 a 1280 pixels.';
+    saida.textContent = 'PASSOU: oito mapas especiais, três lados de hidrosalpinge, montagens independentes, duas identidades, PNG/PDF reais e larguras de 320 a 1280 pixels.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);

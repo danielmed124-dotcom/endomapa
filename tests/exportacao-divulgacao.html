@@ -121,7 +121,8 @@
       else {
         buscar('input[name="vistas-editor"][value="especiais"]').click();
         const select = buscar('[data-mapa-especial]');
-        select.value = vista;
+        select.value = vista.startsWith('hidrosalpinge-') ? 'hidrosalpinge' : vista;
+        if (vista.startsWith('hidrosalpinge-')) buscar('[data-lado-hidrosalpinge]').value = vista;
         select.dispatchEvent(new janela.Event('change', { bubbles: true }));
       }
     };
@@ -247,7 +248,7 @@
       verificar(quadroAuth.contentWindow.endomapaMedico.pode_exportar_divulgacao === (email === 'danielmed124@gmail.com'), 'Permissão incorreta para ' + email);
       quadroAuth.remove();
     }
-    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/PDF nas sete vistas, PDF Ambas, montagem preservada e celular de 320px.';
+    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/PDF nas dez vistas, PDF Ambas, montagem preservada e celular de 320px.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);

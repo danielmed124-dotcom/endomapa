@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=fusao-1" />
+    <link rel="stylesheet" href="styles.css?v=hidrosalpinge-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -373,7 +373,16 @@
               <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
               <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
               <option value="kissing-ovaries">Kissing Ovaries</option>
+              <option value="hidrosalpinge">Hidrosalpinge</option>
             </select>
+            <div data-opcoes-hidrosalpinge hidden>
+              <label class="rotulo-mapa-especial" for="lado-hidrosalpinge">Lado da hidrosalpinge</label>
+              <select id="lado-hidrosalpinge" data-lado-hidrosalpinge>
+                <option value="hidrosalpinge-direita">Direita</option>
+                <option value="hidrosalpinge-esquerda">Esquerda</option>
+                <option value="hidrosalpinge-bilateral">Bilateral</option>
+              </select>
+            </div>
           </div>
         </fieldset>
         <p class="texto-apoio">Em ambas, selecione a vista que deseja editar. Monte e baixe cada vista separadamente.</p>
@@ -552,6 +561,42 @@
             <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
           </figure>
         </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-direita" aria-labelledby="titulo-hidrosalpinge-direita" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-direita">Hidrosalpinge direita</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-direita" aria-pressed="false">Editar Hidrosalpinge direita</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-direita">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-centrus.png" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-neutro.png" alt="Mapa anatômico: Hidrosalpinge direita" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-direita" aria-label="Lesões adicionadas ao mapa Hidrosalpinge direita"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-esquerda" aria-labelledby="titulo-hidrosalpinge-esquerda" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-esquerda">Hidrosalpinge esquerda</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-esquerda" aria-pressed="false">Editar Hidrosalpinge esquerda</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-esquerda">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-centrus.png" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-neutro.png" alt="Mapa anatômico: Hidrosalpinge esquerda" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-esquerda" aria-label="Lesões adicionadas ao mapa Hidrosalpinge esquerda"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-bilateral" aria-labelledby="titulo-hidrosalpinge-bilateral" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-bilateral">Hidrosalpinge bilateral</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-bilateral" aria-pressed="false">Editar Hidrosalpinge bilateral</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-bilateral">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-centrus.png" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-neutro.png" alt="Mapa anatômico: Hidrosalpinge bilateral" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-bilateral" aria-label="Lesões adicionadas ao mapa Hidrosalpinge bilateral"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
       </section>
 
       <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
@@ -661,11 +706,11 @@
     ></script>
     <script src="supabase-config.js"></script>
     <script src="app-auth.js?v=divulgacao-exclusiva-1"></script>
-    <script src="prototipo.js?v=historico-1"></script>
+    <script src="prototipo.js?v=hidrosalpinge-1"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=historico-1"></script>
+    <script src="editor-manual.js?v=hidrosalpinge-1"></script>
     <script src="historico-manual.js?v=historico-1"></script>
     <script src="fusao-integracao.js?v=1"></script>
   </body>

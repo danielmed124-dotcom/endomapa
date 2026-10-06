@@ -244,6 +244,8 @@
 
   function aplicarVistasManuais(escolha) {
     if (!mapasManuais.length) return;
+    const opcoesHidrosalpinge = document.querySelector('[data-opcoes-hidrosalpinge]');
+    if (opcoesHidrosalpinge) opcoesHidrosalpinge.hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'hidrosalpinge';
     escolha = resolverVista(escolha);
     document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
       vista.hidden = escolha === "ambas"
@@ -259,10 +261,14 @@
   }
 
   function resolverVista(escolha) {
-    return escolha === "especiais" ? document.querySelector('[data-mapa-especial]').value : escolha;
+    if (escolha !== 'especiais') return escolha;
+    const especial = document.querySelector('[data-mapa-especial]').value;
+    return especial === 'hidrosalpinge' ? document.querySelector('[data-lado-hidrosalpinge]').value : especial;
   }
 
   function nomeDaVista(vista) {
+    const lado = document.querySelector(`[data-lado-hidrosalpinge] option[value="${vista}"]`);
+    if (lado) return `Hidrosalpinge ${lado.textContent.toLowerCase()}`;
     return document.querySelector(`[data-mapa-especial] option[value="${vista}"]`)?.textContent || vista;
   }
 
@@ -595,7 +601,7 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, ativa: vistaAtiva, vistas };
+    return { versao: 1, escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
@@ -604,9 +610,15 @@
     const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
     const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
+    const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
+    if (montagem.hidrosalpinge !== undefined && !lados.includes(montagem.hidrosalpinge)) falhar();
+    if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
+    // Montagens anteriores à hidrosalpinge não possuem as três novas vistas.
+    const vistas = { ...montagem.vistas };
+    for (const lado of lados) if (!Object.hasOwn(vistas, lado)) vistas[lado] = { lesoes: [], tracos: [] };
     // Valida tudo antes de remover a montagem aberta. Fontes vêm somente da biblioteca.
     for (const id of ids) {
-      const vista = montagem.vistas[id];
+      const vista = vistas[id];
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
@@ -620,12 +632,12 @@
         if (t.pontos.some(p => !Array.isArray(p) || p.length !== 2 || p.some(n => !Number.isFinite(n) || n < 0 || n > 1))) falhar();
       });
     }
-    return { modelos, ids };
+    return { modelos, ids, vistas };
   }
 
   function restaurarMontagemEditavel(montagem) {
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
-    const { modelos, ids } = validarMontagemEditavel(montagem);
+    const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
     definirCaneta(null);
     selecionada = null; selecoesPorVista.clear(); imagemCopiada = null;
     mapasManuais.forEach(mapa => {
@@ -634,15 +646,17 @@
     });
     ids.forEach(id => {
       aplicarVistasManuais(id);
-      montagem.vistas[id].lesoes.forEach(l => {
+      vistas[id].lesoes.forEach(l => {
         const modelo = modelos.get(l.src);
         const dados = {};
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
         adicionarLesao(l.src, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
-      const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(montagem.vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
+      const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
     });
     document.querySelector('[data-mapa-especial]').value = montagem.especial;
+    const ladoHidrosalpinge = document.querySelector('[data-lado-hidrosalpinge]');
+    if (ladoHidrosalpinge) ladoHidrosalpinge.value = montagem.hidrosalpinge || 'hidrosalpinge-direita';
     document.querySelector(`input[name="vistas-editor"][value="${montagem.escolha}"]`).checked = true;
     aplicarVistasManuais(montagem.escolha); ativarVista(montagem.ativa);
     controles.hidden = !selecionada;

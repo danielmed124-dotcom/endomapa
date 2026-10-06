@@ -157,6 +157,11 @@ document.querySelector('[data-mapa-especial]')?.addEventListener('change', () =>
   document.querySelector('input[name="vistas-editor"][value="especiais"]').checked = true;
   aplicarVistas();
 });
+document.querySelector('[data-lado-hidrosalpinge]')?.addEventListener('change', () => {
+  document.querySelector('[data-mapa-especial]').value = 'hidrosalpinge';
+  document.querySelector('input[name="vistas-editor"][value="especiais"]').checked = true;
+  aplicarVistas();
+});
 document.querySelectorAll("[data-tela-alvo]").forEach((elemento) => {
   elemento.addEventListener("click", () => {
     abrirTela(elemento.dataset.telaAlvo);
