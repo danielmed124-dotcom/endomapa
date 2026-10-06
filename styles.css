@@ -2075,3 +2075,10 @@ h1 span {
     transform: none;
   }
 }
+/* Entrada e área de fusão 3D/Hycosy. */
+.acoes--novo-mapa{flex-direction:column;align-items:stretch}
+.conteudo:has(> .fusao-integrada:not([hidden])){max-width:1940px;width:100%}
+.fusao-integrada{min-width:0}
+.fusao-integrada > .link-voltar{margin-bottom:16px}
+body:has(.fusao-integrada:not([hidden])){min-width:0}
+.fusao-integrada{width:100%}

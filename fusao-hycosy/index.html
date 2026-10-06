@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src blob: data:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Fusão de imagens 3D/Hycosy | Endomapa</title>
+  <link rel="stylesheet" href="estilo.css">
+  <script src="../assets/vendor/jspdf-4.2.1.umd.min.js" defer></script>
+  <script src="pdf.js" defer></script>
+  <script src="fusao.js" defer></script>
+</head>
+<body>
+<header><span class="marca">Endomapa</span><h1>Fusão de imagens 3D/Hycosy</h1><p>Combine suas imagens 3D e Hycosy. As imagens ficam apenas nesta aba.</p></header>
+<main>
+  <section class="painel entradas">
+    <h2>1. Carregar as imagens</h2>
+    <div class="duas">
+      <label class="arquivo">Imagem-base · ultrassom 3D<input id="base" type="file" accept="image/png,image/jpeg,image/webp"><small>A imagem inteira e seu cabeçalho serão preservados.</small></label>
+      <label class="arquivo">Imagem a sobrepor · Hycosy<input id="hycosy" type="file" accept="image/png,image/jpeg,image/webp"><small>Selecione abaixo a região que deseja aproveitar.</small></label>
+    </div>
+    <p>Use imagens do mesmo exame e confira a identificação antes de compor. Formatos: JPG, PNG ou WebP; até 4.096 pixels por lado e 12 milhões de pixels.</p>
+    <p id="estado" role="status" aria-live="polite">Carregue as duas imagens para começar.</p>
+  </section>
+  <div class="layout">
+    <section class="painel recorte">
+      <h2>2. Separar a região da Hycosy</h2>
+      <p>Arraste um retângulo ao redor do útero e das trompas, deixando os textos e marcadores de fora. O fundo escuro dentro da seleção ficará transparente.</p>
+      <div class="botoes"><button id="retangulo" aria-pressed="true">Retângulo</button><button id="contorno" aria-pressed="false">Contorno por pontos</button></div>
+      <p id="ajuda-recorte">Arraste sobre a imagem para substituir a seleção inicial.</p>
+      <div class="imagem"><canvas id="origem" width="640" height="480" aria-label="Imagem Hycosy: desenhe a região que será sobreposta"></canvas><span id="vazio-origem">A imagem Hycosy aparecerá aqui</span></div>
+      <div class="botoes"><button id="fechar" disabled>Aplicar contorno</button><button id="voltar-ponto" disabled>Desfazer ponto</button><button id="recorte-inicial" disabled>Seleção inicial</button></div>
+      <label class="controle">Retirar fundo escuro <output for="limiar"></output><input id="limiar" type="range" min="0" max="100" value="12"></label>
+      <label class="controle">Suavizar borda <output for="suavidade"></output><input id="suavidade" type="range" min="1" max="60" value="12"></label>
+      <p class="nota">A seleção inicial é apenas uma área central sugerida. Confira o recorte: escurecer demais o limite pode retirar detalhes da própria imagem.</p>
+    </section>
+    <section class="painel montagem">
+      <h2>3. Ajustar a sobreposição</h2>
+      <p>Arraste diretamente na imagem para posicionar a Hycosy. Acompanhe o resultado enquanto altera os ajustes.</p>
+      <div class="bancada">
+      <div class="previa-fixa">
+      <div class="imagem"><canvas id="resultado" width="640" height="480" aria-label="Prévia da composição: arraste para mover a Hycosy"></canvas><span id="vazio-base">A imagem 3D aparecerá aqui</span></div>
+      <label class="check"><input id="comparar" type="checkbox"> Mostrar somente o 3D original</label>
+      </div>
+      <div class="ferramentas" role="region" aria-label="Ajustes da composição" tabindex="0">
+      <label class="controle">Modo de fusão<select id="modo-fusao"><option value="screen">Fusão clara · mantém o 3D visível</option><option value="source-over">Sobreposição normal · modo anterior</option></select></label>
+      <div class="botoes"><button id="fusao-clara">Aplicar ajuste de fusão clara</button></div>
+      <label class="check"><input id="preservar-relevo" type="checkbox" checked> Preservar relevo da Hycosy</label>
+      <p class="nota">Conserva melhor as gradações de luz e sombra da imagem original ao ajustar cor, luminosidade e contraste. Desmarque para comparar. O resultado continua sendo uma imagem plana com aparência de volume.</p>
+      <p class="nota">A fusão clara combina a luminosidade da Hycosy com o 3D, reduzindo o efeito de uma camada escura. O ajuste acima muda somente a aparência e a retirada do fundo; mantém posição, tamanho e angulação.</p>
+      <div id="ajustes" class="duas">
+        <input id="x" type="hidden" value="50">
+        <input id="y" type="hidden" value="56">
+        <label class="controle">Tamanho <output for="escala"></output><input id="escala" type="range" min="5" max="200" step="0.5" value="60" data-unidade="% da largura da base"></label>
+        <label class="controle">Largura da Hycosy <output for="largura"></output><input id="largura" type="range" min="25" max="200" step="1" value="100" data-unidade="%"></label>
+        <label class="controle">Altura da Hycosy <output for="altura"></output><input id="altura" type="range" min="25" max="200" step="1" value="100" data-unidade="%"></label>
+        <p class="nota">Largura e altura alteram as proporções da Hycosy. Em 100% nos dois controles, a proporção original é mantida.</p>
+        <label class="controle">Girar no plano <output for="giro"></output><input id="giro" type="range" min="-45" max="45" step="0.1" value="0" data-unidade="°"></label>
+        <label class="controle">Perspectiva horizontal <output for="ry"></output><input id="ry" type="range" min="-65" max="65" step="0.5" value="0" data-unidade="°"></label>
+        <label class="controle">Perspectiva vertical <output for="rx"></output><input id="rx" type="range" min="-65" max="65" step="0.5" value="0" data-unidade="°"></label>
+        <input id="opacidade" type="hidden" value="85">
+        <label class="controle">Transparência da Hycosy <output for="transparencia"></output><input id="transparencia" type="range" min="0" max="100" value="15" data-unidade="%"></label>
+        <p class="nota">0%: parte sólida da Hycosy opaca, cobrindo o 3D. 100%: Hycosy oculta. Na fusão clara, abaixo de 20% a camada se torna gradualmente sólida. O fundo removido e as bordas suavizadas mantêm seu recorte.</p>
+        <label class="controle">Contraste <output for="contraste"></output><input id="contraste" type="range" min="20" max="250" value="100" data-unidade="%"></label>
+        <label class="controle">Luminosidade da Hycosy <output for="brilho"></output><input id="brilho" type="range" min="20" max="300" value="180" data-unidade="%"></label>
+        <label class="controle">Intensidade da cor escolhida <output for="colorir"></output><input id="colorir" type="range" min="0" max="100" value="0" data-unidade="%"></label>
+        <label class="controle">Cor da Hycosy<input id="cor" type="color" value="#efb65d"></label>
+        <label class="controle">Proteger cabeçalho da base <output for="cabecalho"></output><input id="cabecalho" type="range" min="0" max="40" step="0.5" value="12" data-unidade="% da altura"></label>
+      </div>
+      <p class="nota">Escolher uma cor mantém o modo de fusão selecionado. Na fusão clara, tons claros iluminam e tons escuros escurecem os detalhes da Hycosy sobre o 3D, preservando sua textura. Em 0% de intensidade da cor, a cor original é mantida.</p>
+      <h3>Cor da imagem 3D</h3>
+      <div class="duas">
+        <label class="controle">Cor do 3D<input id="cor-base" type="color" value="#efb65d"></label>
+        <label class="controle">Intensidade da cor do 3D <output for="colorir-base"></output><input id="colorir-base" type="range" min="0" max="100" value="0" data-unidade="%"></label>
+      </div>
+      <p class="nota">A cor do 3D é independente da Hycosy. Escolher uma cor ativa o efeito; a intensidade 0% recupera a cor original. A faixa protegida do cabeçalho mantém suas cores e informações.</p>
+      <p class="nota">A perspectiva inclina a imagem plana; não reconstrói um volume 3D. O alinhamento é manual. A faixa protegida também impede que a sobreposição cubra o cabeçalho do 3D.</p>
+      <div class="botoes"><button id="repor" disabled>Restaurar ajustes</button><button id="baixar" class="primario" disabled>Baixar composição PNG</button><button id="baixar-pdf" class="primario" disabled>Gerar PDF A4</button><button id="limpar">Limpar imagens</button></div>
+      </div>
+      </div>
+    </section>
+  </div>
+  <footer>A composição não altera os arquivos originais nem salva os exames no histórico do Endomapa. Ao fechar ou atualizar esta página, a montagem é perdida.</footer>
+</main>
+</body>
+</html>

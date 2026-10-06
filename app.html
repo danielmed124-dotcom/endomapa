@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=divulgacao-1" />
+    <link rel="stylesheet" href="styles.css?v=fusao-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -29,8 +29,9 @@
       >
         <header class="cabecalho-tela">
           <h1 class="titulo-tela" id="titulo-novo-mapa">Novo mapa</h1>
-          <div class="acoes">
-            <button class="botao" type="button" data-tela-alvo="editor-manual">Montar mapa manualmente</button>
+          <div class="acoes acoes--novo-mapa">
+            <button class="botao" type="button" data-tela-alvo="editor-manual">Montar mapa de endometriose manualmente</button>
+            <button class="botao" type="button" data-tela-alvo="fusao-hycosy">Fusão de imagens 3D/Hycosy</button>
           </div>
         </header>
 
@@ -627,6 +628,12 @@
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
       </div>
       </section>
+      <section class="tela fusao-integrada" data-tela="fusao-hycosy" aria-label="Fusão de imagens 3D/Hycosy" hidden>
+        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
+        <p data-fusao-estado role="status">Abra a fusão para carregar as ferramentas.</p>
+        <button class="botao" type="button" data-fusao-repetir hidden>Tentar carregar novamente</button>
+        <div data-fusao-host></div>
+      </section>
     </main>
 
     <nav class="navegacao" aria-label="Navegação principal">
@@ -660,5 +667,6 @@
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
     <script src="editor-manual.js?v=historico-1"></script>
     <script src="historico-manual.js?v=historico-1"></script>
+    <script src="fusao-integracao.js?v=1"></script>
   </body>
 </html>
