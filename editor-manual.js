@@ -594,8 +594,23 @@
   function fotografarLesoes(camadaDaCaptura = camada) {
     // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
     return Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
-      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src };
+      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src,
+        estiloRotulo: fotografarEstiloRotulo(lesao, camadaDaCaptura) };
     });
+  }
+
+  function fotografarEstiloRotulo(lesao, camadaDaCaptura) {
+    const rotulo = camadaDaCaptura.querySelector(`[data-medida-id="${lesao.dataset.id}"]`);
+    if (!rotulo) return null;
+    const estilo = getComputedStyle(rotulo);
+    // Vistas ocultas usam a largura da vista visível, sem trocar a tela do usuário.
+    const largura = camadaDaCaptura.getBoundingClientRect().width || camada.getBoundingClientRect().width;
+    return {
+      largura, familia: estilo.fontFamily, peso: estilo.fontWeight,
+      fonte: parseFloat(estilo.fontSize), alturaLinha: parseFloat(estilo.lineHeight),
+      margemX: parseFloat(estilo.paddingLeft), margemY: parseFloat(estilo.paddingTop),
+      raio: parseFloat(estilo.borderTopLeftRadius), cor: estilo.color, fundo: estilo.backgroundColor,
+    };
   }
 
   function capturarMontagemEditavel() {
@@ -986,19 +1001,22 @@
     return { x: esquerda + inicioX, y: topo + inicioY, largura: larguraAlfa, altura: alturaAlfa, alfa };
   }
 
-  function desenharRotulos(contexto, canvas, lesoes = camada.querySelectorAll(".lesao-editavel")) {
+  function desenharRotulos(contexto, canvas, lesoes = fotografarLesoes()) {
     contexto.save();
     contexto.strokeStyle = "#000";
     contexto.fillStyle = "#000";
     contexto.lineWidth = Math.max(1.5, canvas.width / 700);
     contexto.lineCap = "round";
     contexto.setLineDash([0, contexto.lineWidth * 3]);
-    contexto.font = `700 ${Math.max(15, canvas.width / 58)}px Arial`;
     contexto.textAlign = "center";
-    contexto.textBaseline = "middle";
+    contexto.textBaseline = "alphabetic";
     for (const lesao of lesoes) {
       const linhas = linhasDoRotulo(lesao);
       if (!linhas.length) continue;
+      const estilo = lesao.estiloRotulo;
+      if (!estilo) continue;
+      const escala = canvas.width / estilo.largura;
+      contexto.font = `${estilo.peso} ${estilo.fonte * escala}px ${estilo.familia}`;
       const inicioX = canvas.width * Number(lesao.dataset.x) / 100;
       const inicioY = canvas.height * Number(lesao.dataset.y) / 100;
       const fimX = canvas.width * Number(lesao.dataset.medidaX) / 100;
@@ -1010,13 +1028,19 @@
       contexto.beginPath();
       contexto.arc(inicioX, inicioY, 3, 0, Math.PI * 2);
       contexto.fill();
-      const alturaLinha = Math.max(15, canvas.width / 58) * 1.15;
-      const larguraTexto = Math.max(...linhas.map((texto) => contexto.measureText(texto).width)) + 12;
-      contexto.fillStyle = "rgba(255,255,255,0.9)";
-      contexto.fillRect(fimX - larguraTexto / 2, fimY, larguraTexto, alturaLinha * linhas.length + 4);
-      contexto.fillStyle = "#7c1919";
+      const alturaLinha = estilo.alturaLinha * escala;
+      const margemY = estilo.margemY * escala;
+      const larguraTexto = Math.max(...linhas.map((texto) => contexto.measureText(texto).width)) + 2 * estilo.margemX * escala;
+      contexto.fillStyle = estilo.fundo;
+      contexto.beginPath();
+      contexto.roundRect(fimX - larguraTexto / 2, fimY, larguraTexto,
+        alturaLinha * linhas.length + 2 * margemY, estilo.raio * escala);
+      contexto.fill();
+      contexto.fillStyle = estilo.cor;
+      const metrica = contexto.measureText("Mg");
+      const linhaBase = (alturaLinha + metrica.fontBoundingBoxAscent - metrica.fontBoundingBoxDescent) / 2;
       linhas.forEach((texto, indice) => {
-        contexto.fillText(texto, fimX, fimY + 2 + alturaLinha * (indice + 0.5));
+        contexto.fillText(texto, fimX, fimY + margemY + alturaLinha * indice + linhaBase);
       });
       contexto.fillStyle = "#000";
     }

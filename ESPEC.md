@@ -30,6 +30,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Correção dos rótulos exportados (07/10/2026): PDF, PNG e JPEG do editor manual passam a usar a fonte, peso, tamanho proporcional ao mapa, espaçamento, cores e cantos arredondados das anotações da tela. A aparência é capturada junto com as lesões no instante do clique, antes do carregamento das imagens. Substitui o desenho separado com fonte Arial e caixas retangulares; não altera os textos, medidas ou posições salvos.
+
 Escala de cinza (06/10/2026): o editor manual oferece **Mapa em escala de cinza**, desmarcado por padrão. Quando marcado, converte somente a imagem-base em todas as vistas, incluindo mapas especiais; lesões, rótulos, caneta e assinatura mantêm suas cores. PNG, JPEG e PDF, inclusive Ambas e divulgação, seguem a opção capturada no instante do clique. Desmarcar restaura a base colorida. Salvar mapa conserva a escolha ao reabrir; montagens antigas abrem coloridas. Conversão local por regra fixa, sem IA.
 
 Correção do salvamento de aderências (06/10/2026): a validação do histórico compara os caminhos das imagens no mesmo formato usado pela captura, sem o parâmetro de versão de cache. Antes, os itens de aderências com `?v=...` eram rejeitados localmente como incompatíveis, impedindo Salvar mapa e, por consequência, o PDF. Ao reabrir, utiliza a URL atual da imagem na biblioteca, conservando sua versão de cache. Mantém a lista de imagens permitidas e a rejeição de fontes externas. A conta relatada estava ativa e possuía salvamentos anteriores; a reprodução local comprova o defeito nas aderências, mas não identifica retroativamente a composição da tentativa relatada.

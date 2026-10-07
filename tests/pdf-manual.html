@@ -132,14 +132,22 @@
     const fotografarEstado = () => JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), lesao => ({ dataset: { ...lesao.dataset }, src: lesao.querySelector('img').src })));
     const operacoes = new WeakMap();
     const operacoesDaTela = canvas => {
-      if (!operacoes.has(canvas)) operacoes.set(canvas, { textos: [], imagens: [] });
+      if (!operacoes.has(canvas)) operacoes.set(canvas, { textos: [], imagens: [], caixas: [], fontes: [] });
       return operacoes.get(canvas);
     };
     const contexto = janela.CanvasRenderingContext2D.prototype;
     const escrever = contexto.fillText;
     const desenhar = contexto.drawImage;
+    const arredondar = contexto.roundRect;
+    let ultimaTela;
+    contexto.roundRect = function (x, y, largura, altura, raio) {
+      ultimaTela = this.canvas;
+      operacoesDaTela(this.canvas).caixas.push({ x, y, largura, altura, raio, fundo: this.fillStyle });
+      return arredondar.apply(this, arguments);
+    };
     contexto.fillText = function (texto) {
       operacoesDaTela(this.canvas).textos.push(texto);
+      operacoesDaTela(this.canvas).fontes.push(this.font);
       return escrever.apply(this, arguments);
     };
     contexto.drawImage = function (imagem) {
@@ -215,6 +223,31 @@
     buscar('[data-modelo][data-nome="Adenomiose 1"]').click();
     preencher(campoNome, 'Adenomiose sagital');
     preencher(campoMedida, '1,7');
+    // Compara o resultado desenhado com as caixas reais do navegador em celular
+    // e computador. Uma mudança de fonte ou o retorno de fillRect deve falhar.
+    for (const larguraTela of [390, 1440, 390]) {
+      document.querySelector('iframe').style.width = larguraTela + 'px';
+      await new Promise(resolve => setTimeout(resolve, 50));
+      for (const vista of ['coronal', 'sagital']) {
+        editar(vista);
+        const camada = camadaDaVista(vista);
+        const rotulo = camada.querySelector('.medida-lesao-editavel');
+        const estilo = janela.getComputedStyle(rotulo);
+        const retangulo = rotulo.getBoundingClientRect();
+        const escala = baseDaVista(vista).naturalWidth / camada.getBoundingClientRect().width;
+        ultimaTela = null;
+        await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+        verificar(ultimaTela, 'Exportação deve desenhar cantos arredondados');
+        const registro = operacoesDaTela(ultimaTela);
+        const caixa = registro.caixas[0];
+        verificar(Math.abs(caixa.largura / escala - retangulo.width) < 0.15, 'Largura da caixa difere da tela em ' + larguraTela);
+        verificar(Math.abs(caixa.altura / escala - retangulo.height) < 0.15, 'Altura da caixa difere da tela em ' + larguraTela);
+        verificar(Math.abs(caixa.raio / escala - parseFloat(estilo.borderTopLeftRadius)) < 0.01, 'Raio deve seguir o editor');
+        const medidor = doc.createElement('canvas').getContext('2d');
+        medidor.font = `${estilo.fontWeight} ${parseFloat(estilo.fontSize) * escala}px ${estilo.fontFamily}`;
+        verificar(registro.fontes[0] === medidor.font, 'Fonte e tamanho devem seguir o editor');
+      }
+    }
     const esperadoCoronal = await capturarVista('coronal');
     const esperadoSagital = await capturarVista('sagital');
     const basesVisitante = ['coronal', 'sagital'].map(vista => baseDaVista(vista).src);
