@@ -49,6 +49,7 @@
   function habilitar(){
     $("baixar").disabled=!(base && hycosy && temPixels) || falhaGL || carregando>0 || exportando || pontos.length>0;
     $("baixar-pdf").disabled=$("baixar").disabled;
+    $("baixar-jpeg").disabled=$("baixar").disabled;
     $("repor").disabled=!(base || hycosy);
     $("fusao-clara").disabled=!hycosy;
     $("recorte-inicial").disabled=!hycosy;
@@ -294,22 +295,29 @@
     if(c.type==="color")c.addEventListener("change",mudar);
   });
   $("comparar").addEventListener("change",()=>agendar());
-  $("baixar").addEventListener("click",()=>{
+  function baixarImagem(formato){
     if($("baixar").disabled)return;
     exportando=true;habilitar();
     try{
       if(quadro){clearTimeout(quadro);quadro=0;}atualizar();desenharResultado(true);
-      resultado.toBlob(blob=>{
+      let captura=resultado;
+      if(formato==='jpeg'){
+        captura=document.createElement('canvas');captura.width=resultado.width;captura.height=resultado.height;
+        const ctx=captura.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,captura.width,captura.height);ctx.drawImage(resultado,0,0);
+      }
+      captura.toBlob(blob=>{
         try{
           if(!blob)throw new Error();
-          const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="endomapa-fusao-hycosy.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-          estado("Composição PNG preparada nas dimensões da imagem 3D. Os arquivos originais foram preservados.");
-        }catch{estado("Não foi possível preparar o PNG. As imagens continuam na tela.",true);}
+          const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`endomapa-fusao-hycosy.${formato==='jpeg'?'jpg':'png'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+          estado(`Composição ${formato.toUpperCase()} preparada nas dimensões da imagem 3D. Os arquivos originais foram preservados.`);
+        }catch{estado(`Não foi possível preparar o ${formato.toUpperCase()}. As imagens continuam na tela.`,true);}
         finally{exportando=false;desenharResultado();habilitar();}
-      },"image/png");
+      },`image/${formato}`,0.95);
       desenharResultado();
     }catch{exportando=false;estado("Não foi possível exportar. As imagens continuam na tela.",true);habilitar();}
-  });
+  }
+  $("baixar").addEventListener("click",()=>baixarImagem('png'));
+  $("baixar-jpeg").addEventListener("click",()=>baixarImagem('jpeg'));
   $("baixar-pdf").addEventListener("click",async()=>{
     if($("baixar-pdf").disabled)return;
     exportando=true;habilitar();

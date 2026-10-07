@@ -184,6 +184,12 @@
       const png = await exportar(false, true, vista);
       saida.dataset.etapa = vista + ': PNG';
       verificar(png === esperada, 'PNG deve coincidir com a montagem neutra: ' + vista);
+      const jpegEsperado = await janela.endomapaCapturarMapaManual({ formato: 'image/jpeg', qualidade: 0.95, fundoBranco: true, divulgacao: true });
+      const inicioJpeg = teste.downloads.length;
+      buscar('[data-baixar-jpeg-manual]').click(); buscar('[data-baixar-jpeg-manual]').click();
+      await aguardar(() => teste.downloads.length > inicioJpeg && !opcao.disabled, 'JPEG não concluiu');
+      verificar(teste.downloads.length === inicioJpeg + 1, 'Clique duplicado gerou dois JPEGs');
+      verificar(teste.downloads.at(-1).nome === 'endomapa-divulgacao-' + vista + '.jpg' && teste.downloads.at(-1).endereco === jpegEsperado, 'JPEG deve preservar divulgação e composição: ' + vista);
       const pdf = await exportar(true, true, vista);
       verificar(pdf.length === 1 && pdf[0].imagem === esperada, 'PDF deve coincidir com PNG neutro: ' + vista);
       verificar(base.src === fonteAntes && !assinatura.hidden && assinatura.toDataURL() === assinaturaAntes, 'Exportação alterou a identidade na tela');
@@ -201,13 +207,14 @@
     verificar(!opcao.checked && Array.from(doc.querySelectorAll('[data-opcao-divulgacao]')).every(item => item.hidden && janela.getComputedStyle(item).display === 'none'), 'Outro perfil deve ocultar e desmarcar a opção');
     const normal = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
     verificar(await janela.endomapaCapturarMapaManual({ formato: 'image/png', divulgacao: true }) === normal, 'Captura não autorizada deve manter identidade');
-    for (const pdf of [false, true]) {
+    for (const pdf of [false, true, 'jpeg']) {
       opcao.checked = true;
       const inicio = teste.downloads.length;
-      buscar(pdf ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
+      buscar(pdf === 'jpeg' ? '[data-baixar-jpeg-manual]' : pdf ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
       await aguardar(() => teste.downloads.length > inicio && !opcao.disabled, 'Download comum não concluiu');
       verificar(teste.downloads.at(-1).nome.startsWith('endomapa-manual-'), 'Outro perfil não pode exportar divulgação');
-      if (!pdf) verificar(teste.downloads.at(-1).endereco === normal, 'PNG comum alterado');
+      if (pdf === 'jpeg') verificar(teste.downloads.at(-1).endereco === await janela.endomapaCapturarMapaManual({ formato: 'image/jpeg', qualidade: 0.95, fundoBranco: true }), 'JPEG não autorizado perdeu identidade');
+      else if (!pdf) verificar(teste.downloads.at(-1).endereco === normal, 'PNG comum alterado');
       else verificar(geracoes.at(-1)[0].imagem === normal, 'PDF comum alterado');
     }
     perfil(true);
@@ -248,7 +255,7 @@
       verificar(quadroAuth.contentWindow.endomapaMedico.pode_exportar_divulgacao === (email === 'danielmed124@gmail.com'), 'Permissão incorreta para ' + email);
       quadroAuth.remove();
     }
-    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/PDF nas dez vistas, PDF Ambas, montagem preservada e celular de 320px.';
+    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/JPEG/PDF nas dez vistas, PDF Ambas, montagem preservada e celular de 320px.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);

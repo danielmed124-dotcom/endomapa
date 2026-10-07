@@ -14,7 +14,7 @@
     if(tela.hidden || !window.endomapaMedico || carregando || pronta)return;
     carregando=true;repetir.hidden=true;estado.hidden=false;estado.textContent="Carregando ferramentas de fusão…";
     try{
-      const resposta=await fetch("fusao-hycosy/index.html?v=1");
+      const resposta=await fetch("fusao-hycosy/index.html?v=jpeg-1");
       if(!resposta.ok)throw new Error("Falha de conexão");
       const pagina=new DOMParser().parseFromString(await resposta.text(),"text/html");
       const raiz=host.shadowRoot || host.attachShadow({mode:"open"});
@@ -24,7 +24,7 @@
       raiz.append(estilo,...Array.from(pagina.body.children));
       await estiloPronto;
       await script("fusao-hycosy/pdf.js?v=1");
-      await script("fusao-hycosy/fusao.js?v=1");
+      await script("fusao-hycosy/fusao.js?v=jpeg-1");
       pronta=true;estado.hidden=true;
     }catch{
       host.shadowRoot?.replaceChildren();

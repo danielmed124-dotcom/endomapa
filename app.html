@@ -659,7 +659,7 @@
         <button class="botao" type="button" data-salvar-manual>Salvar mapa</button>
         <button class="botao botao--secundario" type="button" data-novo-manual>Iniciar novo mapa</button>
         <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
-        <p class="texto-apoio">Salvar guarda todas as vistas da montagem na sua conta. Gerar PDF também salva; baixar PNG não salva no histórico.</p>
+        <p class="texto-apoio">Salvar guarda todas as vistas da montagem na sua conta. Gerar PDF também salva; baixar PNG ou JPEG não salva no histórico.</p>
         <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
@@ -668,8 +668,9 @@
           <input type="checkbox" data-exportar-divulgacao aria-describedby="ajuda-exportar-divulgacao" />
           <span>Exportar para divulgação</span>
         </label>
-        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para baixar PNG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
+        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para baixar PNG, JPEG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
         <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
+        <button class="botao botao--secundario" type="button" data-baixar-jpeg-manual>Baixar montagem manual (JPEG)</button>
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
       </div>
       </section>
@@ -710,8 +711,8 @@
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=hidrosalpinge-1"></script>
+    <script src="editor-manual.js?v=jpeg-1"></script>
     <script src="historico-manual.js?v=historico-1"></script>
-    <script src="fusao-integracao.js?v=1"></script>
+    <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>
 </html>

@@ -136,9 +136,15 @@
     };
     const exportar = async (formato, id) => {
       const antes = teste.downloads.length;
-      buscar(formato === 'pdf' ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
+      buscar(formato === 'pdf' ? '[data-baixar-pdf-manual]' : formato === 'jpeg' ? '[data-baixar-jpeg-manual]' : '[data-baixar-mapa-manual]').click();
       await aguardar(() => teste.downloads.length > antes && !buscar('[data-baixar-pdf-manual]').disabled, 'Exportação não concluiu: ' + id + ' ' + formato);
-      verificar(teste.downloads[antes].nome === 'endomapa-manual-' + id + (formato === 'pdf' ? '-a4.pdf' : '.png'), 'Arquivo deve identificar o mapa escolhido');
+      verificar(teste.downloads[antes].nome === 'endomapa-manual-' + id + (formato === 'pdf' ? '-a4.pdf' : formato === 'jpeg' ? '.jpg' : '.png'), 'Arquivo deve identificar o mapa escolhido');
+      if (formato === 'jpeg') {
+        const endereco = teste.downloads[antes].endereco;
+        verificar(endereco.startsWith('data:image/jpeg;base64,/9j/'), 'JPEG deve ter conteúdo JPEG real');
+        const img = new janela.Image(); img.src = endereco; await img.decode();
+        verificar(img.naturalWidth === 1086 && img.naturalHeight === 1448, 'JPEG deve preservar resolução');
+      }
       if (formato === 'pdf') {
         const pagina = geracoes.at(-1);
         verificar(pagina.length === 1 && pagina[0].vista === id, 'PDF precisa conter só o mapa selecionado');
@@ -158,6 +164,8 @@
       verificar(buscar('[data-vista-em-edicao]').textContent.includes(opcao.textContent), 'Identificação legível do mapa');
       const painel = buscar('[data-vista-manual="' + id + '"]');
       const base = painel.querySelector('[data-mapa-base]');
+      // A automação escolhe mapas abaixo da área visível; carregar a base sem depender da rolagem.
+      base.loading = 'eager';
       await aguardar(() => base.complete && base.naturalWidth > 0, 'Imagem não carregou: ' + id);
       verificar(base.naturalWidth === 1086 && base.naturalHeight === 1448, 'Proporção de página deve seguir as bases atuais');
       verificar(base.src.endsWith(id + '-neutro.png'), 'Outro médico precisa usar base neutra');
@@ -171,6 +179,7 @@
       verificar(camada.querySelectorAll('.lesao-editavel').length === 1, 'Lesão deve entrar no mapa ativo');
       await exportar('png', id);
       const pngNeutro = teste.downloads.at(-1).endereco;
+      await exportar('jpeg', id);
       await exportar('pdf', id);
       verificar(geracoes.at(-1)[0].imagem === pngNeutro, 'PNG e PDF precisam ter a mesma anatomia, lesão e assinatura');
       perfil(true);
@@ -208,10 +217,11 @@
     quadro.style.width = '390px';
     especial('utero-retrofletido');
     buscar('.opcoes-vistas').scrollIntoView();
-    saida.textContent = 'PASSOU: oito mapas especiais, três lados de hidrosalpinge, montagens independentes, duas identidades, PNG/PDF reais e larguras de 320 a 1280 pixels.';
+    saida.textContent = 'PASSOU: oito mapas especiais, três lados de hidrosalpinge, montagens independentes, duas identidades, PNG/JPEG/PDF reais e larguras de 320 a 1280 pixels.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);
   }
+  if (location.hostname === 'localhost' && new URLSearchParams(location.search).has('relatorio')) await fetch('/resultado-hycosy', { method: 'POST', body: saida.textContent });
 })();
 </script>

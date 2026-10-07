@@ -197,6 +197,7 @@
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
+  const botaoJpeg = document.querySelector('[data-baixar-jpeg-manual]');
   const botaoPdf = document.querySelector("[data-baixar-pdf-manual]");
   const exportarDivulgacao = document.querySelector("[data-exportar-divulgacao]");
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
@@ -209,7 +210,8 @@
   }
   atualizarPermissaoDivulgacao(window.endomapaMedico);
   window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoDivulgacao(evento.detail));
-  botaoBaixar?.addEventListener("click", baixarMontagemManual);
+  botaoBaixar?.addEventListener("click", () => baixarMontagemManual('png'));
+  botaoJpeg?.addEventListener('click', () => baixarMontagemManual('jpeg'));
   botaoPdf?.addEventListener("click", baixarPdfManual);
   document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
     botao.addEventListener("click", function () { ativarVista(botao.dataset.editarVista); });
@@ -296,6 +298,7 @@
     const indicacao = document.querySelector("[data-vista-em-edicao]");
     if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${nomeDaVista(vistaAtiva)}.`;
     if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${nomeDaVista(vistaAtiva)} (PNG)`;
+    if (botaoJpeg) botaoJpeg.textContent = `Baixar vista ${nomeDaVista(vistaAtiva)} (JPEG)`;
     document.querySelector("[data-limpar-mapa]").textContent = `Limpar vista ${nomeDaVista(vistaAtiva)}`;
     atualizarTodasAsLinhas();
   }
@@ -663,7 +666,7 @@
     mostrar('Montagem aberta. Você pode continuar editando.');
   }
 
-  async function baixarMontagemManual() {
+  async function baixarMontagemManual(formato = 'png') {
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
@@ -675,10 +678,10 @@
     definirExportacaoEmAndamento(true);
     estadoMapa.textContent = "Preparando a montagem com os nomes e as medidas…";
     try {
-      const imagem = await capturarMapa({ formato: "image/png", divulgacao });
+      const imagem = await capturarMapa({ formato: `image/${formato}`, qualidade: 0.95, fundoBranco: formato === 'jpeg', divulgacao });
       const link = document.createElement("a");
       link.href = imagem;
-      link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.png`;
+      link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.${formato === 'jpeg' ? 'jpg' : 'png'}`;
       document.body.append(link);
       link.click();
       link.remove();
@@ -697,6 +700,7 @@
   function definirExportacaoEmAndamento(ocupado) {
     exportacaoEmAndamento = ocupado;
     if (botaoBaixar) botaoBaixar.disabled = ocupado;
+    if (botaoJpeg) botaoJpeg.disabled = ocupado;
     if (botaoPdf) botaoPdf.disabled = ocupado;
     if (exportarDivulgacao) exportarDivulgacao.disabled = ocupado;
   }
@@ -784,9 +788,14 @@
       obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());
     if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
     if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
+    if (opcoes.fundoBranco) {
+      const contexto = canvas.getContext('2d');
+      contexto.save(); contexto.globalCompositeOperation = 'destination-over';
+      contexto.fillStyle = '#fff'; contexto.fillRect(0, 0, canvas.width, canvas.height); contexto.restore();
+    }
     return opcoes.formato === "image/png"
       ? canvas.toDataURL("image/png")
-      : canvas.toDataURL("image/jpeg", 0.9);
+      : canvas.toDataURL("image/jpeg", opcoes.qualidade ?? 0.9);
   }
 
   async function capturarIntegracaoManual(opcoes = {}) {
