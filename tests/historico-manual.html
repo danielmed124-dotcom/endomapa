@@ -124,8 +124,20 @@
     const escolher = vista => { buscar(`input[name="vistas-editor"][value="${vista}"]`).click(); };
     salvar.click();
     verificar(h.mapas.size === 0 && mensagem.textContent.includes('Adicione'), 'Mapa novo vazio não deve salvar');
+    // Todos os itens da biblioteca devem poder ser salvos, inclusive URLs com versão.
+    const montagemVazia = dados();
+    for (const modelo of doc.querySelectorAll('[data-modelo]')) {
+      modelo.click();
+      try { janela.endomapaEditorManual.validar(dados()); }
+      catch (_) { throw new Error('Biblioteca rejeitada no salvamento: ' + modelo.dataset.nome); }
+    }
+    const bibliotecaCompleta = dados();
+    janela.endomapaEditorManual.restaurar(bibliotecaCompleta);
+    verificar(dados().vistas.coronal.lesoes.length === doc.querySelectorAll('[data-modelo]').length, 'Reabertura perdeu imagens da biblioteca');
+    janela.endomapaEditorManual.restaurar(montagemVazia);
     titulo.value = 'Exemplo com medidas';
     buscar('[data-modelo]').click();
+    buscar('[data-modelo*="aderencia-1-marrom-escuro.png"]').click();
     mudar('[data-controle-nome-lesao]', 'Lesão de exemplo');
     mudar('[data-medida="1"]', '2,5');
     mudar('[data-controle-tamanho]', '150');
@@ -214,7 +226,7 @@
     janela.endomapaEditorManual.restaurar(snapshot);
     for (const largura of [320,390,768,1280]) { quadro.style.width = largura+'px'; await new Promise(resolve=>setTimeout(resolve,60)); verificar(doc.documentElement.scrollWidth <= largura, 'Transbordou em '+largura); }
     verificar(!teste.erros.length && !teste.chamadas.length, 'Erros inesperados: '+teste.erros.join(';'));
-    saida.textContent = 'PASSOU: salvar/reabrir com imagem idêntica, caneta e dez vistas; histórico antigo compatível; lado da hidrosalpinge restaurado; salvar atualiza; duplicidade; erro de rede; conflito; alterações pendentes; PDF e contagem; busca e paginação; dados inválidos; celular.';
+    saida.textContent = 'PASSOU: toda a biblioteca aceita; aderências salvas, reabertas e exportadas em PDF; imagem idêntica, caneta e dez vistas; histórico antigo compatível; lado da hidrosalpinge restaurado; duplicidade; erro de rede; conflito; alterações pendentes; contagem; busca e paginação; fontes externas rejeitadas; celular.';
   } catch (erro) { saida.textContent = 'FALHOU: '+erro.message; console.error(erro); }
 })();
 </script>

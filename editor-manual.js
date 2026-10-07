@@ -608,7 +608,9 @@
   }
 
   function validarMontagemEditavel(montagem) {
-    const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [botao.dataset.modelo, botao.dataset]));
+    // O histórico guarda o caminho sem a versão de cache. Compara no mesmo formato,
+    // somente contra imagens conhecidas; ao reabrir usa a URL atual da biblioteca.
+    const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [new URL(botao.dataset.modelo, document.baseURI).pathname.replace(/^\//, ''), botao.dataset]));
     const ids = mapasManuais.map(m => m.dataset.mapaEditor);
     const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
     const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
@@ -653,7 +655,7 @@
         const modelo = modelos.get(l.src);
         const dados = {};
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
-        adicionarLesao(l.src, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
+        adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
       const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
     });
