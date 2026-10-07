@@ -16,20 +16,20 @@
     html.head.prepend(csp);
     const ambiente = html.createElement('script');
     ambiente.textContent = `
-      window.__teste = { chamadas: [], erros: [], instancias: [], resposta: null, falhar: false, atrasar: false, liberar: null, auth: null };
+      window.__teste = { chamadas: [], erros: [], instancias: [], resposta: null, falhar: false, atrasar: false, liberar: null, auth: null, conectado: false, perfilFalha: false };
       const t = window.__teste;
       window.addEventListener('error', e => t.erros.push(e.message));
       window.addEventListener('unhandledrejection', e => t.erros.push(String(e.reason)));
       const usuario = { id: 'medico-sintetico' };
       window.supabase = { createClient() { return {
         auth: {
-          getUser: async () => ({ data: { user: usuario } }),
+          getUser: async () => ({ data: { user: t.conectado ? usuario : null } }),
           getSession: async () => ({ data: { session: { user: usuario, access_token: 'token-ficticio' } } }),
           onAuthStateChange: callback => { t.auth = callback; }
         },
         from(nome) {
           if (nome !== 'medicos') throw new Error('Acesso a tabela indevida: ' + nome);
-          return { select() { return { eq() { return { single: async () => ({ data: { id: 'medico', titulo: 'Dr.', nome: 'Teste', assinatura: 'Teste', clinica_id: null, ativo: 'sim' } }) }; } }; } };
+          return { select() { return { eq() { return { single: async () => t.perfilFalha ? { error: { message: 'Falha simulada' }, data: null } : ({ data: { id: 'medico', titulo: 'Dr.', nome: 'Teste', assinatura: 'Teste', clinica_id: null, ativo: 'sim' } }) }; } }; } };
         }
       }; } };
       const fetchReal = window.fetch;
@@ -42,9 +42,13 @@
         if (new URL(url, document.baseURI).origin !== new URL(document.baseURI).origin) throw new Error('Rede externa bloqueada');
         return fetchReal(url, opcoes);
       };
+      window.SpeechRecognitionPhrase = class { constructor(phrase, boost) { this.phrase = phrase; this.boost = boost; } };
       window.SpeechRecognition = class {
-        constructor() { t.instancias.push(this); }
-        start() { this.iniciou = true; setTimeout(() => this.onstart?.(), 0); }
+        constructor() { this.phrases = []; t.instancias.push(this); }
+        start() {
+          if (this.phrases.length) { setTimeout(() => { this.onerror?.({ error: 'phrases-not-supported' }); this.onend?.(); }, 0); return; }
+          this.iniciou = true; setTimeout(() => this.onstart?.(), 0);
+        }
         stop() { setTimeout(() => this.onend?.(), 0); }
         abort() { this.abortou = true; this.onend?.(); }
         resultado(texto, final) { const r = [{ transcript: texto }]; r.isFinal = final; this.onresult?.({ resultIndex: 0, results: [r] }); }
@@ -56,8 +60,21 @@
     quadro.srcdoc = '<!doctype html>' + html.documentElement.outerHTML;
     await esperar(() => quadro.contentDocument?.body.dataset.vozPronta, 'A página de teste não iniciou');
     const w = quadro.contentWindow, d = quadro.contentDocument, t = w.__teste;
-    verificar(d.body.dataset.vozPronta === 'true', d.querySelector('#voz-acesso').textContent);
     const $ = seletor => d.querySelector(seletor);
+    verificar(d.body.dataset.vozPronta === 'erro' && !$('#voz-login').hidden && !$('#voz-rever-acesso').hidden, 'Sem login, deve oferecer acesso e recuperação');
+    verificar($('#voz-iniciar').matches(':disabled'), 'Voz deve aguardar autenticação');
+    verificar(typeof t.auth === 'function', 'Login em outra aba precisa ser observado mesmo após falha inicial');
+    t.conectado = true;
+    t.auth('SIGNED_IN', { user: { id: 'medico-sintetico' } });
+    await esperar(() => d.body.dataset.vozPronta === 'true' && !$('#voz-iniciar').matches(':disabled'), 'O botão não reativou após login em outra aba');
+    verificar($('#voz-login').hidden && $('#voz-rever-acesso').hidden, 'Avisos de acesso devem desaparecer após login');
+    t.auth('SIGNED_OUT', null);
+    t.perfilFalha = true;
+    $('#voz-rever-acesso').click();
+    await esperar(() => d.body.dataset.vozPronta === 'erro' && !$('#voz-rever-acesso').disabled, 'Falha temporária de perfil não foi tratada');
+    t.perfilFalha = false;
+    $('#voz-rever-acesso').click();
+    await esperar(() => !$('#voz-iniciar').matches(':disabled'), 'Tentar novamente não recuperou o botão');
     const lesoes = vista => d.querySelectorAll('[data-camada-editor="' + vista + '"] .lesao-editavel');
     const dado = (extras = {}) => ({ categoria: 'lesão ovariana', localizacao: 'ovário', lado: 'direito', medida_1: 3.2, medida_2: 2.1, medida_3: null, observacao: 'Endometrioma', confianca: 95, ...extras });
     const sugestao = (itens = [dado()]) => ({ confianca: 95, lesoes: itens, duvidas: [], relacoes_anatomicas: [] });
@@ -124,6 +141,7 @@
     $('#voz-iniciar').click(); $('#voz-iniciar').click();
     await esperar(() => t.instancias.length === 1, 'Microfone não iniciou');
     const primeiro = t.instancias[0];
+    verificar(primeiro.phrases.length === 0 && primeiro.iniciou, 'Voz padrão não deve usar o vocabulário que o Chrome recusa');
     verificar(primeiro.lang === 'pt-BR' && primeiro.continuous === false, 'Microfone deve ouvir um comando pt-BR por vez');
     primeiro.resultado('Endometrioma provisório', false);
     await pausa(); verificar(t.chamadas.length === 0 && lesoes('coronal').length === 0, 'Texto provisório não pode virar lesão');

@@ -22,13 +22,8 @@
       let falhou = false;
       let encerrou = false;
       const valido = () => token === ciclo && !encerrou;
-      if (window.SpeechRecognitionPhrase && 'phrases' in reconhecimento) {
-        try {
-          reconhecimento.phrases = ['endometrioma', 'adenomiose', 'mioma', 'ligamento uterossacro',
-            'retrocervical', 'ovário direito', 'ovário esquerdo', 'cisto hemorrágico', 'centímetros']
-            .map(termo => new window.SpeechRecognitionPhrase(termo, 6));
-        } catch (_) { /* Ajuda opcional; mantém o reconhecimento comum. */ }
-      }
+      // O Chrome expõe "phrases", mas o serviço padrão pode recusar start()
+      // com phrases-not-supported. Não habilitar essa ajuda experimental.
       reconhecimento.onstart = () => { if (valido()) estado('Ouvindo. Dite uma lesão com local, lado e medidas.', 'ouvindo', true); };
       reconhecimento.onresult = evento => {
         if (!valido() || falhou) return;

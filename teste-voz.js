@@ -13,6 +13,10 @@
   let requisicao = null;
   let total = 0;
   let acessoValido = false;
+  let verificandoAcesso = false;
+  let verificarDepois = false;
+  let versaoAcesso = 0;
+  const reverAcesso = $('#voz-rever-acesso');
   function informar(texto, tipo = 'neutro') {
     if (texto) estado.textContent = texto;
     estado.dataset.tipo = tipo;
@@ -145,20 +149,65 @@
     requisicao?.abort();
     microfone?.cancelar();
   }
+  function comPrazo(pedido) {
+    let temporizador;
+    return Promise.race([pedido, new Promise((_, rejeitar) => {
+      temporizador = setTimeout(() => rejeitar(new Error('A conferência do acesso demorou demais. Confira a conexão e toque em Tentar novamente.')), 15000);
+    })]).finally(() => clearTimeout(temporizador));
+  }
+  async function conferirAcesso() {
+    if (verificandoAcesso) { verificarDepois = true; return; }
+    verificandoAcesso = true;
+    const tentativa = ++versaoAcesso;
+    reverAcesso.disabled = true;
+    $('#voz-acesso').textContent = 'Conferindo acesso…';
+    try {
+      const { data, error } = await comPrazo(cliente.auth.getUser());
+      if (tentativa !== versaoAcesso) return;
+      if (error || !data.user) {
+        $('#voz-login').hidden = false;
+        throw new Error('Use o link de entrada para acessar sua conta. Ao voltar a esta aba, os comandos serão liberados após conferir seu acesso.');
+      }
+      if (usuario && usuario.id !== data.user.id) throw new Error('A conta conectada mudou. Atualize esta página para iniciar um teste com essa conta.');
+      const { data: perfil, error: erroPerfil } = await comPrazo(cliente.from('medicos').select('id, titulo, nome, assinatura, clinica_id, ativo').eq('user_id', data.user.id).single());
+      if (tentativa !== versaoAcesso) return;
+      if (erroPerfil || !perfil || perfil.ativo !== 'sim') throw new Error('Não foi possível confirmar seu perfil ativo. Toque em Tentar novamente ou entre novamente no Endomapa.');
+      usuario = data.user;
+      window.dispatchEvent(new CustomEvent('endomapa:perfil-carregado', { detail: perfil }));
+      acessoValido = true;
+      $('#voz-comandos').disabled = false;
+      $('#voz-login').hidden = true;
+      reverAcesso.hidden = true;
+      $('#voz-acesso').textContent = 'Acesso confirmado: ' + perfil.titulo + ' ' + perfil.nome + '.';
+      informar(microfone.disponivel ? 'Pronto. Ative o microfone e diga um comando completo.' : 'Este navegador não oferece reconhecimento de voz. Você pode testar digitando o comando.', microfone.disponivel ? 'neutro' : 'erro');
+      document.body.dataset.vozPronta = 'true';
+    } catch (erro) {
+      if (tentativa !== versaoAcesso) return;
+      acessoValido = false;
+      $('#voz-comandos').disabled = true;
+      $('#voz-login').hidden = false;
+      reverAcesso.hidden = false;
+      $('#voz-acesso').textContent = erro.message;
+      informar(erro.message, 'erro');
+      document.body.dataset.vozPronta = 'erro';
+    } finally {
+      verificandoAcesso = false;
+      reverAcesso.disabled = false;
+      controles();
+      if (verificarDepois) {
+        verificarDepois = false;
+        if (!acessoValido) setTimeout(conferirAcesso, 0);
+      }
+    }
+  }
+  reverAcesso.addEventListener('click', () => {
+    if (cliente && microfone) conferirAcesso();
+    else window.location.reload();
+  });
   try {
     await prepararEditor();
     if (!window.supabase || !window.ENDOMAPA_SUPABASE) throw new Error('Não foi possível iniciar a conexão de acesso. Atualize a página.');
     cliente = window.supabase.createClient(window.ENDOMAPA_SUPABASE.projectUrl, window.ENDOMAPA_SUPABASE.publicAnonKey);
-    const { data, error } = await cliente.auth.getUser();
-    if (error || !data.user) {
-      $('#voz-login').hidden = false;
-      throw new Error('Entre na sua conta para testar a interpretação por voz.');
-    }
-    usuario = data.user;
-    const { data: perfil, error: erroPerfil } = await cliente.from('medicos').select('id, titulo, nome, assinatura, clinica_id, ativo').eq('user_id', usuario.id).single();
-    if (erroPerfil || !perfil || perfil.ativo !== 'sim') throw new Error('Não foi possível confirmar seu perfil ativo. Entre novamente no Endomapa.');
-    window.dispatchEvent(new CustomEvent('endomapa:perfil-carregado', { detail: perfil }));
-    acessoValido = true;
     microfone = window.criarMicrofoneDeTeste({
       aoTexto: texto => { campo.value = texto; },
       aoComando: processar,
@@ -168,29 +217,32 @@
     parar.addEventListener('click', () => microfone.parar());
     $('#voz-barra-parar').addEventListener('click', () => microfone.parar());
     enviar.addEventListener('click', () => processar(campo.value.trim()));
-    $('#voz-comandos').disabled = false;
-    $('#voz-acesso').textContent = 'Acesso confirmado: ' + perfil.titulo + ' ' + perfil.nome + '.';
-    informar(microfone.disponivel ? 'Pronto. Ative o microfone e diga um comando completo.' : 'Este navegador não oferece reconhecimento de voz. Você pode testar digitando o comando.', microfone.disponivel ? 'neutro' : 'erro');
-    controles();
     cliente.auth.onAuthStateChange((evento, sessao) => {
-      if (evento === 'SIGNED_OUT' || (sessao && sessao.user.id !== usuario.id)) {
+      if (evento === 'SIGNED_OUT' || (usuario && sessao && sessao.user.id !== usuario.id)) {
+        ++versaoAcesso;
         acessoValido = false;
         interromper();
         $('#voz-comandos').disabled = true;
         $('#voz-login').hidden = false;
-        $('#voz-acesso').textContent = 'Sua sessão mudou. Entre novamente e atualize esta página.';
+        reverAcesso.hidden = false;
+        $('#voz-acesso').textContent = 'Sua sessão mudou. Entre novamente para continuar o teste.';
       }
+      // Nunca aguardar chamadas de autenticação dentro deste callback:
+      // o cliente pode estar terminando a atualização da sessão.
+      if (sessao && !acessoValido && ['SIGNED_IN', 'TOKEN_REFRESHED'].includes(evento)) setTimeout(conferirAcesso, 0);
     });
+    window.addEventListener('focus', () => { if (!acessoValido) conferirAcesso(); });
     document.addEventListener('visibilitychange', () => { if (document.hidden) interromper(); });
     window.addEventListener('pagehide', interromper);
     window.addEventListener('beforeunload', evento => {
       if (ocupado || document.querySelector('.lesao-editavel')) { evento.preventDefault(); evento.returnValue = ''; }
     });
-    document.body.dataset.vozPronta = 'true';
+    await conferirAcesso();
   } catch (erro) {
     $('#voz-acesso').textContent = erro.message;
     informar(erro.message, 'erro');
     $('#voz-comandos').disabled = true;
+    reverAcesso.hidden = false;
     document.body.dataset.vozPronta = 'erro';
   }
 })();
