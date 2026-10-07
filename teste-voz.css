@@ -1,0 +1,32 @@
+.teste-voz main { padding-bottom: 32px; }
+.voz-painel { width: min(100% - 32px, 960px); margin: 24px auto; padding: 24px; border: 1px solid var(--borda); border-radius: 18px; background: var(--superficie); }
+.voz-painel h1 { font-size: clamp(1.5rem, 5vw, 2.2rem); line-height: 1.2; }
+.voz-painel p { line-height: 1.55; }
+.voz-painel fieldset { margin: 20px 0; padding: 0; border: 0; min-width: 0; }
+.voz-painel legend { margin-bottom: 12px; font-weight: 700; }
+.voz-painel textarea { display: block; width: 100%; resize: vertical; margin: 8px 0 12px; padding: 14px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); color: var(--texto); font: inherit; font-size: 16px; }
+.voz-acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.voz-painel a { color: var(--dourado); }
+.voz-painel summary { padding: 12px 0; cursor: pointer; }
+#voz-estado { padding: 12px; background: var(--superficie-alta); border-radius: 10px; border-left: 4px solid var(--dourado); }
+#voz-estado[data-tipo="erro"] { border-color: #ee8b8b; }
+#voz-historico { max-height: 320px; overflow: auto; padding-left: 24px; }
+#voz-historico li { margin: 12px 0; overflow-wrap: anywhere; }
+#voz-historico li p { margin: 4px 0; }
+#mapa-teste, #imagem-teste { scroll-margin-top: 80px; }
+.biblioteca-voz { min-width: 0; }
+.biblioteca-voz > summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--dourado); }
+.teste-voz .editor-manual__cabecalho h1 { font-size: 1.6rem; }
+.teste-voz .opcao-vista--especiais { display: none; }
+.teste-voz .editor-manual .controles-lesao { position: static; max-height: none; }
+.teste-voz .editor-manual:has(.controles-lesao:not([hidden])) { padding-bottom: 32px; }
+.teste-voz button:disabled { opacity: .55; }
+#voz-barra { position: fixed; z-index: 30; bottom: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 16px; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); background: var(--superficie); border-top: 1px solid var(--borda); }
+#voz-barra a { color: var(--dourado); font-weight: 700; }
+#voz-barra button { width: auto; flex-shrink: 0; min-height: 44px; }
+.teste-voz:has(#voz-barra:not([hidden])) main { padding-bottom: 100px; }
+@media (min-width: 1000px) { .biblioteca-voz { grid-area: biblioteca; } }
+@media (max-width: 600px) {
+  .voz-painel { padding: 18px; }
+  .voz-acoes .botao { width: 100%; }
+}
