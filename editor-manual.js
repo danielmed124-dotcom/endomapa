@@ -16,6 +16,12 @@
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
+  const opcaoEscalaCinza = document.querySelector('[data-mapa-escala-cinza]');
+  function atualizarEscalaCinza() {
+    mapasManuais.forEach(mapa => mapa.classList.toggle('mapa-editor--cinza', Boolean(opcaoEscalaCinza?.checked)));
+  }
+  opcaoEscalaCinza?.addEventListener('change', atualizarEscalaCinza);
+  atualizarEscalaCinza();
   const selecoesPorVista = new Map();
   let vistaAtiva = camada.dataset.camadaEditor || "coronal";
   const canetas = new Map();
@@ -604,7 +610,7 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
+    return { versao: 1, escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
@@ -616,6 +622,7 @@
     const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
     const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
+    if (montagem.escalaCinza !== undefined && typeof montagem.escalaCinza !== 'boolean') falhar();
     if (montagem.hidrosalpinge !== undefined && !lados.includes(montagem.hidrosalpinge)) falhar();
     if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
     // Montagens anteriores à hidrosalpinge não possuem as três novas vistas.
@@ -643,6 +650,8 @@
   function restaurarMontagemEditavel(montagem) {
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
+    if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
+    atualizarEscalaCinza();
     definirCaneta(null);
     selecionada = null; selecoesPorVista.clear(); imagemCopiada = null;
     mapasManuais.forEach(mapa => {
@@ -732,6 +741,7 @@
     if (exportacaoEmAndamento) return;
     if (window.endomapaHistoricoManual?.ocupado()) return;
     const registroPdf = window.endomapaHistoricoManual?.prepararPdf();
+    const escalaCinza = Boolean(opcaoEscalaCinza?.checked);
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
     const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
@@ -752,7 +762,7 @@
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, {}, false, captura.base, captura.assinatura, captura.caneta);
+        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza }, false, captura.base, captura.assinatura, captura.caneta);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
         paginas.push({ vista: captura.vista, canvas });
@@ -845,12 +855,25 @@
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta()) {
+    // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
+    const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
     const base = await carregarImagem(fonteBase);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
+    if (escalaCinza) {
+      // Conversão por pixels funciona também em celulares sem filtro de canvas.
+      // Só a base foi desenhada neste instante; as lesões conservam suas cores.
+      const imagem = contexto.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = imagem.data;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const cinza = Math.round(0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]);
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = cinza;
+      }
+      contexto.putImageData(imagem, 0, 0);
+    }
     if (assinatura) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
     const mascaras = [];
     // Uma única tela reutilizada mantém a rasterização nas coordenadas absolutas

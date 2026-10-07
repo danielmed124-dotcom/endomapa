@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=hidrosalpinge-1" />
+    <link rel="stylesheet" href="styles.css?v=escala-cinza-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -477,6 +477,11 @@
       </section>
 
       <section class="editor-manual__area" aria-label="Mapas para edição manual">
+        <label class="opcao-escala-cinza">
+          <input type="checkbox" data-mapa-escala-cinza aria-describedby="ajuda-escala-cinza" />
+          Mapa em escala de cinza
+        </label>
+        <p class="texto-apoio" id="ajuda-escala-cinza">Aplica-se a todas as vistas e aos arquivos PNG, JPEG e PDF. As lesões permanecem coloridas.</p>
         <section class="vista-manual" data-vista-manual="coronal" aria-labelledby="titulo-mapa-manual">
           <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
           <button class="botao botao--secundario" type="button" data-editar-vista="coronal" aria-pressed="true">Editar vista coronal</button>
@@ -711,7 +716,7 @@
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
-    <script src="editor-manual.js?v=salvar-aderencias-1"></script>
+    <script src="editor-manual.js?v=escala-cinza-1"></script>
     <script src="historico-manual.js?v=historico-1"></script>
     <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>

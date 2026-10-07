@@ -1949,6 +1949,11 @@ h1 span {
   background: rgba(120, 35, 27, 0.5);
 }
 
+.mapa-editor--cinza [data-mapa-base] {
+  filter: grayscale(1);
+}
+
+.opcao-escala-cinza,
 .exportacao-divulgacao {
   display: flex;
   align-items: center;
@@ -1958,6 +1963,7 @@ h1 span {
   font-weight: 600;
 }
 
+.opcao-escala-cinza input,
 .exportacao-divulgacao input {
   width: 20px;
   height: 20px;

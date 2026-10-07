@@ -144,6 +144,16 @@
       return pdf ? geracoes.at(-1) : arquivo.endereco;
     };
     const esperadas = new Map();
+    const cinza = buscar('[data-mapa-escala-cinza]');
+    verificar(!cinza.checked, 'Escala de cinza deve começar desmarcada');
+    const mudarCinza = valor => { cinza.checked = valor; cinza.dispatchEvent(new janela.Event('change')); };
+    const pixelsDe = async fonte => {
+      const imagem = new janela.Image();
+      await new Promise((resolve, reject) => { imagem.onload = resolve; imagem.onerror = reject; imagem.src = fonte; });
+      const canvas = doc.createElement('canvas'); canvas.width = imagem.naturalWidth; canvas.height = imagem.naturalHeight;
+      const ctx = canvas.getContext('2d'); ctx.drawImage(imagem, 0, 0);
+      return ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    };
     for (const vista of Array.from(doc.querySelectorAll('[data-mapa-editor]'), m => m.dataset.mapaEditor)) {
       saida.dataset.etapa = vista + ': início';
       escolher(vista);
@@ -198,11 +208,45 @@
       verificar(comum !== esperada, 'Exportação comum perdeu a identidade');
       perfil(false);
       verificar(await exportar(false, true, vista) === esperada, 'Divulgação deve ser igual para outro perfil');
+      mudarCinza(true);
+      verificar(janela.getComputedStyle(base).filter === 'grayscale(1)', 'Base na tela deve ficar cinza');
+      verificar(janela.getComputedStyle(mapa.querySelector('[data-camada-editor]')).filter === 'none', 'Lesões não podem receber filtro');
+      const pngCinza = await exportar(false, true, vista);
+      const original = await pixelsDe(esperada), convertido = await pixelsDe(pngCinza);
+      let baseConvertida = 0, coresPreservadas = 0;
+      for (let i = 0; i < original.length; i += 4) {
+        if (Math.max(original[i], original[i+1], original[i+2]) - Math.min(original[i], original[i+1], original[i+2]) < 20) continue;
+        if (convertido[i] === convertido[i+1] && convertido[i] === convertido[i+2]) baseConvertida++;
+        if (original[i] === convertido[i] && original[i+1] === convertido[i+1] && original[i+2] === convertido[i+2]) coresPreservadas++;
+      }
+      verificar(baseConvertida > 10000 && coresPreservadas > 100, 'Base deve ficar cinza e elementos adicionados manter cor: ' + vista);
+      const pdfCinza = await exportar(true, true, vista);
+      verificar(pdfCinza[0].imagem === pngCinza, 'PDF deve preservar escala de cinza: ' + vista);
+      const jpegCinza = await janela.endomapaCapturarMapaManual({ formato: 'image/jpeg', qualidade: 0.95, fundoBranco: true, divulgacao: true });
+      const downloadsAntes = teste.downloads.length;
+      buscar('[data-baixar-jpeg-manual]').click();
+      await aguardar(() => teste.downloads.length > downloadsAntes && !opcao.disabled, 'JPEG cinza não terminou');
+      verificar(teste.downloads.at(-1).endereco === jpegCinza, 'JPEG deve preservar escala de cinza');
+      const salva = janela.endomapaEditorManual.capturar();
+      verificar(salva.escalaCinza === true, 'Salvamento deve incluir escala de cinza');
+      mudarCinza(false);
+      verificar(await exportar(false, true, vista) === esperada, 'Desmarcar deve restaurar cores originais');
     }
     escolher('ambas');
     perfil(true);
     const ambas = await exportar(true, true, 'ambas');
     verificar(ambas.length === 2 && ambas.every(p => p.imagem === esperadas.get(p.vista)), 'Ambas deve exportar duas páginas neutras');
+    mudarCinza(true);
+    const pdfPendente = exportar(true, true, 'ambas');
+    mudarCinza(false);
+    const ambasCinza = await pdfPendente;
+    verificar(ambasCinza.length === 2 && ambasCinza.every(p => p.imagem !== esperadas.get(p.vista)), 'Todas as páginas devem manter a opção do instante do clique');
+    const montagemCinza = janela.endomapaEditorManual.capturar(); montagemCinza.escalaCinza = true;
+    janela.endomapaEditorManual.restaurar(montagemCinza);
+    verificar(cinza.checked, 'Reabrir deve restaurar escala de cinza');
+    delete montagemCinza.escalaCinza;
+    janela.endomapaEditorManual.restaurar(montagemCinza);
+    verificar(!cinza.checked, 'Montagens antigas devem continuar coloridas');
     perfil(true, false);
     verificar(!opcao.checked && Array.from(doc.querySelectorAll('[data-opcao-divulgacao]')).every(item => item.hidden && janela.getComputedStyle(item).display === 'none'), 'Outro perfil deve ocultar e desmarcar a opção');
     const normal = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
