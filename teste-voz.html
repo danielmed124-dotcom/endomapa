@@ -14,7 +14,7 @@
     <section class="voz-painel" aria-labelledby="titulo-voz">
       <span class="selo">Experimento separado</span>
       <h1 id="titulo-voz">Dite todos os achados.</h1>
-      <p>Fale todas as lesões, indicando o local, o lado e as medidas de cada uma em centímetros. Quando terminar, toque em <strong>Finalizar ditado e inserir lesões</strong>. As pausas não iniciam a interpretação.</p>
+      <p>Dite os nomes das imagens da biblioteca e as medidas em centímetros. Informe o lado para ovários e ligamentos. Quando terminar, toque em <strong>Finalizar ditado e inserir lesões</strong>. As pausas não iniciam a interpretação.</p>
       <p id="voz-acesso" role="status">Conferindo acesso…</p>
       <a id="voz-login" href="login.html" target="_blank" rel="noopener" hidden>Entrar no Endomapa em outra aba e depois voltar a este teste</a>
       <button class="botao botao--secundario" id="voz-rever-acesso" type="button" hidden>Tentar novamente</button>
@@ -34,9 +34,10 @@
         <p class="texto-apoio">Se houver dúvida, o ditado ficará pendente: confira o texto e toque em “Inserir lesões do texto”. As lesões já presentes no mapa são preservadas. Para ajustar uma delas, use os controles do mapa.</p>
       </fieldset>
       <details><summary>Exemplo e informações do teste</summary>
-        <p>“Endometrioma no ovário direito, medindo três vírgula dois por dois vírgula um centímetros. Endometriose no ligamento uterossacro esquerdo, medindo um vírgula nove por zero vírgula dois centímetros.”</p>
-        <p class="texto-apoio">Este teste fica somente nesta aba. Não salva em Meus mapas nem altera suas montagens. Use achados fictícios, sem identificação de pacientes. O reconhecimento de fala é feito pelo serviço do navegador; o texto confirmado vai ao interpretador de IA já existente e consome sua cota de interpretações.</p>
-        <p class="texto-apoio">Inserção automática disponível para lesões ovarianas identificadas, miomas, adenomiose e endometriose nos ligamentos uterossacros ou na região retrocervical. Outras localizações, aderências ou ambiguidades ficam pendentes.</p>
+        <p>“Ligamento uterossacro esquerdo medindo 1,8 por 0,6 cm. Três focos de adenomiose. DIU de cobre. Mioma 1 medindo 3,6 por 2,1 por 2,3 cm. Retrocervical medindo 3,6 por 2,9 cm. Pólipo medindo 0,8 por 0,6 cm.”</p>
+        <p class="texto-apoio">Sem medidas ditadas, a imagem entra sem medidas. Miomas, adenomiose, pólipo e DIU sem posição específica entram em posições iniciais ajustáveis no útero; retrocervical entra na região correspondente. Arraste para posicionar. Vários focos sem medidas entram como imagens separadas; para medidas individuais, descreva cada foco separadamente.</p>
+        <p class="texto-apoio">Este teste fica somente nesta aba. Não salva em Meus mapas nem altera suas montagens. Use achados fictícios, sem identificação de pacientes. O reconhecimento de fala é feito pelo serviço do navegador. Comandos reconhecidos diretamente pelos nomes da biblioteca não usam IA nem consomem a cota; outras descrições seguem para o interpretador de IA existente.</p>
+        <p class="texto-apoio">Inserção pelos nomes: ligamento uterossacro, retrocervical, adenomiose, Mioma 1, 2, 3 ou pediculado, pólipo, DIU de cobre ou hormonal, folículo, cisto, cisto hemorrágico, endometrioma, teratoma e corpo lúteo. Outras localizações, aderências ou ambiguidades ficam pendentes.</p>
       </details>
       <details id="voz-registro"><summary>Ditados deste teste <span id="voz-contagem">(0)</span></summary><ol id="voz-historico"></ol></details>
     </section>
@@ -48,8 +49,8 @@
   </aside>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
-  <script src="teste-voz-regras.js?v=ditado-completo-3"></script>
+  <script src="teste-voz-regras.js?v=biblioteca-4"></script>
   <script src="teste-voz-microfone.js?v=ditado-completo-3"></script>
-  <script src="teste-voz.js?v=ditado-completo-3"></script>
+  <script src="teste-voz.js?v=biblioteca-4"></script>
 </body>
 </html>

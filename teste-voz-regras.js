@@ -2,6 +2,78 @@
   "use strict";
   const normalizar = texto => String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
   const falhar = mensagem => { throw new Error(mensagem); };
+  // Só objetos produzidos por estas regras podem usar os padrões da biblioteca.
+  // A resposta do interpretador antigo continua sujeita às verificações anteriores.
+  const itensDaBiblioteca = new WeakSet();
+  const numeros = { zero: 0, um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6, sete: 7, oito: 8, nove: 9, dez: 10 };
+  const modelos = [
+    ['ligamentos? uteross?acros?', 'Ligamento uterossacro', 'ligamento uterossacro', 'endometriose'],
+    ['retrocervical', 'Retrocervical', 'região retrocervical', 'endometriose'],
+    ['adenomiose(?: 1)?', 'Adenomiose 1', 'útero', 'adenomiose'],
+    ['diu (?:de )?cobre', 'DIU de Cobre', 'útero', 'dispositivo'],
+    ['diu hormonal', 'DIU hormonal', 'útero', 'dispositivo'],
+    ['mioma pediculado', 'Mioma pediculado', 'útero', 'mioma'],
+    ['mioma (?:1|um)', 'Mioma 1', 'útero', 'mioma'],
+    ['mioma (?:2|dois)', 'Mioma 2', 'útero', 'mioma'],
+    ['mioma (?:3|tres)', 'Mioma 3', 'útero', 'mioma'],
+    ['miomas?', 'Mioma 1', 'útero', 'mioma'],
+    ['polipos?', 'Pólipo', 'útero', 'pólipo'],
+    ['endometriomas?', 'Endometrioma', 'ovário', 'lesão ovariana'],
+    ['cistos? hemorragicos?', 'Cisto hemorrágico', 'ovário', 'lesão ovariana'],
+    ['cistos?', 'Cisto', 'ovário', 'lesão ovariana'],
+    ['foliculos?', 'Folículo', 'ovário', 'lesão ovariana'],
+    ['teratomas?', 'Teratoma', 'ovário', 'lesão ovariana'],
+    ['corpo luteo', 'Corpo Lúteo', 'ovário', 'lesão ovariana'],
+  ];
+  function interpretarBiblioteca(texto) {
+    conferirTexto(texto);
+    const fonte = normalizar(texto);
+    const quantidade = '(?:(\\d+|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)\\s+(?:focos?\\s+de\\s+)?)?';
+    const exp = new RegExp('\\b' + quantidade + '(' + modelos.map(m => m[0]).join('|') + ')\\b', 'g');
+    const encontrados = Array.from(fonte.matchAll(exp));
+    // Não ignorar negativas, correções, locais ou qualquer trecho desconhecido.
+    const vazio = trecho => /^[\s,;.]*(?:e[\s,;.]*)?$/.test(trecho);
+    if (!encontrados.length || !vazio(fonte.slice(0, encontrados[0].index).replace(/^(?:inserir|adicione|adicionar)\s+/, ''))) return null;
+    const lesoes = [];
+    for (let i = 0; i < encontrados.length; i++) {
+      const achado = encontrados[i];
+      const modelo = modelos.find(m => new RegExp('^(?:' + m[0] + ')$').test(achado[2]));
+      const n = achado[1] ? (numeros[achado[1]] ?? Number(achado[1])) : 1;
+      if (!Number.isInteger(n) || n < 1 || lesoes.length + n > 30) falhar('Informe de 1 a 30 itens por ditado.');
+      let resto = fonte.slice(achado.index + achado[0].length, encontrados[i + 1]?.index ?? fonte.length).trim();
+      const local = modelo[2] === 'ovário' ? /^\s*(?:no |em |do )?ovario\b/ : modelo[2] === 'útero' ? /^\s*(?:no |em |do )?utero\b/ : /$^/;
+      resto = resto.replace(local, '').trim();
+      const lateral = /^(?:a |do lado |no lado |lado )?(direit[oa]|esquerd[oa]|central)\b/.exec(resto);
+      let lado = lateral ? lateral[1].replace(/a$/, 'o') : null;
+      if (lateral) resto = resto.slice(lateral[0].length).trim();
+      resto = resto.replace(local, '').trim();
+      // Números falados simples: não transformar palavras desconhecidas em zero.
+      resto = resto.replace(/\b(zero|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove|dez)\b/g, p => numeros[p]);
+      resto = resto.replace(/\s+virgula\s+/g, ',');
+      let medidas = [null, null, null];
+      if (!vazio(resto)) {
+        // Um número de modelo desconhecido não é uma medida (ex.: "Mioma 4").
+        if (!/^(?:,\s*)?(?:medindo|mede|de|com)\b/.test(resto) && !/\b(?:cm|centimetros?)\b/.test(resto)) return null;
+        const medida = /^(?:(?:,\s*)?(?:medindo|mede|de|com medidas de|com)\s+)?(\d+(?:[.,]\d+)?)(?:\s*(?:por|x|×)\s*(\d+(?:[.,]\d+)?))?(?:\s*(?:por|x|×)\s*(\d+(?:[.,]\d+)?))?\s*(?:cm|centimetros?)?([\s,;.]*(?:e[\s,;.]*)?)$/.exec(resto);
+        if (!medida) return null;
+        medidas = medida.slice(1, 4).map(m => m === undefined ? null : Number(m.replace(',', '.')));
+        if (medidas.some(m => m !== null && m <= 0)) falhar('Informe medidas positivas em centímetros.');
+        if (n > 1) falhar('Para vários focos com medidas, descreva cada foco com suas próprias medidas.');
+      }
+      if (!lado && ['ovário', 'ligamento uterossacro'].includes(modelo[2])) falhar('Informe o lado de ' + modelo[1] + '.');
+      const posicaoInicial = !lado;
+      lado ||= 'central';
+      for (let j = 0; j < n; j++) {
+        const item = { categoria: modelo[3], localizacao: modelo[2], lado, modelo: modelo[1],
+          medida_1: medidas[0], medida_2: medidas[1], medida_3: medidas[2], confianca: 100,
+          observacao: posicaoInicial ? 'posição inicial ajustável; localização específica não ditada' : '',
+          foco: n > 1 ? j + 1 : null, deslocamento: n > 1 ? (j - (n - 1) / 2) * 5 : 0 };
+        itensDaBiblioteca.add(item);
+        lesoes.push(item);
+      }
+    }
+    return { confianca: 100, lesoes, duvidas: [], relacoes_anatomicas: [] };
+  }
   // Posições iniciais herdadas de mapa-visual.js, não uma nova calibração clínica.
   const pontos = {
     coronal: {
@@ -56,24 +128,26 @@
       if (!lesao || !Number.isInteger(lesao.confianca) || lesao.confianca < 70 || lesao.confianca > 100) falhar('Uma lesão não foi entendida com confiança suficiente. Confira o comando.');
       if (!['direito', 'esquerdo', 'central'].includes(lesao.lado)) falhar('Informe o lado da lesão. Para lesões bilaterais, descreva cada lado com suas próprias medidas no mesmo ditado.');
       const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3];
-      if (typeof medidas[0] !== 'number' || medidas.some(m => m !== null && (typeof m !== 'number' || !Number.isFinite(m) || m <= 0)) || (medidas[1] === null && medidas[2] !== null)) falhar('Informe medidas positivas, em centímetros, na ordem correta. Nada foi inserido.');
+      const daBiblioteca = itensDaBiblioteca.has(lesao);
+      if ((!daBiblioteca && typeof medidas[0] !== 'number') || medidas.some(m => m !== null && (typeof m !== 'number' || !Number.isFinite(m) || m <= 0)) || (medidas[0] === null && medidas[1] !== null) || (medidas[1] === null && medidas[2] !== null)) falhar('Informe medidas positivas, em centímetros, na ordem correta. Nada foi inserido.');
       // O coronal também valida lateralidade na vista sagital, que não separa os lados visualmente.
       if (!pontos.coronal[lesao.localizacao]?.[lesao.lado]) falhar('A localização e o lado precisam de esclarecimento antes da inserção.');
       // Uma única lesão desta categoria pode usar seu nome explícito no ditado,
       // mesmo quando há lesões de outras categorias no mesmo texto.
       const unicaDaCategoria = sugestao.lesoes.filter(l => l.categoria === lesao.categoria).length === 1;
-      const nomeModelo = modeloPara(lesao, texto, unicaDaCategoria);
+      const nomeModelo = daBiblioteca ? lesao.modelo : modeloPara(lesao, texto, unicaDaCategoria);
       const modelo = biblioteca.find(m => m.nome === nomeModelo);
       if (!modelo) falhar('A imagem ' + nomeModelo + ' não está disponível na biblioteca.');
-      const nome = nomeModelo.replace(/ 1$/, '') + (lesao.lado === 'central' ? '' : ' · ' + lesao.lado);
+      const nome = (daBiblioteca ? nomeModelo.replace(/^Adenomiose 1$/, 'Adenomiose') : nomeModelo.replace(/ 1$/, '')) + (lesao.foco && daBiblioteca ? ' · foco ' + lesao.foco : '') + (lesao.lado === 'central' ? '' : ' · ' + lesao.lado);
       const dadosMedidas = Object.fromEntries(medidas.map((m, i) => ['medida' + (i + 1), m === null ? '' : String(m).replace('.', ',')]));
       return { nome, medidas, observacao: String(lesao.observacao || ''), vistas: vistas.map(vista => {
-        const [x, y, giro = Number(modelo.giroInicial || 0)] = vista === 'coronal' ? pontos.coronal[lesao.localizacao][lesao.lado] : pontos.sagital[lesao.localizacao];
+        let [x, y, giro = Number(modelo.giroInicial || 0)] = vista === 'coronal' ? pontos.coronal[lesao.localizacao][lesao.lado] : pontos.sagital[lesao.localizacao];
+        if (daBiblioteca) x = Math.max(5, Math.min(95, x + lesao.deslocamento));
         return { vista, src: modelo.modelo.split('?')[0], dados: { x, y, giro,
           tamanho: Number(modelo.tamanhoInicial || 65), eixoX: 100, eixoY: 100,
           medidaX: x, medidaY: Math.min(92, y + 9), nomeNoMapa: nome, ...dadosMedidas } };
       }) };
     });
   }
-  window.EndomapaVozRegras = { planejar, conferirTexto };
+  window.EndomapaVozRegras = { planejar, conferirTexto, interpretarBiblioteca };
 })();

@@ -80,6 +80,35 @@
     const dado = (extras = {}) => ({ categoria: 'lesão ovariana', localizacao: 'ovário', lado: 'direito', medida_1: 3.2, medida_2: 2.1, medida_3: null, observacao: 'Endometrioma', confianca: 95, ...extras });
     const sugestao = (itens = [dado()]) => ({ confianca: 95, lesoes: itens, duvidas: [], relacoes_anatomicas: [] });
     const biblioteca = Array.from(d.querySelectorAll('[data-modelo]'), b => ({ ...b.dataset }));
+    const interpretarBiblioteca = w.EndomapaVozRegras.interpretarBiblioteca;
+    const ditadoDaniel = 'ligamento uterosacro esquerdo medindo 1,8 por 0,6 cm três focos de adenomiose DIU de cobre mioma 1 medindo 3,6 por 2,1 por 2,3 cm retrocervical medindo 3,6 por 2,9 cm pólipo medindo 0,8 por 0,6 cm';
+    const interpretado = interpretarBiblioteca(ditadoDaniel);
+    verificar(interpretado?.lesoes.length === 8 && interpretado.duvidas.length === 0, 'O ditado real deve produzir oito itens sem perguntas de categoria');
+    const planoDaniel = w.EndomapaVozRegras.planejar(interpretado, ditadoDaniel, 'ambas', biblioteca);
+    verificar(planoDaniel.filter(l => l.nome.startsWith('Adenomiose')).length === 3, 'Três focos devem produzir três imagens');
+    verificar(new Set(planoDaniel.filter(l => l.nome.startsWith('Adenomiose')).map(l => l.vistas[0].dados.x)).size === 3, 'Os focos devem aparecer separados');
+    for (const l of planoDaniel.filter(l => /Adenomiose|DIU/.test(l.nome))) verificar(l.medidas.every(m => m === null) && l.vistas.every(v => v.dados.medida1 === ''), 'Não inventar medidas para adenomiose ou DIU');
+    for (const [nome, valores, arquivo] of [
+      ['Ligamento uterossacro · esquerdo', [1.8, .6, null], 'endometriose-isolada'],
+      ['Mioma 1', [3.6, 2.1, 2.3], 'mioma-1'],
+      ['Retrocervical', [3.6, 2.9, null], 'retrocervical'],
+      ['Pólipo', [.8, .6, null], 'polipo'],
+      ['DIU de Cobre', [null, null, null], 'diu-cobre'],
+    ]) {
+      const l = planoDaniel.find(item => item.nome === nome);
+      verificar(l && JSON.stringify(l.medidas) === JSON.stringify(valores) && l.vistas.every(v => v.src.includes(arquivo)), 'Modelo ou medidas incorretos para ' + nome);
+    }
+    verificar(interpretarBiblioteca('Mioma dois medindo três vírgula seis por dois vírgula um centímetros. Pólipo medindo zero vírgula oito por zero vírgula seis centímetros.').lesoes[0].modelo === 'Mioma 2', 'Números falados e modelo numerado devem ser reconhecidos');
+    for (const texto of ['não há mioma', 'Mioma 4', 'mioma no reto medindo 2 cm', 'pólipo medindo 0,8 por 0,6 cm e lesão desconhecida', 'mioma 1 medindo -2 cm', 'dois focos de adenomiose um deles posterior']) {
+      verificar(interpretarBiblioteca(texto) === null, 'Trecho desconhecido ou negativo não pode ser ignorado: ' + texto);
+    }
+    for (const texto of ['ligamento uterossacro medindo 1 cm', 'cisto medindo 2 cm', 'três focos de adenomiose medindo 2 cm', 'pólipo medindo 0 cm', '31 focos de adenomiose']) {
+      let recusado = false; try { interpretarBiblioteca(texto); } catch (_) { recusado = true; }
+      verificar(recusado, 'Não aceitar lado ausente, medida inválida ou atribuição ambígua: ' + texto);
+    }
+    // Os cenários antigos abaixo exercitam especificamente respostas/falhas da IA.
+    // O caminho local real é restaurado e testado pela interface ao final.
+    w.EndomapaVozRegras.interpretarBiblioteca = () => null;
     const planejar = (s, texto = 'Endometrioma direito de 3,2 por 2,1 centímetros', vista = 'coronal') => w.EndomapaVozRegras.planejar(s, texto, vista, biblioteca);
     const recusar = (s, texto, trecho) => { try { planejar(s, texto); } catch (e) { verificar(e.message.includes(trecho), 'Recusa inesperada: ' + e.message); return; } throw new Error('Comando inválido foi aceito'); };
     recusar(sugestao([dado({ lado: 'não informado' })]), '', 'Informe um comando');
@@ -213,8 +242,27 @@
     $('#voz-enviar').click(); await esperar(() => t.liberar, 'Pedido lento não começou');
     t.auth('SIGNED_OUT', null); t.liberar(); await pausa();
     verificar(lesoes('coronal').length === 6 && $('#voz-comandos').disabled, 'Resposta depois de sair não pode inserir');
+    w.EndomapaVozRegras.interpretarBiblioteca = interpretarBiblioteca;
+    t.atrasar = false;
+    t.auth('SIGNED_IN', { user: { id: 'medico-sintetico' } });
+    await esperar(() => !$('#voz-iniciar').disabled, 'Acesso não voltou para testar o ditado real');
+    const antesCoronal = lesoes('coronal').length, antesSagital = lesoes('sagital').length, chamadasAntes = t.chamadas.length;
+    escrever(''); $('#voz-iniciar').click();
+    const ditadoReal = t.instancias.at(-1);
+    ditadoReal.resultado(ditadoDaniel, true);
+    verificar(lesoes('coronal').length === antesCoronal, 'Ditado real não pode inserir antes de finalizar');
+    $('#voz-parar').click();
+    await esperar(() => lesoes('coronal').length === antesCoronal + 8 && !$('#voz-iniciar').disabled, 'Ditado real não inseriu seus oito itens: ' + $('#voz-estado').textContent);
+    verificar(lesoes('sagital').length === antesSagital + 8 && t.chamadas.length === chamadasAntes, 'Nomes da biblioteca devem funcionar em ambas sem chamada à IA');
+    verificar($('#voz-estado').textContent.includes('sem medidas ditadas') && $('#voz-estado').textContent.includes('posição inicial ajustável'), 'Defaults precisam ser apresentados como ajustes, não achados ditados');
+    const lote = Array.from(lesoes('coronal')).slice(-8);
+    verificar(lote.filter(l => l.dataset.nomeNoMapa.startsWith('Adenomiose')).length === 3, 'Os três focos devem existir no editor real');
+    verificar(lote.find(l => l.dataset.nomeNoMapa === 'Pólipo').dataset.medida2 === '0,6', 'Medida do pólipo deve chegar ao editor');
+    verificar(lesoes('coronal')[0].dataset.x === '28', 'Ditado real deve preservar ajustes anteriores');
+    $('#voz-enviar').dispatchEvent(new w.MouseEvent('click')); await pausa();
+    verificar(lesoes('coronal').length === antesCoronal + 8, 'Oito itens não podem se duplicar');
     verificar(t.erros.length === 0, t.erros.join('; '));
     $('#imagem-teste').scrollIntoView();
-    saida.textContent = 'PASSOU: ditado contínuo, pausas sem IA, texto preservado entre sessões, uma interpretação ao finalizar, três lesões com medidas independentes, biblioteca existente, prevenção de duplicação, revisão de trechos provisórios, falhas, login e preservação da montagem. Nenhuma chamada real à IA.';
+    saida.textContent = 'PASSOU: ditado real de Daniel com oito itens, três focos separados, DIU e pólipo, medidas independentes, ausência de medidas preservada, nenhuma chamada à IA para nomes da biblioteca; ditado contínuo, falhas, login, prevenção de duplicação e preservação da montagem. Voz e respostas da IA simuladas.';
   } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
 })();

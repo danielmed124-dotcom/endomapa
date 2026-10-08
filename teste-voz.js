@@ -97,6 +97,8 @@
     const { data, error } = await cliente.auth.getSession();
     if (error || !data.session || data.session.user.id !== usuario.id) throw new Error('Sua sessão terminou. Entre novamente e atualize esta página.');
     if (versao !== sequencia || !acessoValido) throw new Error('Comando cancelado.');
+    const sugestaoLocal = window.EndomapaVozRegras.interpretarBiblioteca(texto);
+    if (sugestaoLocal) return { sugestao: sugestaoLocal };
     requisicao = new AbortController();
     const tempo = setTimeout(() => requisicao?.abort(), 35000);
     try {
@@ -136,7 +138,7 @@
       window.endomapaEditorManual.validar(montagem);
       window.endomapaEditorManual.restaurar(montagem);
       ultimoTextoInserido = texto.trim();
-      const resumo = plano.map(l => l.nome + ', ' + l.medidas.filter(m => m !== null).map(m => String(m).replace('.', ',')).join(' × ') + ' cm' + (l.observacao ? ' (' + l.observacao + ')' : '')).join('; ');
+      const resumo = plano.map(l => l.nome + ', ' + (l.medidas.some(m => m !== null) ? l.medidas.filter(m => m !== null).map(m => String(m).replace('.', ',')).join(' × ') + ' cm' : 'sem medidas ditadas') + (l.observacao ? ' (' + l.observacao + ')' : '')).join('; ');
       registrar(texto, resumo + ' · ' + destino, true);
       informar('Inserido no mapa: ' + resumo + '. Confira a posição e as medidas.', 'sucesso');
       return true;
