@@ -18,6 +18,14 @@
   let verificarDepois = false;
   let versaoAcesso = 0;
   const reverAcesso = $('#voz-rever-acesso');
+  function mostrarPainel(modo, focar = false) {
+    const lateral = $('#voz-lateral');
+    if (!lateral) return;
+    lateral.dataset.modo = modo;
+    $('#voz-painel').hidden = modo !== 'ditado';
+    $('#voz-ajustes').hidden = modo !== 'ajustes';
+    if (focar) (modo === 'ditado' ? iniciar : $('#voz-retomar')).focus({ preventScroll: true });
+  }
   function informar(texto, tipo = 'neutro') {
     if (texto) estado.textContent = texto;
     estado.dataset.tipo = tipo;
@@ -31,6 +39,7 @@
     $('#voz-barra').hidden = !ouvindo && !ocupado;
     $('#voz-barra-estado').textContent = ocupado ? 'Interpretando…' : 'Microfone ativo';
     $('#voz-barra-parar').disabled = !ouvindo;
+    if ($('#voz-retomar')) $('#voz-retomar').disabled = !acessoValido || ocupado || ouvindo;
     document.querySelectorAll('input[name="vistas-editor"]').forEach(c => { c.disabled = ocupado || ouvindo; });
   }
   function registrar(texto, mensagem, sucesso) {
@@ -78,17 +87,37 @@
     const limpar = acoes.querySelector('[data-limpar-mapa]');
     limpar.textContent = 'Limpar a vista de teste';
     acoes.replaceChildren(limpar);
-    const biblioteca = editor.querySelector('.biblioteca-lesoes');
-    const detalhes = document.createElement('details');
-    detalhes.className = 'biblioteca-voz';
-    const resumo = document.createElement('summary');
-    resumo.textContent = 'Biblioteca para ajustes manuais';
-    biblioteca.replaceWith(detalhes);
-    detalhes.append(resumo, biblioteca);
     editor.querySelector('.editor-manual__area').id = 'imagem-teste';
     editor.querySelector('#ajuda-escala-cinza').textContent = 'Aplica-se às vistas deste teste. As lesões permanecem coloridas.';
     editor.querySelectorAll('[data-mapa-base]').forEach(img => { img.loading = 'eager'; });
     $('#mapa-teste').replaceChildren(document.importNode(editor, true));
+    const ajustes = $('[data-controles-lesao]');
+    const lateral = document.createElement('aside');
+    lateral.id = 'voz-lateral';
+    lateral.setAttribute('aria-label', 'Ditado e ajustes das lesões');
+    ajustes.replaceWith(lateral);
+    const grupo = document.createElement('div');
+    grupo.id = 'voz-ajustes';
+    const retomar = document.createElement('button');
+    retomar.id = 'voz-retomar'; retomar.type = 'button'; retomar.className = 'botao botao--secundario';
+    retomar.textContent = 'Retomar ditado';
+    const resultado = document.createElement('p');
+    resultado.id = 'voz-resultado'; resultado.setAttribute('role', 'status');
+    const ajuda = document.createElement('p');
+    ajuda.className = 'texto-apoio voz-sem-selecao';
+    ajuda.textContent = 'Selecione uma lesão no mapa ou insira uma imagem pela biblioteca para ajustar.';
+    grupo.append(retomar, resultado, ajustes, ajuda);
+    lateral.append($('#voz-painel'), grupo);
+    mostrarPainel('ditado');
+    retomar.addEventListener('click', () => {
+      mostrarPainel('ditado', true);
+      if (!iniciar.disabled) iniciar.click();
+      else campo.focus();
+    });
+    // A seleção manual abre seus ajustes, preservando qualquer texto pendente.
+    $('#mapa-teste').addEventListener('click', evento => {
+      if (!ocupado && !ouvindo && evento.target.closest('[data-modelo], .lesao-editavel')) mostrarPainel('ajustes');
+    });
     await carregarScript('prototipo.js?v=hidrosalpinge-1');
     await carregarScript('editor-manual.js?v=rotulos-exportacao-1');
     if (!window.endomapaEditorManual) throw new Error('Não foi possível iniciar os controles do mapa.');
@@ -142,11 +171,14 @@
       const resumo = plano.map(l => l.nome + ', ' + (l.medidas.some(m => m !== null) ? l.medidas.filter(m => m !== null).map(m => String(m).replace('.', ',')).join(' × ') + ' cm' : 'sem medidas ditadas') + (l.observacao ? ' (' + l.observacao + ')' : '')).join('; ');
       registrar(texto, resumo + ' · ' + destino, true);
       informar('Inserido no mapa: ' + resumo + '. Confira a posição e as medidas.', 'sucesso');
+      $('#voz-resultado').textContent = (plano.length === 1 ? '1 item inserido.' : plano.length + ' itens inseridos.') + ' Selecione uma lesão para ajustar.';
+      mostrarPainel('ajustes', true);
       return true;
     } catch (erro) {
       if (versao !== sequencia) return false;
       const mensagem = erro.name === 'AbortError' ? 'A interpretação demorou demais. Seu mapa foi preservado; tente novamente.' : erro.message || 'Falha de conexão. Seu mapa foi preservado.';
       informar(mensagem, 'erro');
+      mostrarPainel('ditado');
       registrar(texto, mensagem, false);
       return false;
     } finally { ocupado = false; controles(); }
@@ -191,6 +223,7 @@
     } catch (erro) {
       if (tentativa !== versaoAcesso) return;
       acessoValido = false;
+      mostrarPainel('ditado');
       $('#voz-comandos').disabled = true;
       $('#voz-login').hidden = false;
       reverAcesso.hidden = false;
@@ -221,6 +254,7 @@
       aoEstado: situacao => { ouvindo = situacao.ativo; informar(situacao.texto, situacao.tipo); controles(); },
     });
     iniciar.addEventListener('click', () => {
+      mostrarPainel('ditado');
       if (campo.value.trim() === ultimoTextoInserido) { campo.value = ''; ultimoTextoInserido = ''; }
       microfone.iniciar(campo.value);
     });
@@ -232,6 +266,7 @@
       if (evento === 'SIGNED_OUT' || (usuario && sessao && sessao.user.id !== usuario.id)) {
         ++versaoAcesso;
         acessoValido = false;
+        mostrarPainel('ditado');
         interromper();
         $('#voz-comandos').disabled = true;
         $('#voz-login').hidden = false;

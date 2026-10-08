@@ -73,6 +73,8 @@
     t.auth('SIGNED_IN', { user: { id: 'medico-sintetico' } });
     await esperar(() => d.body.dataset.vozPronta === 'true' && !$('#voz-iniciar').matches(':disabled'), 'O botão não reativou após login em outra aba');
     verificar($('#voz-login').hidden && $('#voz-rever-acesso').hidden, 'Avisos de acesso devem desaparecer após login');
+    verificar($('#voz-lateral').contains($('#voz-painel')) && !$('#voz-painel').hidden && $('#voz-ajustes').hidden, 'Ditado deve iniciar no painel lateral');
+    verificar(!$('.biblioteca-lesoes').closest('details'), 'Biblioteca manual deve permanecer aberta');
     t.auth('SIGNED_OUT', null);
     t.perfilFalha = true;
     $('#voz-rever-acesso').click();
@@ -138,6 +140,10 @@
       quadro.style.width = largura + 'px';
       await pausa();
       verificar(d.documentElement.scrollWidth <= w.innerWidth, 'Página ultrapassa a tela de ' + largura + ' pixels');
+      if (largura === 1440) {
+        const bibliotecaBox = $('.biblioteca-lesoes').getBoundingClientRect(), mapaBox = $('#imagem-teste').getBoundingClientRect(), painelBox = $('#voz-lateral').getBoundingClientRect();
+        verificar(bibliotecaBox.right <= mapaBox.left && mapaBox.right <= painelBox.left, 'Computador deve mostrar biblioteca à esquerda, mapa central e ditado à direita');
+      }
     }
     // Estados e preservação do texto sem chamar o interpretador.
     const simuladas = [], estados = [];
@@ -177,6 +183,7 @@
     const escrever = texto => { $('#voz-texto').value = texto; $('#voz-texto').dispatchEvent(new w.Event('input', { bubbles: true })); };
     // Uma lesão colocada manualmente antes do ditado deve permanecer intacta.
     $('[data-modelo][data-nome="Mioma 1"]').click();
+    verificar($('#voz-painel').hidden && !$('#voz-ajustes').hidden && !$('[data-controles-lesao]').hidden, 'Inserção manual deve abrir ajustes');
     lesoes('coronal')[0].dataset.x = '24';
     lesoes('coronal')[0].dataset.medida1 = '7,5';
     const texto1 = 'Endometrioma no ovário direito, três vírgula dois por dois vírgula um centímetros.';
@@ -203,6 +210,7 @@
     verificar($('#voz-texto').value === [texto1, texto2, texto3].join(' '), 'Retomada não pode perder frases anteriores');
     $('#voz-parar').click(); $('#voz-parar').dispatchEvent(new w.MouseEvent('click'));
     await esperar(() => lesoes('coronal').length === 4 && !$('#voz-iniciar').disabled, 'Ditado completo não inseriu as três lesões ao finalizar');
+    verificar($('#voz-painel').hidden && !$('#voz-ajustes').hidden && !$('#voz-retomar').hidden, 'Após ditado deve mostrar ajustes e Retomar ditado');
     verificar(t.chamadas.length === 1 && t.chamadas[0].texto === [texto1, texto2, texto3].join(' '), 'Deve enviar exatamente uma interpretação do texto inteiro');
     verificar(t.instancias.length === 2, 'O microfone deve permanecer parado após inserir');
     const endometrioma = Array.from(lesoes('coronal')).find(l => l.dataset.nomeNoMapa.startsWith('Endometrioma'));
@@ -224,6 +232,7 @@
     await esperar(() => !$('#voz-enviar').disabled, 'Dúvida não liberou a revisão');
     verificar(lesoes('coronal').length === 4 && t.instancias.length === 3, 'Dúvida não pode inserir nem retomar o microfone');
     verificar($('#voz-estado').textContent.includes('Qual o lado'), 'Pergunta deve ficar visível');
+    verificar(!$('#voz-painel').hidden && $('#voz-ajustes').hidden, 'Dúvida deve manter ditado visível para revisão');
     // Continua possível corrigir o texto e acrescentar em Ambas.
     t.resposta = sugestao([dado({ lado: 'esquerdo' })]);
     const ambas = $('input[name="vistas-editor"][value="ambas"]'); ambas.checked = true; ambas.dispatchEvent(new w.Event('change', { bubbles: true }));
@@ -286,8 +295,25 @@
       let recusado = false; try { w.EndomapaVozRegras.prepararSugestaoIA({ confianca: 95, duvidas: [], itens: [item] }); } catch (_) { recusado = true; }
       verificar(recusado, 'Resposta da nova IA inválida não pode entrar no mapa');
     }
+    const totalAntesRetomar = lesoes('coronal').length, antesRetomar = t.chamadas.length;
+    $('#voz-retomar').click();
+    verificar(!$('#voz-painel').hidden && $('#voz-ajustes').hidden && $('#voz-texto').value === '', 'Retomar deve reabrir ditado limpo e ocultar ajustes');
+    const vozRetomada = t.instancias.at(-1);
+    vozRetomada.resultado('Mioma 2 medindo 1,2 por 0,8 cm', true);
+    verificar(lesoes('coronal').length === totalAntesRetomar && t.chamadas.length === antesRetomar, 'Retomar não pode repetir o lote anterior nem interpretar antes de finalizar');
+    $('#voz-parar').click();
+    await esperar(() => lesoes('coronal').length === totalAntesRetomar + 1 && !$('#voz-iniciar').disabled, 'Ditado retomado não acrescentou item');
+    verificar($('#voz-painel').hidden && !$('#voz-ajustes').hidden, 'Novo sucesso deve voltar aos ajustes');
+    const nomeSelecionado = $('[data-controle-nome-lesao]');
+    nomeSelecionado.value = 'Lesão ajustada'; nomeSelecionado.dispatchEvent(new w.Event('input', { bubbles: true }));
+    verificar(Array.from(lesoes('coronal')).some(l => l.dataset.nomeNoMapa === 'Lesão ajustada'), 'Ajuste deve funcionar depois da troca de painéis');
+    $('[data-modelo][data-nome="Pólipo"]').click();
+    verificar(lesoes('coronal').length === totalAntesRetomar + 2 && !$('#voz-ajustes').hidden, 'Biblioteca deve continuar inserindo manualmente após ditado');
     verificar(t.erros.length === 0, t.erros.join('; '));
-    $('#imagem-teste').scrollIntoView();
-    saida.textContent = 'PASSOU: ditado direto com oito itens e linguagem livre pela função nova com seis itens, pólipo e modelos numerados, focos sem medidas, nenhum retorno ao interpretador antigo, ditado contínuo, falhas, login e montagem preservada. Voz e respostas da IA simuladas.';
+    // Deixa a captura final mostrando os três painéis no computador.
+    quadro.style.width = '1360px';
+    await pausa();
+    $('#voz-lateral').scrollIntoView();
+    saida.textContent = 'PASSOU: painel direito alterna ditado e ajustes, Retomar ditado não duplica lote, biblioteca aberta à esquerda no computador, inserção e ajuste manual preservados, celular sem transbordamento; ditado contínuo, interpretação, falhas e login. Voz e IA simuladas.';
   } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
 })();
