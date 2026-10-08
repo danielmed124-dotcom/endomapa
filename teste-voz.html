@@ -6,50 +6,50 @@
   <meta name="robots" content="noindex, nofollow">
   <title>Teste de comandos de voz | Endomapa</title>
   <link rel="stylesheet" href="styles.css?v=escala-cinza-1">
-  <link rel="stylesheet" href="teste-voz.css?v=1">
+  <link rel="stylesheet" href="teste-voz.css?v=ditado-completo-3">
 </head>
 <body class="teste-voz">
   <header class="topo"><div class="topo__conteudo"><a class="logo" href="app">Endo<span>mapa</span></a><span class="area-atual">Página de teste · voz</span></div></header>
   <main>
     <section class="voz-painel" aria-labelledby="titulo-voz">
       <span class="selo">Experimento separado</span>
-      <h1 id="titulo-voz">Dite uma lesão. Veja no mapa.</h1>
-      <p>Dite local, lado e medidas em centímetros. A lesão entra automaticamente ao fim da frase. Aguarde “Ouvindo” antes do próximo comando.</p>
+      <h1 id="titulo-voz">Dite todos os achados.</h1>
+      <p>Fale todas as lesões, indicando o local, o lado e as medidas de cada uma em centímetros. Quando terminar, toque em <strong>Finalizar ditado e inserir lesões</strong>. As pausas não iniciam a interpretação.</p>
       <p id="voz-acesso" role="status">Conferindo acesso…</p>
       <a id="voz-login" href="login.html" target="_blank" rel="noopener" hidden>Entrar no Endomapa em outra aba e depois voltar a este teste</a>
       <button class="botao botao--secundario" id="voz-rever-acesso" type="button" hidden>Tentar novamente</button>
       <fieldset id="voz-comandos" disabled>
-        <legend>Comandos de voz</legend>
+        <legend>Ditado completo</legend>
         <div class="voz-acoes">
-          <button class="botao" id="voz-iniciar" type="button">Ativar comandos de voz</button>
-          <button class="botao botao--secundario" id="voz-parar" type="button" disabled>Parar microfone</button>
+          <button class="botao" id="voz-iniciar" type="button">Iniciar ditado</button>
+          <button class="botao botao--secundario" id="voz-parar" type="button" disabled>Finalizar ditado e inserir lesões</button>
         </div>
         <p id="voz-estado" role="status" aria-live="polite">Preparando o mapa de teste…</p>
-        <label for="voz-texto">Comando atual</label>
-        <textarea id="voz-texto" rows="3" maxlength="4000" placeholder="Você também pode digitar um comando para testar a interpretação."></textarea>
+        <label for="voz-texto">Texto completo do ditado</label>
+        <textarea id="voz-texto" rows="5" maxlength="4000" placeholder="O texto vai se acumulando aqui. Você também pode digitar os achados. Limite de 4.000 caracteres por interpretação."></textarea>
         <div class="voz-acoes">
-          <button class="botao botao--secundario" id="voz-enviar" type="button">Testar este texto</button>
+          <button class="botao botao--secundario" id="voz-enviar" type="button">Inserir lesões do texto</button>
           <a href="#imagem-teste">Ver mapa de teste</a>
         </div>
-        <p class="texto-apoio">Se houver dúvida, o comando ficará pendente: corrija o texto e toque em “Testar este texto”. Comandos para apagar ou corrigir lesões já inseridas ainda não são interpretados; use os ajustes do mapa.</p>
+        <p class="texto-apoio">Se houver dúvida, o ditado ficará pendente: confira o texto e toque em “Inserir lesões do texto”. As lesões já presentes no mapa são preservadas. Para ajustar uma delas, use os controles do mapa.</p>
       </fieldset>
       <details><summary>Exemplo e informações do teste</summary>
-        <p>“Inserir endometrioma no ovário direito, medindo três vírgula dois por dois vírgula um centímetros.”</p>
+        <p>“Endometrioma no ovário direito, medindo três vírgula dois por dois vírgula um centímetros. Endometriose no ligamento uterossacro esquerdo, medindo um vírgula nove por zero vírgula dois centímetros.”</p>
         <p class="texto-apoio">Este teste fica somente nesta aba. Não salva em Meus mapas nem altera suas montagens. Use achados fictícios, sem identificação de pacientes. O reconhecimento de fala é feito pelo serviço do navegador; o texto confirmado vai ao interpretador de IA já existente e consome sua cota de interpretações.</p>
         <p class="texto-apoio">Inserção automática disponível para lesões ovarianas identificadas, miomas, adenomiose e endometriose nos ligamentos uterossacros ou na região retrocervical. Outras localizações, aderências ou ambiguidades ficam pendentes.</p>
       </details>
-      <details id="voz-registro"><summary>Comandos deste teste <span id="voz-contagem">(0)</span></summary><ol id="voz-historico"></ol></details>
+      <details id="voz-registro"><summary>Ditados deste teste <span id="voz-contagem">(0)</span></summary><ol id="voz-historico"></ol></details>
     </section>
     <div id="mapa-teste"><p class="voz-painel">Carregando o editor…</p></div>
   </main>
   <aside id="voz-barra" hidden aria-label="Estado do microfone">
     <a href="#titulo-voz" id="voz-barra-estado">Microfone ativo</a>
-    <button class="botao botao--secundario" id="voz-barra-parar" type="button">Parar microfone</button>
+    <button class="botao botao--secundario" id="voz-barra-parar" type="button">Finalizar ditado e inserir lesões</button>
   </aside>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0" integrity="sha384-fPWur1rx/DE6YtXP/x0MD6dd90RgnVsz5yX/DIg7CcVAnTBZsENWuIcpvVTM39ti" crossorigin="anonymous"></script>
   <script src="supabase-config.js"></script>
-  <script src="teste-voz-regras.js?v=1"></script>
-  <script src="teste-voz-microfone.js?v=inicio-2"></script>
-  <script src="teste-voz.js?v=acesso-2"></script>
+  <script src="teste-voz-regras.js?v=ditado-completo-3"></script>
+  <script src="teste-voz-microfone.js?v=ditado-completo-3"></script>
+  <script src="teste-voz.js?v=ditado-completo-3"></script>
 </body>
 </html>

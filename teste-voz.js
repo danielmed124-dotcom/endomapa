@@ -12,6 +12,7 @@
   let sequencia = 0;
   let requisicao = null;
   let total = 0;
+  let ultimoTextoInserido = '';
   let acessoValido = false;
   let verificandoAcesso = false;
   let verificarDepois = false;
@@ -23,8 +24,9 @@
   }
   function controles() {
     iniciar.disabled = !acessoValido || !microfone?.disponivel || ocupado || ouvindo;
-    parar.disabled = !ouvindo && !ocupado;
-    enviar.disabled = !acessoValido || ocupado || ouvindo;
+    parar.disabled = !ouvindo || ocupado;
+    enviar.disabled = !acessoValido || ocupado || ouvindo || !campo.value.trim() || campo.value.trim() === ultimoTextoInserido;
+    iniciar.textContent = campo.value.trim() && campo.value.trim() !== ultimoTextoInserido ? 'Continuar ditado' : 'Iniciar ditado';
     campo.readOnly = ocupado || ouvindo;
     $('#voz-barra').hidden = !ouvindo && !ocupado;
     $('#voz-barra-estado').textContent = ocupado ? 'Interpretando…' : 'Microfone ativo';
@@ -69,7 +71,7 @@
     const cabecalho = editor.querySelector('.editor-manual__cabecalho');
     const explicacoes = cabecalho.querySelectorAll('p.texto-apoio');
     explicacoes[0].textContent = 'Confira local, lado e medidas. As posições são iniciais: arraste as lesões e os rótulos para ajustar.';
-    explicacoes[1].textContent = 'O próximo comando entra na vista selecionada. Em Ambas, entra nas duas vistas. O tamanho da figura é ilustrativo; as medidas ficam no rótulo.';
+    explicacoes[1].textContent = 'As lesões do ditado entram na vista selecionada. Em Ambas, entram nas duas vistas. O tamanho da figura é ilustrativo; as medidas ficam no rótulo.';
     editor.querySelector('input[name="vistas-editor"][value="ambas"]').checked = false;
     editor.querySelector('input[name="vistas-editor"][value="coronal"]').checked = true;
     const acoes = editor.querySelector('.editor-manual__acoes');
@@ -111,11 +113,12 @@
   }
   async function processar(texto) {
     if (ocupado || !acessoValido) return false;
+    if (texto.trim() === ultimoTextoInserido) { informar('Este ditado já foi inserido. Inicie outro ditado para acrescentar novas lesões.'); return false; }
     ocupado = true;
     const versao = ++sequencia;
     const destino = $('input[name="vistas-editor"]:checked').value;
     controles();
-    informar('Interpretando o comando. Aguarde antes de falar novamente…', 'processando');
+    informar('Interpretando o ditado completo e preparando todas as lesões…', 'processando');
     try {
       window.EndomapaVozRegras.conferirTexto(texto);
       const retorno = await interpretar(texto, versao);
@@ -132,6 +135,7 @@
       montagem.ativa = destino === 'sagital' ? 'sagital' : 'coronal';
       window.endomapaEditorManual.validar(montagem);
       window.endomapaEditorManual.restaurar(montagem);
+      ultimoTextoInserido = texto.trim();
       const resumo = plano.map(l => l.nome + ', ' + l.medidas.filter(m => m !== null).map(m => String(m).replace('.', ',')).join(' × ') + ' cm' + (l.observacao ? ' (' + l.observacao + ')' : '')).join('; ');
       registrar(texto, resumo + ' · ' + destino, true);
       informar('Inserido no mapa: ' + resumo + '. Confira a posição e as medidas.', 'sucesso');
@@ -179,7 +183,7 @@
       $('#voz-login').hidden = true;
       reverAcesso.hidden = true;
       $('#voz-acesso').textContent = 'Acesso confirmado: ' + perfil.titulo + ' ' + perfil.nome + '.';
-      informar(microfone.disponivel ? 'Pronto. Ative o microfone e diga um comando completo.' : 'Este navegador não oferece reconhecimento de voz. Você pode testar digitando o comando.', microfone.disponivel ? 'neutro' : 'erro');
+      informar(microfone.disponivel ? 'Pronto. Inicie o ditado e fale todas as lesões. Finalize somente quando terminar.' : 'Este navegador não oferece reconhecimento de voz. Você pode testar digitando o ditado.', microfone.disponivel ? 'neutro' : 'erro');
       document.body.dataset.vozPronta = 'true';
     } catch (erro) {
       if (tentativa !== versaoAcesso) return;
@@ -213,7 +217,11 @@
       aoComando: processar,
       aoEstado: situacao => { ouvindo = situacao.ativo; informar(situacao.texto, situacao.tipo); controles(); },
     });
-    iniciar.addEventListener('click', () => microfone.iniciar());
+    iniciar.addEventListener('click', () => {
+      if (campo.value.trim() === ultimoTextoInserido) { campo.value = ''; ultimoTextoInserido = ''; }
+      microfone.iniciar(campo.value);
+    });
+    campo.addEventListener('input', controles);
     parar.addEventListener('click', () => microfone.parar());
     $('#voz-barra-parar').addEventListener('click', () => microfone.parar());
     enviar.addEventListener('click', () => processar(campo.value.trim()));
@@ -235,7 +243,7 @@
     document.addEventListener('visibilitychange', () => { if (document.hidden) interromper(); });
     window.addEventListener('pagehide', interromper);
     window.addEventListener('beforeunload', evento => {
-      if (ocupado || document.querySelector('.lesao-editavel')) { evento.preventDefault(); evento.returnValue = ''; }
+      if (ocupado || campo.value.trim() || document.querySelector('.lesao-editavel')) { evento.preventDefault(); evento.returnValue = ''; }
     });
     await conferirAcesso();
   } catch (erro) {

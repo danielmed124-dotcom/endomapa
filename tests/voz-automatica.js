@@ -52,6 +52,7 @@
         stop() { setTimeout(() => this.onend?.(), 0); }
         abort() { this.abortou = true; this.onend?.(); }
         resultado(texto, final) { const r = [{ transcript: texto }]; r.isFinal = final; this.onresult?.({ resultIndex: 0, results: [r] }); }
+        resultados(trechos) { this.onresult?.({ resultIndex: 0, results: trechos.map(([texto, final]) => { const r = [{ transcript: texto }]; r.isFinal = final; return r; }) }); }
         terminar(texto) { this.resultado(texto, true); this.resultado(texto, true); this.onend?.(); this.onend?.(); }
       };
     `;
@@ -105,81 +106,115 @@
       await pausa();
       verificar(d.documentElement.scrollWidth <= w.innerWidth, 'Página ultrapassa a tela de ' + largura + ' pixels');
     }
-    // Estado do microfone também é testado isoladamente, sem o interpretador.
+    // Estados e preservação do texto sem chamar o interpretador.
     const simuladas = [], estados = [];
-    let liberarVoz;
+    let textoMostrado = '', liberarVoz;
     let atrasarVoz = false;
-    const mic = w.criarMicrofoneDeTeste({ aoTexto() {}, aoEstado: e => estados.push(e), aoComando: async texto => {
+    const mic = w.criarMicrofoneDeTeste({ aoTexto: texto => { textoMostrado = texto; }, aoEstado: e => estados.push(e), aoComando: async texto => {
       simuladas.push(texto); if (atrasarVoz) await new Promise(r => { liberarVoz = r; }); return true;
     } });
     mic.iniciar();
     let instancia = t.instancias.at(-1);
-    instancia.resultado('Somente provisório', false); instancia.onend(); await pausa();
-    verificar(simuladas.length === 0, 'Interim sem final não pode ser enviado');
+    instancia.resultado('Somente provisório', false); mic.parar(); await pausa();
+    verificar(simuladas.length === 0 && textoMostrado === 'Somente provisório', 'Trecho provisório deve ser preservado para revisão, sem interpretar');
+    verificar(estados.at(-1).texto.includes('não confirmou'), 'Trecho não confirmado precisa ser explicado');
     mic.iniciar(); instancia = t.instancias.at(-1);
     instancia.onerror({ error: 'not-allowed' }); instancia.onend(); await pausa();
     verificar(estados.at(-1).texto.includes('Autorize'), 'Erro de permissão deve permanecer visível');
     mic.iniciar(); instancia = t.instancias.at(-1);
-    mic.cancelar(); instancia.terminar('Comando após cancelamento'); await pausa();
-    verificar(simuladas.length === 0, 'Cancelar deve descartar resultados tardios');
-    mic.iniciar(); instancia = t.instancias.at(-1);
-    instancia.resultado('Frase ao parar', true); mic.parar(); await pausa();
-    verificar(simuladas.length === 1 && estados.at(-1).texto.includes('parado'), 'Parar deve concluir uma frase final sem reativar');
+    instancia.resultado('Frase preservada', true); mic.cancelar(); instancia.terminar('Resposta após cancelamento'); await pausa();
+    verificar(simuladas.length === 0 && textoMostrado === 'Frase preservada', 'Cancelar deve preservar texto e ignorar resultados tardios');
+    mic.iniciar(textoMostrado); instancia = t.instancias.at(-1);
+    instancia.resultado('Segunda frase', true); mic.parar();
+    instancia.resultados([['Segunda frase', true], ['Últimas medidas', true]]);
+    await pausa();
+    verificar(simuladas.length === 1 && simuladas[0] === 'Frase preservada Segunda frase Últimas medidas', 'Finalizar deve aguardar e incluir as últimas palavras');
     atrasarVoz = true;
-    mic.iniciar(); instancia = t.instancias.at(-1); instancia.terminar('Frase lenta');
+    mic.iniciar(); instancia = t.instancias.at(-1); instancia.resultado('Frase lenta', true); mic.parar();
     await esperar(() => liberarVoz, 'A interpretação simulada não aguardou');
     const antesDeParar = t.instancias.length;
     mic.parar(); liberarVoz(); await pausa();
-    verificar(t.instancias.length === antesDeParar && simuladas.length === 2, 'Parar durante interpretação não pode reativar microfone');
+    verificar(t.instancias.length === antesDeParar && simuladas.length === 2, 'Finalizar duas vezes não pode duplicar nem reativar o microfone');
     const Tipo = w.SpeechRecognition, TipoWebkit = w.webkitSpeechRecognition;
     w.SpeechRecognition = undefined; w.webkitSpeechRecognition = undefined;
     const semVoz = w.criarMicrofoneDeTeste({ aoEstado() {}, aoTexto() {}, aoComando() {} });
     verificar(!semVoz.disponivel, 'Navegador sem voz deve ser detectado'); semVoz.iniciar();
     w.SpeechRecognition = Tipo; w.webkitSpeechRecognition = TipoWebkit;
     t.instancias.length = 0;
-    t.resposta = sugestao();
+    const escrever = texto => { $('#voz-texto').value = texto; $('#voz-texto').dispatchEvent(new w.Event('input', { bubbles: true })); };
+    // Uma lesão colocada manualmente antes do ditado deve permanecer intacta.
+    $('[data-modelo][data-nome="Mioma 1"]').click();
+    lesoes('coronal')[0].dataset.x = '24';
+    lesoes('coronal')[0].dataset.medida1 = '7,5';
+    const texto1 = 'Endometrioma no ovário direito, três vírgula dois por dois vírgula um centímetros.';
+    const texto2 = 'Cisto no ovário esquerdo de dois vírgula quatro por um vírgula oito por um vírgula três centímetros.';
+    const texto3 = 'Endometriose no ligamento uterossacro esquerdo de um vírgula nove por zero vírgula dois centímetros.';
+    const ligamento = dado({ categoria: 'endometriose', localizacao: 'ligamento uterossacro', lado: 'esquerdo', medida_1: 1.9, medida_2: 0.2, observacao: null });
+    t.resposta = sugestao([dado(), dado({ lado: 'esquerdo', medida_1: 2.4, medida_2: 1.8, medida_3: 1.3, observacao: 'Cisto' }), ligamento]);
     $('#voz-iniciar').click(); $('#voz-iniciar').click();
     await esperar(() => t.instancias.length === 1, 'Microfone não iniciou');
     const primeiro = t.instancias[0];
     verificar(primeiro.phrases.length === 0 && primeiro.iniciou, 'Voz padrão não deve usar o vocabulário que o Chrome recusa');
-    verificar(primeiro.lang === 'pt-BR' && primeiro.continuous === false, 'Microfone deve ouvir um comando pt-BR por vez');
+    verificar(primeiro.lang === 'pt-BR' && primeiro.continuous === true, 'Microfone deve captar o ditado contínuo pt-BR');
     primeiro.resultado('Endometrioma provisório', false);
-    await pausa(); verificar(t.chamadas.length === 0 && lesoes('coronal').length === 0, 'Texto provisório não pode virar lesão');
-    primeiro.terminar('Endometrioma no ovário direito, três vírgula dois por dois vírgula um centímetros');
-    await esperar(() => lesoes('coronal').length === 1 && t.instancias.length === 2, 'Comando final não inseriu automaticamente e retomou o microfone');
-    verificar(t.chamadas.length === 1, 'Eventos finais repetidos devem gerar uma única interpretação');
-    const inserida = lesoes('coronal')[0];
-    verificar(inserida.dataset.medida1 === '3,2' && inserida.dataset.medida2 === '2,1' && inserida.dataset.medida3 === '', 'Medidas ditadas não chegaram ao mapa');
-    verificar(inserida.dataset.x === '32' && inserida.dataset.y === '50', 'Posição deve seguir o mapeamento existente');
+    await pausa(); verificar(t.chamadas.length === 0 && lesoes('coronal').length === 1, 'Fala não pode alterar o mapa antes de finalizar');
+    primeiro.resultados([[texto1, true], [texto2, true]]);
+    primeiro.resultados([[texto1, true], [texto2, true]]);
+    await pausa();
+    verificar(t.chamadas.length === 0 && $('#voz-texto').value === texto1 + ' ' + texto2, 'Frases finais devem se acumular sem interpretar ou duplicar');
+    primeiro.onend(); primeiro.onend();
+    await esperar(() => t.instancias.length === 2, 'Fim de sessão do navegador deve retomar somente a escuta');
+    verificar(t.chamadas.length === 0 && lesoes('coronal').length === 1, 'Pausa natural não pode enviar o texto à IA');
+    const segundo = t.instancias[1];
+    segundo.resultado(texto3, true);
+    verificar($('#voz-texto').value === [texto1, texto2, texto3].join(' '), 'Retomada não pode perder frases anteriores');
+    $('#voz-parar').click(); $('#voz-parar').dispatchEvent(new w.MouseEvent('click'));
+    await esperar(() => lesoes('coronal').length === 4 && !$('#voz-iniciar').disabled, 'Ditado completo não inseriu as três lesões ao finalizar');
+    verificar(t.chamadas.length === 1 && t.chamadas[0].texto === [texto1, texto2, texto3].join(' '), 'Deve enviar exatamente uma interpretação do texto inteiro');
+    verificar(t.instancias.length === 2, 'O microfone deve permanecer parado após inserir');
+    const endometrioma = Array.from(lesoes('coronal')).find(l => l.dataset.nomeNoMapa.startsWith('Endometrioma'));
+    const cisto = Array.from(lesoes('coronal')).find(l => l.dataset.nomeNoMapa.startsWith('Cisto'));
+    const uterossacro = Array.from(lesoes('coronal')).find(l => l.dataset.nomeNoMapa.startsWith('Ligamento'));
+    verificar(endometrioma.dataset.medida1 === '3,2' && endometrioma.dataset.medida2 === '2,1' && endometrioma.dataset.medida3 === '', 'Medidas do endometrioma devem permanecer associadas a ele');
+    verificar(cisto.dataset.medida1 === '2,4' && cisto.dataset.medida2 === '1,8' && cisto.dataset.medida3 === '1,3' && cisto.querySelector('img').src.includes('/cisto-referencia.png'), 'Cisto deve usar sua imagem e suas três medidas');
+    verificar(uterossacro.dataset.medida1 === '1,9' && uterossacro.dataset.medida2 === '0,2', 'Ligamento deve receber somente suas medidas');
+    verificar(lesoes('coronal')[0].dataset.x === '24' && lesoes('coronal')[0].dataset.medida1 === '7,5', 'Lesão manual existente deve ser preservada');
     verificar(lesoes('sagital').length === 0, 'Coronal não pode inserir na sagital');
     primeiro.terminar('Resposta atrasada'); await pausa(); verificar(t.chamadas.length === 1, 'Resultado antigo não pode duplicar lesões');
+    $('#voz-enviar').dispatchEvent(new w.MouseEvent('click')); await pausa();
+    verificar(t.chamadas.length === 1, 'Reenviar ditado já inserido não pode duplicar o lote');
+    // Novo ditado começa vazio e só processa ao finalizar.
+    $('#voz-iniciar').click(); verificar($('#voz-texto').value === '', 'Novo ditado não deve reaproveitar texto já inserido');
+    const terceiro = t.instancias.at(-1);
     t.resposta = { ...sugestao(), duvidas: [{ pergunta: 'Qual o lado?' }] };
-    t.instancias[1].terminar('Endometrioma sem lado');
-    await esperar(() => !$('#voz-enviar').disabled, 'Dúvida não parou a escuta');
-    verificar(lesoes('coronal').length === 1 && t.instancias.length === 2, 'Dúvida não pode inserir nem continuar consumindo chamadas');
+    terceiro.resultado('Endometrioma sem lado', true); $('#voz-parar').click();
+    await esperar(() => !$('#voz-enviar').disabled, 'Dúvida não liberou a revisão');
+    verificar(lesoes('coronal').length === 4 && t.instancias.length === 3, 'Dúvida não pode inserir nem retomar o microfone');
     verificar($('#voz-estado').textContent.includes('Qual o lado'), 'Pergunta deve ficar visível');
+    // Continua possível corrigir o texto e acrescentar em Ambas.
     t.resposta = sugestao([dado({ lado: 'esquerdo' })]);
     const ambas = $('input[name="vistas-editor"][value="ambas"]'); ambas.checked = true; ambas.dispatchEvent(new w.Event('change', { bubbles: true }));
-    $('#voz-texto').value = 'Endometrioma no ovário esquerdo de 3,2 por 2,1 centímetros';
+    escrever('Endometrioma no ovário esquerdo de 3,2 por 2,1 centímetros');
     $('#voz-enviar').click(); $('#voz-enviar').dispatchEvent(new w.MouseEvent('click'));
-    await esperar(() => !$('#voz-enviar').disabled, 'Texto não concluiu');
-    verificar(lesoes('coronal').length === 2 && lesoes('sagital').length === 1 && t.chamadas.length === 3, 'Texto e Ambas devem acrescentar uma vez, preservando o mapa');
+    await esperar(() => lesoes('coronal').length === 5 && !$('#voz-iniciar').disabled, 'Texto não concluiu');
+    verificar(lesoes('sagital').length === 1 && t.chamadas.length === 3, 'Ambas deve acrescentar uma vez, preservando o mapa');
+    escrever('Outro endometrioma no ovário esquerdo de 2 por 1 centímetros');
     t.resposta = sugestao([dado(), dado({ medida_1: -1 })]);
     $('#voz-enviar').click(); await esperar(() => !$('#voz-enviar').disabled, 'Falha atômica não terminou');
-    verificar(lesoes('coronal').length === 2, 'Um item inválido deve impedir inserção parcial');
+    verificar(lesoes('coronal').length === 5, 'Um item inválido deve impedir inserção parcial');
     t.falhar = true; $('#voz-enviar').click(); await esperar(() => !$('#voz-enviar').disabled, 'Falha do serviço não terminou');
-    verificar(lesoes('coronal').length === 2 && $('#voz-estado').textContent.includes('Falha simulada'), 'Falha deve preservar montagem e explicar causa');
+    verificar(lesoes('coronal').length === 5 && $('#voz-estado').textContent.includes('Falha simulada'), 'Falha deve preservar montagem e explicar causa');
     t.falhar = false; t.atrasar = true; t.resposta = sugestao();
     $('#voz-enviar').click(); await esperar(() => t.liberar, 'Pedido lento não começou');
-    lesoes('coronal')[0].dataset.x = '24';
-    t.liberar(); await esperar(() => !$('#voz-enviar').disabled, 'Pedido lento não terminou');
-    verificar(lesoes('coronal').length === 3 && lesoes('coronal')[0].dataset.x === '24', 'Ajuste manual durante a interpretação deve ser preservado');
-    t.liberar = null;
+    lesoes('coronal')[0].dataset.x = '28';
+    t.liberar(); await esperar(() => lesoes('coronal').length === 6 && !$('#voz-iniciar').disabled, 'Pedido lento não terminou');
+    verificar(lesoes('coronal')[0].dataset.x === '28', 'Ajuste manual durante a interpretação deve ser preservado');
+    t.liberar = null; escrever('Um novo endometrioma no ovário direito');
     $('#voz-enviar').click(); await esperar(() => t.liberar, 'Pedido lento não começou');
     t.auth('SIGNED_OUT', null); t.liberar(); await pausa();
-    verificar(lesoes('coronal').length === 3 && $('#voz-comandos').disabled, 'Resposta depois de sair não pode inserir');
+    verificar(lesoes('coronal').length === 6 && $('#voz-comandos').disabled, 'Resposta depois de sair não pode inserir');
     verificar(t.erros.length === 0, t.erros.join('; '));
     $('#imagem-teste').scrollIntoView();
-    saida.textContent = 'PASSOU: voz automática com resultados finais, retomada, sem duplicação, medidas, lateralidade, duas vistas, dúvidas, falhas, cancelamento de sessão, regras atômicas e celular de 390 pixels. Nenhuma chamada real à IA ou gravação de mapas.';
+    saida.textContent = 'PASSOU: ditado contínuo, pausas sem IA, texto preservado entre sessões, uma interpretação ao finalizar, três lesões com medidas independentes, biblioteca existente, prevenção de duplicação, revisão de trechos provisórios, falhas, login e preservação da montagem. Nenhuma chamada real à IA.';
   } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
 })();

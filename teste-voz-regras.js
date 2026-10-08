@@ -37,7 +37,7 @@
       const encontrados = tipos.filter(([expressao]) => expressao.test(termos));
       if (encontrados.length === 1) return encontrados[0][1];
       if (!encontrados.length && /\bcistos?\b/.test(termos)) return 'Cisto';
-      falhar('O tipo da lesão ovariana ficou ambíguo. Dite uma lesão por comando, indicando, por exemplo, endometrioma ou cisto.');
+      falhar('O tipo de uma lesão ovariana ficou ambíguo. Confira se o ditado identifica cada lesão e suas medidas, por exemplo, endometrioma no ovário direito e cisto no esquerdo.');
     }
     falhar('Ainda não há inserção automática para ' + lesao.categoria + ' em ' + lesao.localizacao + ' neste teste. A montagem foi preservada.');
   }
@@ -54,12 +54,15 @@
     const vistas = destino === 'ambas' ? ['coronal', 'sagital'] : [destino];
     return sugestao.lesoes.map(lesao => {
       if (!lesao || !Number.isInteger(lesao.confianca) || lesao.confianca < 70 || lesao.confianca > 100) falhar('Uma lesão não foi entendida com confiança suficiente. Confira o comando.');
-      if (!['direito', 'esquerdo', 'central'].includes(lesao.lado)) falhar('Informe o lado da lesão. Para lesões bilaterais, dite cada lado com suas medidas em comandos separados.');
+      if (!['direito', 'esquerdo', 'central'].includes(lesao.lado)) falhar('Informe o lado da lesão. Para lesões bilaterais, descreva cada lado com suas próprias medidas no mesmo ditado.');
       const medidas = [lesao.medida_1, lesao.medida_2, lesao.medida_3];
       if (typeof medidas[0] !== 'number' || medidas.some(m => m !== null && (typeof m !== 'number' || !Number.isFinite(m) || m <= 0)) || (medidas[1] === null && medidas[2] !== null)) falhar('Informe medidas positivas, em centímetros, na ordem correta. Nada foi inserido.');
       // O coronal também valida lateralidade na vista sagital, que não separa os lados visualmente.
       if (!pontos.coronal[lesao.localizacao]?.[lesao.lado]) falhar('A localização e o lado precisam de esclarecimento antes da inserção.');
-      const nomeModelo = modeloPara(lesao, texto, sugestao.lesoes.length === 1);
+      // Uma única lesão desta categoria pode usar seu nome explícito no ditado,
+      // mesmo quando há lesões de outras categorias no mesmo texto.
+      const unicaDaCategoria = sugestao.lesoes.filter(l => l.categoria === lesao.categoria).length === 1;
+      const nomeModelo = modeloPara(lesao, texto, unicaDaCategoria);
       const modelo = biblioteca.find(m => m.nome === nomeModelo);
       if (!modelo) falhar('A imagem ' + nomeModelo + ' não está disponível na biblioteca.');
       const nome = nomeModelo.replace(/ 1$/, '') + (lesao.lado === 'central' ? '' : ' · ' + lesao.lado);
