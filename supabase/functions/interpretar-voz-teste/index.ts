@@ -6,6 +6,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const ORIGEM_PERMITIDA = "https://endomapa.pages.dev";
 const LIMITE_CARACTERES = 4000;
 const TEMPO_MAXIMO_IA_MS = 25_000;
+const MODELO_GEMINI = "gemini-3.5-flash-lite";
 
 const cabecalhosCors = {
   "Access-Control-Allow-Origin": ORIGEM_PERMITIDA,
@@ -119,10 +120,10 @@ Deno.serve(async (requisicao) => {
 
   // A chave secreta nasce e permanece somente dentro desta Edge Function.
   // Nunca registramos seu valor, nunca a devolvemos e nunca a enviamos ao navegador.
-  const chaveCerebras = Deno.env.get("CEREBRAS_API_KEY");
+  const chaveGemini = Deno.env.get("GEMINI_API_KEY");
 
-  if (!chaveCerebras) {
-    return responder({ erro: "A inteligência artificial ainda não foi configurada no servidor." }, 503);
+  if (!chaveGemini) {
+    return responder({ erro: "A API do Gemini ainda não foi configurada no servidor." }, 503);
   }
 
   // Reserva uma das 20 chamadas do dia de forma atômica no banco.
@@ -146,61 +147,50 @@ Deno.serve(async (requisicao) => {
   const temporizador = setTimeout(() => controlador.abort(), TEMPO_MAXIMO_IA_MS);
 
   try {
-    const respostaCerebras = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+    const respostaGemini = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODELO_GEMINI}:generateContent`, {
       method: "POST",
       signal: controlador.signal,
       headers: {
-        "Authorization": `Bearer ${chaveCerebras}`,
+        "x-goog-api-key": chaveGemini,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-oss-120b",
-        reasoning_effort: "low",
-        max_completion_tokens: 6000,
-        messages: [
-          {
-            role: "developer",
-            content: instrucoes,
-          },
-          {
-            role: "user",
-            content: `Interprete somente o valor de texto_bruto neste objeto: ${JSON.stringify({ texto_bruto: textoBruto })}`,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "biblioteca_voz_teste",
-            strict: true,
-            schema: esquemaInterpretacao,
-          },
+        systemInstruction: { parts: [{ text: instrucoes }] },
+        contents: [{ role: "user", parts: [{ text: JSON.stringify({ texto_bruto: textoBruto }) }] }],
+        generationConfig: {
+          maxOutputTokens: 6000,
+          responseMimeType: "application/json",
+          responseJsonSchema: esquemaInterpretacao,
         },
       }),
     });
 
-    if (!respostaCerebras.ok) {
+    if (!respostaGemini.ok) {
       // Registra apenas o código técnico, nunca a chave, o ditado ou o corpo do erro externo.
-      console.error(`Cerebras respondeu com status ${respostaCerebras.status}.`);
+      console.error(`Gemini respondeu com status ${respostaGemini.status}.`);
 
-      if (respostaCerebras.status === 402) {
+      if (respostaGemini.status === 402) {
         return responder(
-          { erro: "A conta de inteligência artificial está sem créditos. O texto continua disponível para revisão manual." },
+          { erro: "O Gemini recusou a cobrança da API. Confira o saldo e a conta de faturamento no Google AI Studio. O texto foi preservado." },
           503,
         );
       }
 
-      if (respostaCerebras.status === 429) {
-        return responder({ erro: "A inteligência artificial está ocupada. Aguarde um momento e tente novamente." }, 503);
+      if (respostaGemini.status === 429) {
+        return responder({ erro: "O Gemini atingiu um limite de uso ou saldo da API. Confira a cota e o faturamento no Google AI Studio ou tente novamente mais tarde. O texto foi preservado." }, 503);
       }
+      if ([401, 403].includes(respostaGemini.status)) return responder({ erro: "O Gemini recusou a chave ou a permissão do projeto. Confira a configuração da API no servidor." }, 503);
 
       return responder(
-        { erro: "A inteligência artificial não conseguiu interpretar o ditado. Revise o texto manualmente e tente novamente." },
+        { erro: `O Gemini não conseguiu interpretar o ditado (código GEMINI-${respostaGemini.status}). O texto foi preservado.` },
         502,
       );
     }
 
-    const respostaExterna = await respostaCerebras.json();
-    const conteudo = respostaExterna?.choices?.[0]?.message?.content;
+    const respostaExterna = await respostaGemini.json();
+    const candidato = respostaExterna?.candidates?.[0];
+    if (candidato?.finishReason !== "STOP") return responder({ erro: "O Gemini não concluiu a interpretação. O texto e o mapa foram preservados; revise o ditado ou tente novamente." }, 502);
+    const conteudo = candidato?.content?.parts?.filter((p: { thought?: boolean; text?: unknown }) => !p.thought && typeof p.text === "string").map((p: { text: string }) => p.text).join("");
 
     if (typeof conteudo !== "string" || !conteudo) {
       return responder({ erro: "A inteligência artificial respondeu sem uma interpretação válida." }, 502);
@@ -222,6 +212,8 @@ Deno.serve(async (requisicao) => {
 
     return responder({
       sugestao: interpretacao,
+      provedor: "Gemini",
+      modelo: MODELO_GEMINI,
       aviso: "Sugestão da IA: confira todos os campos antes de salvar.",
       uso: {
         chamadas_hoje: reserva.total_chamadas,
@@ -236,7 +228,7 @@ Deno.serve(async (requisicao) => {
       );
     }
 
-    console.error("Falha de comunicação com a Cerebras, sem registrar dados sensíveis.");
+    console.error("Falha de comunicação com o Gemini, sem registrar dados sensíveis.");
     return responder(
       { erro: "Não foi possível falar com a inteligência artificial. O texto continua disponível para revisão manual." },
       502,

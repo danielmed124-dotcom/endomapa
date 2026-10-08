@@ -6,7 +6,8 @@ export const modelos = [
 ];
 export const locais = ['não informada', 'útero', 'ovário', 'ligamento uterossacro', 'região retrocervical', 'outra'];
 export const lados = ['não informado', 'central', 'direito', 'esquerdo', 'bilateral'];
-const medida = { anyOf: [{ type: 'number', exclusiveMinimum: 0 }, { type: 'null' }] };
+// O Gemini aceita minimum; a validação abaixo também recusa zero.
+const medida = { anyOf: [{ type: 'number', minimum: 0 }, { type: 'null' }] };
 const confianca = { type: 'integer', minimum: 0, maximum: 100 };
 export const esquemaInterpretacao = {
   type: 'object', additionalProperties: false,

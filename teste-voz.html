@@ -12,7 +12,7 @@
   <header class="topo"><div class="topo__conteudo"><a class="logo" href="app">Endo<span>mapa</span></a><span class="area-atual">Página de teste · voz</span></div></header>
   <main>
     <section class="voz-painel" aria-labelledby="titulo-voz">
-      <span class="selo">Experimento separado · interpretador da biblioteca v5</span>
+      <span class="selo">Experimento separado · Gemini API · v6</span>
       <h1 id="titulo-voz">Dite todos os achados.</h1>
       <p>Dite os nomes das imagens da biblioteca e as medidas em centímetros. Informe o lado para ovários e ligamentos. Quando terminar, toque em <strong>Finalizar ditado e inserir lesões</strong>. As pausas não iniciam a interpretação.</p>
       <p id="voz-acesso" role="status">Conferindo acesso…</p>
@@ -36,7 +36,7 @@
       <details><summary>Exemplo e informações do teste</summary>
         <p>“Ligamento uterossacro esquerdo medindo 1,8 por 0,6 cm. Três focos de adenomiose. DIU de cobre. Mioma 1 medindo 3,6 por 2,1 por 2,3 cm. Retrocervical medindo 3,6 por 2,9 cm. Pólipo medindo 0,8 por 0,6 cm.”</p>
         <p class="texto-apoio">Sem medidas ditadas, a imagem entra sem medidas. Miomas, adenomiose, pólipo e DIU sem posição específica entram em posições iniciais ajustáveis no útero; retrocervical entra na região correspondente. Arraste para posicionar. Vários focos sem medidas entram como imagens separadas; para medidas individuais, descreva cada foco separadamente.</p>
-        <p class="texto-apoio">Este teste fica somente nesta aba. Não salva em Meus mapas nem altera suas montagens. Use achados fictícios, sem identificação de pacientes. O reconhecimento de fala é feito pelo serviço do navegador. Comandos reconhecidos diretamente pelos nomes da biblioteca não usam IA nem consomem a cota; outras formas de ditar usam um interpretador exclusivo deste teste, que também conhece essas imagens e usa a cota de interpretações.</p>
+        <p class="texto-apoio">Este teste fica somente nesta aba. Não salva em Meus mapas nem altera suas montagens. Use achados fictícios, sem identificação de pacientes. O reconhecimento de fala é feito pelo serviço do navegador. Comandos reconhecidos diretamente pelos nomes da biblioteca não usam IA nem consomem a cota; outras formas de ditar usam a API do Gemini, com a conta já configurada no Endomapa e a cota diária de interpretações.</p>
         <p class="texto-apoio">Inserção pelos nomes: ligamento uterossacro, retrocervical, adenomiose, Mioma 1, 2, 3 ou pediculado, pólipo, DIU de cobre ou hormonal, folículo, cisto, cisto hemorrágico, endometrioma, teratoma e corpo lúteo. Outras localizações, aderências ou ambiguidades ficam pendentes.</p>
       </details>
       <details id="voz-registro"><summary>Ditados deste teste <span id="voz-contagem">(0)</span></summary><ol id="voz-historico"></ol></details>

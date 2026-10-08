@@ -18,15 +18,16 @@ Deno.test('contrato da biblioteca conserva quantidades e medidas ausentes', () =
 
 Deno.test('função nova protege acesso e cota e usa o esquema da biblioteca', async () => {
   const fetchAnterior = globalThis.fetch, serveAnterior = Deno.serve;
-  const nomes = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'CEREBRAS_API_KEY'];
+  const nomes = ['SUPABASE_URL', 'SUPABASE_ANON_KEY', 'GEMINI_API_KEY'];
   const anteriores = nomes.map(n => Deno.env.get(n));
   let handler: (r: Request) => Promise<Response>;
   let autenticado = true, ativo = true, permitido = true, reservas = 0, chamadas = 0, payload: any;
   let retorno: unknown = exemplo;
+  let fim = "STOP", statusGemini = 200;
   try {
     Deno.env.set('SUPABASE_URL', 'https://projeto-ficticio.supabase.co');
     Deno.env.set('SUPABASE_ANON_KEY', 'chave-publica-ficticia');
-    Deno.env.set('CEREBRAS_API_KEY', 'segredo-ficticio');
+    Deno.env.set('GEMINI_API_KEY', 'segredo-ficticio');
     Deno.serve = ((h: typeof handler) => { handler = h; }) as typeof Deno.serve;
     globalThis.fetch = (async (entrada: Request | string | URL, opcoes?: RequestInit) => {
       const url = String(entrada instanceof Request ? entrada.url : entrada);
@@ -34,7 +35,7 @@ Deno.test('função nova protege acesso e cota e usa o esquema da biblioteca', a
       if (url.includes('/auth/v1/user')) return autenticado ? json({ id: '11111111-1111-4111-8111-111111111111', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: '' }) : json({ message: 'Sessão inválida' }, 401);
       if (url.includes('/rest/v1/usuarios_imagem_autorizados')) return json([{ ativo }]);
       if (url.includes('/rest/v1/rpc/reservar_chamada_ia')) { reservas++; return json({ permitido, total_chamadas: reservas, limite_diario: 20 }); }
-      if (url === 'https://api.cerebras.ai/v1/chat/completions') { chamadas++; payload = JSON.parse(String(opcoes?.body)); return json({ choices: [{ message: { content: JSON.stringify(retorno) } }] }); }
+      if (url === 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent') { chamadas++; payload = JSON.parse(String(opcoes?.body)); return json({ candidates: [{ finishReason: fim, content: { parts: [{ thought: true, text: "raciocinio-ficticio" }, { text: JSON.stringify(retorno) }] } }] }, statusGemini); }
       throw new Error('Rede não prevista no teste: ' + url);
     }) as typeof fetch;
     await import('../supabase/functions/interpretar-voz-teste/index.ts');
@@ -45,13 +46,22 @@ Deno.test('função nova protege acesso e cota e usa o esquema da biblioteca', a
     ativo = false; conferir((await pedir()).status === 403, 'Conta não autorizada deve ser recusada'); ativo = true;
     conferir((await pedir('')).status === 400 && (await pedir('a'.repeat(4001))).status === 413, 'Valida entrada antes da cota');
     conferir(reservas === 0 && chamadas === 0, 'Recusas não podem consumir IA');
-    Deno.env.delete('CEREBRAS_API_KEY'); conferir((await pedir()).status === 503 && reservas === 0, 'Configuração ausente não deve consumir cota'); Deno.env.set('CEREBRAS_API_KEY', 'segredo-ficticio');
+    Deno.env.delete('GEMINI_API_KEY'); conferir((await pedir()).status === 503 && reservas === 0, 'Configuração ausente não deve consumir cota'); Deno.env.set('GEMINI_API_KEY', 'segredo-ficticio');
     permitido = false; conferir((await pedir()).status === 429 && chamadas === 0, 'Cota bloqueada deve impedir IA'); permitido = true;
     const resposta = await pedir(); const corpo = await resposta.json();
     conferir(resposta.status === 200 && corpo.sugestao.itens.length === 5 && corpo.sugestao.duvidas.length === 0, 'Lote válido deve ser retornado completo');
-    conferir(JSON.stringify(payload.response_format.json_schema.schema) === JSON.stringify(esquemaInterpretacao), 'Deve enviar o contrato novo ao provedor');
-    conferir(payload.messages[0].content.includes('NÃO peça lados, distribuição') && payload.messages[0].content.includes('Pólipo possui imagem própria'), 'Instruções devem explicar campos opcionais e biblioteca');
+    conferir(JSON.stringify(payload.generationConfig.responseJsonSchema) === JSON.stringify(esquemaInterpretacao), 'Deve enviar o contrato novo ao provedor');
+    conferir(payload.systemInstruction.parts[0].text.includes('NÃO peça lados, distribuição') && payload.systemInstruction.parts[0].text.includes('Pólipo possui imagem própria'), 'Instruções devem explicar campos opcionais e biblioteca');
     conferir(!JSON.stringify(corpo).includes('segredo-ficticio'), 'Não vazar chave');
+    conferir(corpo.provedor === 'Gemini' && corpo.modelo === 'gemini-3.5-flash-lite', 'Deve informar o provedor usado');
+    conferir(payload.generationConfig.responseMimeType === 'application/json', 'Deve pedir JSON');
+    fim = 'MAX_TOKENS'; conferir((await pedir()).status === 502, 'Resposta truncada não pode ser inserida'); fim = 'STOP';
+    for (const status of [402, 429, 403]) {
+      statusGemini = status;
+      const erro = await pedir();
+      conferir(erro.status === 503 && (await erro.json()).erro.includes('Gemini'), 'Erro do Google deve identificar o serviço');
+    }
+    statusGemini = 200;
     retorno = { ...exemplo, itens: [item('Pólipo', [-1, .8, null])] };
     conferir((await pedir()).status === 502, 'Resposta inválida deve ser recusada pelo servidor');
   } finally {
