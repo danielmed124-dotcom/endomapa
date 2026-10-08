@@ -25,6 +25,33 @@
     ['teratomas?', 'Teratoma', 'ovário', 'lesão ovariana'],
     ['corpo luteo', 'Corpo Lúteo', 'ovário', 'lesão ovariana'],
   ];
+  function prepararSugestaoIA(sugestao) {
+    if (!sugestao || !Number.isInteger(sugestao.confianca) || sugestao.confianca < 70 || sugestao.confianca > 100 || !Array.isArray(sugestao.itens) || sugestao.itens.length > 30 || !Array.isArray(sugestao.duvidas) || sugestao.duvidas.length > 20) falhar('A interpretação não identificou as imagens com confiança suficiente. Confira o texto.');
+    if (sugestao.duvidas.length) falhar(sugestao.duvidas.map(d => String(d?.pergunta || 'Confira o texto.')).join(' '));
+    const lesoes = [];
+    for (const item of sugestao.itens) {
+      const modelo = modelos.find(m => m[1] === item?.modelo);
+      if (!modelo || !Number.isInteger(item.quantidade) || item.quantidade < 1 || item.quantidade > 30 || lesoes.length + item.quantidade > 30 || !Number.isInteger(item.confianca) || item.confianca < 70 || item.confianca > 100) falhar('Uma imagem ou sua quantidade não foi identificada com confiança suficiente.');
+      if (!['não informada', modelo[2]].includes(item.localizacao)) falhar('Confira a localização ditada para ' + modelo[1] + ': esta imagem usa a região ' + modelo[2] + '.');
+      if (!['não informado', 'central', 'direito', 'esquerdo', 'bilateral'].includes(item.lado)) falhar('Lado inválido para ' + modelo[1] + '.');
+      if (item.lado === 'bilateral') falhar('Descreva cada lado com suas próprias medidas para ' + modelo[1] + '.');
+      if (['ovário', 'ligamento uterossacro'].includes(modelo[2]) && !['direito', 'esquerdo'].includes(item.lado)) falhar('Informe o lado de ' + modelo[1] + '.');
+      const medidas = [item.medida_1, item.medida_2, item.medida_3];
+      if (medidas.some(m => m !== null && (typeof m !== 'number' || !Number.isFinite(m) || m <= 0)) || (medidas[0] === null && medidas[1] !== null) || (medidas[1] === null && medidas[2] !== null)) falhar('Informe medidas positivas, em centímetros, na ordem correta.');
+      if (item.quantidade > 1 && medidas.some(m => m !== null)) falhar('Descreva cada foco com suas próprias medidas.');
+      if (item.posicao_ditada !== null && (typeof item.posicao_ditada !== 'string' || item.posicao_ditada.length > 500)) falhar('A posição ditada veio em formato inválido.');
+      const lado = item.lado === 'não informado' ? 'central' : item.lado;
+      for (let j = 0; j < item.quantidade; j++) {
+        const lesao = { categoria: modelo[3], localizacao: modelo[2], modelo: modelo[1], lado,
+          medida_1: medidas[0], medida_2: medidas[1], medida_3: medidas[2], confianca: item.confianca,
+          observacao: item.posicao_ditada ? 'posição ditada: ' + item.posicao_ditada + '; ajuste no mapa' : item.lado === 'não informado' ? 'posição inicial ajustável; localização específica não ditada' : '',
+          foco: item.quantidade > 1 ? j + 1 : null, deslocamento: item.quantidade > 1 ? (j - (item.quantidade - 1) / 2) * 5 : 0 };
+        itensDaBiblioteca.add(lesao);
+        lesoes.push(lesao);
+      }
+    }
+    return { confianca: sugestao.confianca, lesoes, duvidas: [], relacoes_anatomicas: [] };
+  }
   function interpretarBiblioteca(texto) {
     conferirTexto(texto);
     const fonte = normalizar(texto);
@@ -149,5 +176,5 @@
       }) };
     });
   }
-  window.EndomapaVozRegras = { planejar, conferirTexto, interpretarBiblioteca };
+  window.EndomapaVozRegras = { planejar, conferirTexto, interpretarBiblioteca, prepararSugestaoIA };
 })();

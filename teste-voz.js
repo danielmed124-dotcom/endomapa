@@ -102,7 +102,7 @@
     requisicao = new AbortController();
     const tempo = setTimeout(() => requisicao?.abort(), 35000);
     try {
-      const resposta = await fetch(window.ENDOMAPA_SUPABASE.projectUrl + '/functions/v1/interpretar-ditado', {
+      const resposta = await fetch(window.ENDOMAPA_SUPABASE.projectUrl + '/functions/v1/interpretar-voz-teste', {
         method: 'POST', signal: requisicao.signal,
         headers: { 'Content-Type': 'application/json', apikey: window.ENDOMAPA_SUPABASE.publicAnonKey,
           Authorization: 'Bearer ' + data.session.access_token },
@@ -110,6 +110,7 @@
       });
       const retorno = await resposta.json();
       if (!resposta.ok || retorno.erro) throw new Error(typeof retorno.erro === 'string' ? retorno.erro : 'Não foi possível interpretar o comando. Tente novamente.');
+      retorno.sugestao = window.EndomapaVozRegras.prepararSugestaoIA(retorno.sugestao);
       return retorno;
     } finally { clearTimeout(tempo); requisicao = null; }
   }

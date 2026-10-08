@@ -34,10 +34,14 @@
       }; } };
       const fetchReal = window.fetch;
       window.fetch = async (url, opcoes) => {
-        if (String(url).includes('/functions/v1/interpretar-ditado')) {
-          t.chamadas.push({ texto: JSON.parse(opcoes.body).texto_bruto, metodo: opcoes.method });
+        if (String(url).includes('/functions/v1/interpretar-ditado')) throw new Error('O teste voltou ao interpretador antigo');
+        if (String(url).includes('/functions/v1/interpretar-voz-teste')) {
+          t.chamadas.push({ texto: JSON.parse(opcoes.body).texto_bruto, metodo: opcoes.method, url: String(url) });
           if (t.atrasar) await new Promise(r => { t.liberar = r; });
-          return new Response(JSON.stringify(t.falhar ? { erro: 'Falha simulada do serviço.' } : { sugestao: t.resposta }), { status: t.falhar ? 503 : 200, headers: { 'Content-Type': 'application/json' } });
+          // Adapta os casos antigos de transporte para o contrato novo.
+          const resposta = t.resposta?.itens ? t.resposta : { confianca: t.resposta?.confianca, duvidas: t.resposta?.duvidas,
+            itens: t.resposta?.lesoes.map(l => ({ modelo: l.localizacao === 'ligamento uterossacro' ? 'Ligamento uterossacro' : l.observacao || 'Mioma 1', quantidade: 1, localizacao: l.localizacao, lado: l.lado, medida_1: l.medida_1, medida_2: l.medida_2, medida_3: l.medida_3, posicao_ditada: null, confianca: l.confianca })) };
+          return new Response(JSON.stringify(t.falhar ? { erro: 'Falha simulada do serviço.' } : { sugestao: resposta }), { status: t.falhar ? 503 : 200, headers: { 'Content-Type': 'application/json' } });
         }
         if (new URL(url, document.baseURI).origin !== new URL(document.baseURI).origin) throw new Error('Rede externa bloqueada');
         return fetchReal(url, opcoes);
@@ -261,8 +265,29 @@
     verificar(lesoes('coronal')[0].dataset.x === '28', 'Ditado real deve preservar ajustes anteriores');
     $('#voz-enviar').dispatchEvent(new w.MouseEvent('click')); await pausa();
     verificar(lesoes('coronal').length === antesCoronal + 8, 'Oito itens não podem se duplicar');
+    // Uma frase fora da gramática direta deve usar a nova IA, não a antiga.
+    const variacao = 'Vejo no ligamento uterosacro esquerdo uma imagem de 1,8 por 0,6 cm. Há também um pólipo de 0,6 por 0,8 cm, mioma 1 de 3,1 por 0,8 por 0,9 cm e três focos de adenomiose no útero.';
+    verificar(interpretarBiblioteca(variacao) === null, 'Este caso precisa exercitar a interpretação de linguagem livre');
+    const itemIA = (modelo, medidas, extras = {}) => ({ modelo, quantidade: 1, localizacao: 'não informada', lado: 'não informado', medida_1: medidas[0], medida_2: medidas[1], medida_3: medidas[2], posicao_ditada: null, confianca: 95, ...extras });
+    t.resposta = { confianca: 95, duvidas: [], itens: [
+      itemIA('Ligamento uterossacro', [1.8, .6, null], { lado: 'esquerdo' }),
+      itemIA('Pólipo', [.6, .8, null]), itemIA('Mioma 1', [3.1, .8, .9]),
+      itemIA('Adenomiose 1', [null, null, null], { quantidade: 3, localizacao: 'útero' }),
+    ] };
+    const antesIA = lesoes('coronal').length;
+    escrever(variacao); $('#voz-enviar').click();
+    await esperar(() => !$('#voz-iniciar').disabled && lesoes('coronal').length === antesIA + 6, 'A nova IA não inseriu o lote: ' + $('#voz-estado').textContent);
+    verificar(t.chamadas.length === chamadasAntes + 1 && t.chamadas.at(-1).url.endsWith('/interpretar-voz-teste'), 'Linguagem livre deve chamar exclusivamente a função nova');
+    const novos = Array.from(lesoes('coronal')).slice(-6);
+    verificar(novos[1].dataset.nomeNoMapa === 'Pólipo' && novos[1].dataset.medida1 === '0,6' && novos[1].dataset.medida2 === '0,8', 'IA deve conservar a ordem das medidas do pólipo');
+    verificar(novos[2].dataset.nomeNoMapa === 'Mioma 1' && novos[2].dataset.medida1 === '3,1' && novos[2].dataset.medida3 === '0,9', 'Número do modelo não pode virar medida');
+    verificar(novos.slice(3).every(l => l.dataset.nomeNoMapa.startsWith('Adenomiose') && l.dataset.medida1 === ''), 'IA deve preservar os três focos sem medidas');
+    for (const item of [itemIA('Pólipo', [.6, .8, null], { localizacao: 'outra' }), itemIA('Cisto', [1, null, null]), itemIA('Adenomiose 1', [2, null, null], { quantidade: 3 }), itemIA('DIU de Cobre', [-1, null, null]), itemIA('Imagem inventada', [null, null, null])]) {
+      let recusado = false; try { w.EndomapaVozRegras.prepararSugestaoIA({ confianca: 95, duvidas: [], itens: [item] }); } catch (_) { recusado = true; }
+      verificar(recusado, 'Resposta da nova IA inválida não pode entrar no mapa');
+    }
     verificar(t.erros.length === 0, t.erros.join('; '));
     $('#imagem-teste').scrollIntoView();
-    saida.textContent = 'PASSOU: ditado real de Daniel com oito itens, três focos separados, DIU e pólipo, medidas independentes, ausência de medidas preservada, nenhuma chamada à IA para nomes da biblioteca; ditado contínuo, falhas, login, prevenção de duplicação e preservação da montagem. Voz e respostas da IA simuladas.';
+    saida.textContent = 'PASSOU: ditado direto com oito itens e linguagem livre pela função nova com seis itens, pólipo e modelos numerados, focos sem medidas, nenhum retorno ao interpretador antigo, ditado contínuo, falhas, login e montagem preservada. Voz e respostas da IA simuladas.';
   } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
 })();
