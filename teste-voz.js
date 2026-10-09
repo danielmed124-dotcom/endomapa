@@ -6,6 +6,7 @@
   const parar = $('#voz-parar');
   const enviar = $('#voz-enviar');
   const estado = $('#voz-estado');
+  const apagar = $('#voz-apagar');
   let cliente, usuario, microfone;
   let ocupado = false;
   let ouvindo = false;
@@ -36,11 +37,20 @@
     enviar.disabled = !acessoValido || ocupado || ouvindo || !campo.value.trim() || campo.value.trim() === ultimoTextoInserido;
     iniciar.textContent = campo.value.trim() && campo.value.trim() !== ultimoTextoInserido ? 'Continuar ditado' : 'Iniciar ditado';
     campo.readOnly = ocupado || ouvindo;
+    apagar.disabled = !acessoValido || ocupado || !campo.value;
     $('#voz-barra').hidden = !ouvindo && !ocupado;
     $('#voz-barra-estado').textContent = ocupado ? 'Interpretando…' : 'Microfone ativo';
     $('#voz-barra-parar').disabled = !ouvindo;
     if ($('#voz-retomar')) $('#voz-retomar').disabled = !acessoValido || ocupado || ouvindo;
     document.querySelectorAll('input[name="vistas-editor"]').forEach(c => { c.disabled = ocupado || ouvindo; });
+  }
+  function apagarDitado() {
+    if (!acessoValido || ocupado) return;
+    microfone?.cancelar();
+    campo.value = '';
+    informar('Ditado apagado. As lesões do mapa foram preservadas.');
+    controles();
+    campo.focus();
   }
   function registrar(texto, mensagem, sucesso) {
     const item = document.createElement('li');
@@ -249,7 +259,7 @@
     if (!window.supabase || !window.ENDOMAPA_SUPABASE) throw new Error('Não foi possível iniciar a conexão de acesso. Atualize a página.');
     cliente = window.supabase.createClient(window.ENDOMAPA_SUPABASE.projectUrl, window.ENDOMAPA_SUPABASE.publicAnonKey);
     microfone = window.criarMicrofoneDeTeste({
-      aoTexto: texto => { campo.value = texto; },
+      aoTexto: texto => { campo.value = texto; apagar.disabled = !acessoValido || ocupado || !texto; },
       aoComando: processar,
       aoEstado: situacao => { ouvindo = situacao.ativo; informar(situacao.texto, situacao.tipo); controles(); },
     });
@@ -259,6 +269,26 @@
       microfone.iniciar(campo.value);
     });
     campo.addEventListener('input', controles);
+    apagar.addEventListener('click', apagarDitado);
+    $('#voz-painel').addEventListener('keydown', evento => {
+      if (!['Delete', 'Backspace'].includes(evento.key) || evento.isComposing) return;
+      // A tecla neste painel nunca deve alcançar o atalho que exclui lesões.
+      evento.stopPropagation();
+      if (evento.target === campo) {
+        if (ocupado) { evento.preventDefault(); return; }
+        if (ouvindo) {
+          const inicio = campo.selectionStart, fim = campo.selectionEnd;
+          microfone.cancelar();
+          controles();
+          campo.setSelectionRange(inicio, fim);
+          informar('Escuta pausada para editar o texto. Use Continuar ditado quando quiser retomar.');
+        }
+        // Mantém a edição nativa: seleção, Delete, Backspace e desfazer.
+      } else if (evento.key === 'Delete' && !evento.ctrlKey && !evento.metaKey && !evento.altKey && !evento.target.closest('input, textarea, select, [contenteditable]')) {
+        evento.preventDefault();
+        if (!evento.repeat) apagarDitado();
+      }
+    });
     parar.addEventListener('click', () => microfone.parar());
     $('#voz-barra-parar').addEventListener('click', () => microfone.parar());
     enviar.addEventListener('click', () => processar(campo.value.trim()));

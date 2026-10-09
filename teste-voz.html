@@ -27,6 +27,8 @@
         <p id="voz-estado" role="status" aria-live="polite">Preparando o mapa de teste…</p>
         <label for="voz-texto">Texto completo do ditado</label>
         <textarea id="voz-texto" rows="5" maxlength="4000" placeholder="O texto vai se acumulando aqui. Você também pode digitar os achados. Limite de 4.000 caracteres por interpretação."></textarea>
+        <button class="botao botao--secundario" id="voz-apagar" type="button" aria-keyshortcuts="Delete">Apagar ditado</button>
+        <p class="texto-apoio">Selecione o texto e pressione Delete para apagar um trecho. Durante a escuta, isso pausa o microfone. “Apagar ditado” limpa todo o texto e preserva as lesões do mapa.</p>
         <div class="voz-acoes">
           <button class="botao botao--secundario" id="voz-enviar" type="button">Inserir lesões do texto</button>
           <a href="#imagem-teste">Ver mapa de teste</a>
@@ -51,6 +53,6 @@
   <script src="supabase-config.js"></script>
   <script src="teste-voz-regras.js?v=biblioteca-5"></script>
   <script src="teste-voz-microfone.js?v=ditado-completo-3"></script>
-  <script src="teste-voz.js?v=painel-lateral-7"></script>
+  <script src="teste-voz.js?v=apagar-ditado-8"></script>
 </body>
 </html>

@@ -248,6 +248,7 @@
     verificar(lesoes('coronal').length === 5 && $('#voz-estado').textContent.includes('Falha simulada'), 'Falha deve preservar montagem e explicar causa');
     t.falhar = false; t.atrasar = true; t.resposta = sugestao();
     $('#voz-enviar').click(); await esperar(() => t.liberar, 'Pedido lento não começou');
+    verificar($('#voz-apagar').disabled, 'Não apagar enquanto o lote está sendo interpretado');
     lesoes('coronal')[0].dataset.x = '28';
     t.liberar(); await esperar(() => lesoes('coronal').length === 6 && !$('#voz-iniciar').disabled, 'Pedido lento não terminou');
     verificar(lesoes('coronal')[0].dataset.x === '28', 'Ajuste manual durante a interpretação deve ser preservado');
@@ -309,11 +310,31 @@
     verificar(Array.from(lesoes('coronal')).some(l => l.dataset.nomeNoMapa === 'Lesão ajustada'), 'Ajuste deve funcionar depois da troca de painéis');
     $('[data-modelo][data-nome="Pólipo"]').click();
     verificar(lesoes('coronal').length === totalAntesRetomar + 2 && !$('#voz-ajustes').hidden, 'Biblioteca deve continuar inserindo manualmente após ditado');
+    const antesApagar = lesoes('coronal').length, chamadasAoApagar = t.chamadas.length;
+    $('#voz-retomar').click();
+    const micApagar = t.instancias.at(-1);
+    micApagar.resultado('Mioma 2 medindo 1,2 por 0,8 cm', true);
+    const textoEditavel = $('#voz-texto');
+    textoEditavel.focus(); textoEditavel.setSelectionRange(0, 5);
+    const deleteTexto = new w.KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
+    textoEditavel.dispatchEvent(deleteTexto);
+    verificar(micApagar.abortou && !textoEditavel.readOnly && !deleteTexto.defaultPrevented && textoEditavel.selectionEnd === 5, 'Delete deve pausar a escuta e manter a seleção para edição nativa');
+    d.execCommand('delete');
+    verificar(!textoEditavel.value.startsWith('Mioma') && textoEditavel.value.includes('0,8 cm'), 'Deve apagar somente o trecho selecionado');
+    micApagar.terminar('Resposta atrasada não pode repor o texto'); await pausa();
+    verificar(!textoEditavel.value.includes('Resposta atrasada') && lesoes('coronal').length === antesApagar, 'Delete não pode excluir a lesão selecionada ou receber texto tardio');
+    $('#voz-iniciar').click();
+    const micLimpar = t.instancias.at(-1); micLimpar.resultado('Mais palavras', true);
+    $('#voz-apagar').focus();
+    $('#voz-apagar').dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true }));
+    verificar(textoEditavel.value === '' && micLimpar.abortou && $('#voz-enviar').disabled, 'Delete sobre Apagar ditado deve limpar e parar o microfone');
+    escrever('Texto digitado para limpar'); $('#voz-apagar').click();
+    verificar(textoEditavel.value === '' && lesoes('coronal').length === antesApagar && t.chamadas.length === chamadasAoApagar, 'Botão deve limpar sem alterar mapa nem chamar IA');
     verificar(t.erros.length === 0, t.erros.join('; '));
     // Deixa a captura final mostrando os três painéis no computador.
     quadro.style.width = '1360px';
     await pausa();
     $('#voz-lateral').scrollIntoView();
-    saida.textContent = 'PASSOU: painel direito alterna ditado e ajustes, Retomar ditado não duplica lote, biblioteca aberta à esquerda no computador, inserção e ajuste manual preservados, celular sem transbordamento; ditado contínuo, interpretação, falhas e login. Voz e IA simuladas.';
+    saida.textContent = 'PASSOU: Delete pausa voz e permite edição nativa do trecho selecionado; Apagar ditado limpa o texto, preserva mapa e não chama IA; resultados tardios ignorados. Painéis, retomada, biblioteca manual, celular, falhas e login. Voz e IA simuladas.';
   } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
 })();
