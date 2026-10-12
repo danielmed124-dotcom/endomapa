@@ -112,7 +112,7 @@
       const id = mapa.dataset.mapaEditor;
       const previa = document.createElement('div'); previa.className = 'documento-cabecalho'; previa.hidden = true; mapa.before(previa);
       const barra = document.createElement('div'); barra.className = 'documento-textos';
-      barra.innerHTML = `<button type="button" class="botao botao--secundario" data-adicionar-texto>Adicionar caixa de texto</button><div data-edicao-texto hidden><label>Texto livre<textarea maxlength="500" rows="3" data-texto-livre></textarea></label><p>Arraste a caixa no mapa ou ajuste a posição abaixo.</p><label>Posição horizontal<input type="range" min="0" max="60" step="0.1" data-texto-x></label><label>Posição vertical<input type="range" min="0" max="90" step="0.1" data-texto-y></label><button type="button" data-excluir-texto>Excluir caixa de texto</button></div>`;
+      barra.innerHTML = `<button type="button" class="botao botao--secundario" data-adicionar-texto>Adicionar caixa de texto</button><div data-edicao-texto hidden><label>Texto livre<textarea maxlength="500" rows="3" data-texto-livre></textarea></label><p>Arraste a caixa diretamente no mapa com o dedo ou o mouse para ajustar a posição.</p><button type="button" data-excluir-texto>Excluir caixa de texto</button></div>`;
       barra.dataset.textosVista = id; barra.hidden = id !== 'coronal'; controles.before(barra);
       const desenho = mapa.querySelector('.mapa-editor__desenho');
       const camada = document.createElement('div'); camada.className = 'documento-camada'; desenho.append(camada);
@@ -121,7 +121,7 @@
       const campo = barra.querySelector('textarea');
       function selecionar(item) {
         ativar(id); estado.selecionado = item; edicao.hidden = !item;
-        if (item) { campo.value = item.texto; barra.querySelector('[data-texto-x]').value = item.x; barra.querySelector('[data-texto-y]').value = item.y; }
+        if (item) campo.value = item.texto;
       }
       estado.selecionar = selecionar;
       barra.querySelector('[data-adicionar-texto]').onclick = () => {
@@ -129,9 +129,6 @@
         const item = { texto: '', x: 5, y: 15 }; estado.textos.push(item); selecionar(item); desenhar(id); campo.focus();
       };
       campo.oninput = () => { if (estado.selecionado) { estado.selecionado.texto = campo.value; desenhar(id); } };
-      ['x', 'y'].forEach(eixo => { barra.querySelector(`[data-texto-${eixo}]`).oninput = evento => {
-        if (estado.selecionado) { estado.selecionado[eixo] = Number(evento.target.value); desenhar(id); }
-      }; });
       barra.querySelector('[data-excluir-texto]').onclick = () => { estado.textos = estado.textos.filter(t => t !== estado.selecionado); selecionar(null); desenhar(id); };
       estado.criarBotao = item => {
         const botao = document.createElement('button'); botao.type = 'button'; botao.className = 'documento-texto';

@@ -26,7 +26,8 @@
   nota.dispatchEvent(new w.PointerEvent('pointermove', {pointerId:1, clientX:120, clientY:110}));
   nota.dispatchEvent(new w.PointerEvent('pointerup', {pointerId:1}));
   verificar(editor.capturar().documento.textos.coronal[0].x > 5, 'Arraste deve mover o texto');
-  const x = barra.querySelector('[data-texto-x]'); x.value = 30; x.dispatchEvent(new w.Event('input'));
+  const posicaoArrastada = editor.capturar().documento.textos.coronal[0].x;
+  verificar(!barra.querySelector('input[type="range"]'), 'Posicionamento deve ocorrer somente por arraste');
   const painel = d.querySelector('.documento-opcoes'); painel.open = true;
   painel.querySelector('[data-novo-campo]').click();
   const inputs = painel.querySelectorAll('.documento-campo input');
@@ -38,7 +39,7 @@
   painel.querySelector('[data-cabecalho-ativo]').click();
   const salvo = editor.capturar();
   verificar(salvo.vistas.coronal.lesoes.length === 0 && salvo.documento.textos.coronal.length === 1, 'Texto deve ser independente');
-  verificar(salvo.documento.textos.sagital.length === 0 && salvo.documento.textos.coronal[0].x === 30, 'Posição e vistas');
+  verificar(salvo.documento.textos.sagital.length === 0 && salvo.documento.textos.coronal[0].x === posicaoArrastada, 'Posição e vistas');
   const imagem = async () => { const img = new w.Image(); img.src = await w.endomapaCapturarMapaManual({formato:'image/png'}); await img.decode(); return img; };
   const com = await imagem(); verificar(com.height > 1448, 'Cabeçalho deve acrescentar espaço sem cobrir anatomia');
   painel.querySelector('[data-cabecalho-ativo]').click(); const sem = await imagem(); verificar(sem.height === 1448, 'Desativar deve remover espaço do cabeçalho');
