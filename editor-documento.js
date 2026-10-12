@@ -4,6 +4,9 @@
     const copiar = valor => JSON.parse(JSON.stringify(valor));
     const limite = (n, max) => Math.max(0, Math.min(max, n));
     const vistas = {};
+    const ajustes = document.createElement('div'); ajustes.className = 'documento-ajustes';
+    const controles = document.querySelector('[data-controles-lesao]');
+    controles.before(ajustes); ajustes.append(controles);
     let cabecalho = { ativo: false, campos: [] };
     const painel = document.createElement('details');
     painel.className = 'documento-opcoes';
@@ -45,26 +48,58 @@
       });
       return resultado;
     }
-    function imagemTexto(texto, largura, fonte = 26) {
-      const tela = document.createElement('canvas'); tela.width = largura;
+    function estiloTexto(id) {
+      const amostra = document.createElement('span'); amostra.className = 'medida-lesao-editavel';
+      amostra.style.visibility = 'hidden'; vistas[id].camada.append(amostra);
+      const css = getComputedStyle(amostra);
+      const largura = vistas[id].camada.getBoundingClientRect().width || mapas.map(m => m.querySelector('.mapa-editor__desenho').getBoundingClientRect().width).find(Boolean) || 320;
+      const escala = 1086 / largura;
+      const estilo = { fonte: parseFloat(css.fontSize) * escala, familia: css.fontFamily, peso: css.fontWeight,
+        linha: parseFloat(css.lineHeight) * escala, px: parseFloat(css.paddingLeft) * escala,
+        py: parseFloat(css.paddingTop) * escala, raio: parseFloat(css.borderRadius) * escala, cor: css.color, fundo: css.backgroundColor };
+      amostra.remove(); return estilo;
+    }
+    function imagemTexto(texto, estilo) {
+      const tela = document.createElement('canvas');
       tela.setAttribute('role', 'img'); tela.setAttribute('aria-label', texto);
-      let ctx = tela.getContext('2d'), trechos, alturaLinha;
-      do {
-        ctx.font = `${fonte}px Arial`; alturaLinha = Math.ceil(fonte * 1.3);
-        trechos = linhas(ctx, texto, largura - 24);
-        if (largura !== 434 || trechos.length * alturaLinha + 24 <= 1200 || fonte <= 1) break;
-        fonte--;
-      } while (true);
-      tela.height = trechos.length * alturaLinha + 24;
-      ctx = tela.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, tela.width, tela.height);
-      ctx.fillStyle = '#193c39'; ctx.font = `${fonte}px Arial`; ctx.textBaseline = 'top';
-      trechos.forEach((linha, i) => ctx.fillText(linha, 12, 12 + i * alturaLinha));
+      let ctx = tela.getContext('2d'); const fonte = `${estilo.peso} ${estilo.fonte}px ${estilo.familia}`;
+      ctx.font = fonte;
+      const trechos = linhas(ctx, texto, 434 - 2 * estilo.px);
+      tela.width = Math.ceil(Math.max(...trechos.map(t => ctx.measureText(t).width), 1) + 2 * estilo.px);
+      tela.height = Math.ceil(trechos.length * estilo.linha + 2 * estilo.py);
+      ctx = tela.getContext('2d'); ctx.fillStyle = estilo.fundo;
+      ctx.beginPath(); ctx.roundRect(0, 0, tela.width, tela.height, estilo.raio); ctx.fill();
+      ctx.fillStyle = estilo.cor; ctx.font = fonte; ctx.textAlign = 'center';
+      const metrica = ctx.measureText('Mg');
+      const base = (estilo.linha + metrica.fontBoundingBoxAscent - metrica.fontBoundingBoxDescent) / 2;
+      trechos.forEach((linha, i) => ctx.fillText(linha, tela.width / 2, estilo.py + i * estilo.linha + base));
       return tela;
     }
     function imagemCabecalho(dados) {
       if (!dados.ativo) return null;
-      const texto = dados.campos.filter(c => c.nome.trim() && c.valor.trim()).map(c => `${c.nome.trim()}: ${c.valor.trim()}`).join('\n');
-      return texto ? imagemTexto(texto, 1086) : null;
+      const campos = dados.campos.filter(c => c.nome.trim() && c.valor.trim());
+      if (!campos.length) return null;
+      const tela = document.createElement('canvas'); tela.width = 1086;
+      const ctx = tela.getContext('2d'); const larguras = [570, 230, 230], posicoes = [28, 598, 828];
+      const blocos = campos.map((campo, i) => {
+        ctx.font = '16px Arial'; const nomes = linhas(ctx, campo.nome.trim(), larguras[i % 3] - 20);
+        ctx.font = 'bold 20px Arial'; const valores = linhas(ctx, campo.valor.trim(), larguras[i % 3] - 20);
+        return { nomes, valores, altura: nomes.length * 19 + valores.length * 23 + 12 };
+      });
+      const alturas = [];
+      for (let i = 0; i < blocos.length; i += 3) alturas.push(Math.max(...blocos.slice(i, i + 3).map(b => b.altura)));
+      tela.height = alturas.reduce((a, b) => a + b, 0) + 32;
+      tela.setAttribute('role', 'img'); tela.setAttribute('aria-label', campos.map(c => `${c.nome}: ${c.valor}`).join('; '));
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, tela.width, tela.height);
+      ctx.strokeStyle = '#303030'; ctx.lineWidth = 2; ctx.beginPath(); ctx.roundRect(10, 8, 1066, tela.height - 16, 24); ctx.stroke();
+      ctx.fillStyle = '#111'; ctx.textBaseline = 'top';
+      let y = 18;
+      blocos.forEach((bloco, i) => {
+        if (i && i % 3 === 0) y += alturas[i / 3 - 1];
+        ctx.font = '16px Arial'; bloco.nomes.forEach((t, n) => ctx.fillText(t, posicoes[i % 3], y + n * 19));
+        ctx.font = 'bold 20px Arial'; bloco.valores.forEach((t, n) => ctx.fillText(t, posicoes[i % 3], y + bloco.nomes.length * 19 + n * 23));
+      });
+      return tela;
     }
     function atualizarCabecalho() {
       mapas.forEach(mapa => {
@@ -78,7 +113,7 @@
       const previa = document.createElement('div'); previa.className = 'documento-cabecalho'; previa.hidden = true; mapa.before(previa);
       const barra = document.createElement('div'); barra.className = 'documento-textos';
       barra.innerHTML = `<button type="button" class="botao botao--secundario" data-adicionar-texto>Adicionar caixa de texto</button><div data-edicao-texto hidden><label>Texto livre<textarea maxlength="500" rows="3" data-texto-livre></textarea></label><p>Arraste a caixa no mapa ou ajuste a posição abaixo.</p><label>Posição horizontal<input type="range" min="0" max="60" step="0.1" data-texto-x></label><label>Posição vertical<input type="range" min="0" max="90" step="0.1" data-texto-y></label><button type="button" data-excluir-texto>Excluir caixa de texto</button></div>`;
-      mapa.after(barra);
+      barra.dataset.textosVista = id; barra.hidden = id !== 'coronal'; controles.before(barra);
       const desenho = mapa.querySelector('.mapa-editor__desenho');
       const camada = document.createElement('div'); camada.className = 'documento-camada'; desenho.append(camada);
       const estado = vistas[id] = { textos: [], previa, camada, selecionado: null, barra };
@@ -101,7 +136,8 @@
       estado.criarBotao = item => {
         const botao = document.createElement('button'); botao.type = 'button'; botao.className = 'documento-texto';
         botao.setAttribute('aria-label', item.texto || 'Caixa de texto vazia');
-        botao.append(imagemTexto(item.texto || 'Digite seu texto', 434));
+        const imagem = imagemTexto(item.texto || 'Digite seu texto', estiloTexto(id));
+        botao.append(imagem); botao.style.width = `${imagem.width / 1086 * 100}%`;
         botao.style.left = `${item.x}%`; botao.style.top = `${item.y}%`;
         botao.onclick = () => selecionar(item);
         botao.onpointerdown = evento => {
@@ -128,8 +164,10 @@
       });
     }
     formulario();
+    window.addEventListener('resize', () => Object.keys(vistas).forEach(desenhar));
     return {
-      capturar: () => copiar({ cabecalho, textos: Object.fromEntries(Object.entries(vistas).map(([id, v]) => [id, v.textos])) }),
+      ativar(id) { Object.entries(vistas).forEach(([vista, estado]) => { estado.barra.hidden = vista !== id; }); },
+      capturar: (aparencia = false) => copiar({ cabecalho, textos: Object.fromEntries(Object.entries(vistas).map(([id, v]) => [id, v.textos])), ...(aparencia ? { estilos: Object.fromEntries(Object.keys(vistas).map(id => [id, estiloTexto(id)])) } : {}) }),
       validar(dados) {
         if (dados === undefined) return;
         const falhar = () => { throw new Error('Textos ou cabeçalho incompatíveis. O mapa aberto foi preservado.'); };
@@ -151,7 +189,7 @@
         if (!dados) return canvas;
         const ctx = canvas.getContext('2d');
         (dados.textos[id] || []).filter(t => t.texto.trim()).forEach(t => {
-          const imagem = imagemTexto(t.texto, 434); const escala = canvas.width / 1086;
+          const imagem = imagemTexto(t.texto, dados.estilos?.[id] || estiloTexto(id)); const escala = canvas.width / 1086;
           ctx.drawImage(imagem, t.x * canvas.width / 100, t.y * canvas.height / 100, imagem.width * escala, imagem.height * escala);
         });
         const topo = imagemCabecalho(dados.cabecalho); if (!topo) return canvas;

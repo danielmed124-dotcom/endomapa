@@ -2100,6 +2100,15 @@ body:has(.fusao-integrada:not([hidden])){min-width:0}
 .documento-opcoes button, .documento-textos button { min-height: 44px; }
 .documento-cabecalho canvas, .documento-texto canvas { display: block; width: 100%; height: auto; }
 .documento-camada { position: absolute; inset: 0; pointer-events: none; z-index: 8; }
-.documento-texto { position: absolute; width: 40%; padding: 0; border: 0; background: #fff; pointer-events: auto; touch-action: none; cursor: move; }
+.documento-texto { position: absolute; padding: 0; border: 0; background: transparent; pointer-events: auto; touch-action: none; cursor: grab; }
+.documento-ajustes { min-width: 0; }
+.documento-ajustes .controles-lesao { position: static; width: 100%; max-height: none; margin: 0; }
+.documento-ajustes .documento-textos { margin-top: 0; }
+@media (min-width: 1000px) {
+  .documento-ajustes { grid-area: controles; position: sticky; top: 84px; max-height: calc(100svh - 162px); overflow-y: auto; }
+}
+@media (max-width: 999px) {
+  .documento-ajustes:has(.controles-lesao:not([hidden])) { position: fixed; z-index: 12; left: 10px; right: 10px; bottom: calc(78px + env(safe-area-inset-bottom, 0px)); width: min(calc(100% - 20px), 728px); margin-inline: auto; max-height: min(52svh, 430px); overflow-y: auto; }
+}
 .documento-texto:focus { outline: 2px solid #187568; }
 @media (max-width: 600px) { .documento-campo { grid-template-columns: minmax(0, 1fr); } }

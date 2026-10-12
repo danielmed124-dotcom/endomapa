@@ -302,6 +302,7 @@
     document.querySelectorAll("[data-vista-manual]").forEach(function (item) {
       item.classList.toggle("vista-manual--ativa", item.dataset.vistaManual === vistaAtiva);
     });
+    documento?.ativar(vistaAtiva);
     const indicacao = document.querySelector("[data-vista-em-edicao]");
     if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${nomeDaVista(vistaAtiva)}.`;
     if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${nomeDaVista(vistaAtiva)} (PNG)`;
@@ -773,7 +774,7 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, documento: documento?.capturar(), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
+        return { vista, documento: documento?.capturar(true), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
       if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta || captura.documento?.textos[captura.vista]?.some(t => t.texto.trim()); })) {
         estadoMapa.textContent = "Adicione pelo menos uma lesão, um texto ou um desenho às vistas selecionadas antes de gerar o PDF.";
@@ -815,7 +816,7 @@
   async function capturarMapa(opcoes = {}) {
     opcoes = { ...opcoes, divulgacao: podeExportarDivulgacao && Boolean(opcoes.divulgacao) };
     const lesoes = fotografarLesoes();
-    const dadosDocumento = documento?.capturar();
+    const dadosDocumento = documento?.capturar(true);
     const vistaDocumento = vistaAtiva;
     let { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
       obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());

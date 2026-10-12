@@ -16,14 +16,25 @@
   d.querySelector('[data-tela-alvo="editor-manual"]').click();
   verificar(editor, 'Editor não inicializou'); const vazio = editor.capturar();
   verificar(vazio.documento.cabecalho.ativo === false, 'Cabeçalho deve começar desativado');
-  const barra = d.querySelector('[data-vista-manual="coronal"] .documento-textos');
+  const barra = d.querySelector('[data-textos-vista="coronal"]');
   barra.querySelector('[data-adicionar-texto]').click();
   const campo = barra.querySelector('textarea'); campo.value = 'Observação livre\nSem lesão inserida'; campo.dispatchEvent(new w.Event('input'));
+  verificar(barra.parentElement === d.querySelector('[data-controles-lesao]').parentElement, 'Texto deve ficar no painel de ajustes');
+  verificar(Boolean(barra.compareDocumentPosition(d.querySelector('[data-controles-lesao]')) & w.Node.DOCUMENT_POSITION_FOLLOWING), 'Botão deve vir antes de Ajustar lesão');
+  const nota = d.querySelector('.documento-texto'); nota.setPointerCapture = () => verificar(nota.isConnected, 'Arrastar deve preservar a caixa selecionada');
+  nota.dispatchEvent(new w.PointerEvent('pointerdown', {bubbles:true, pointerId:1, clientX:100, clientY:100}));
+  nota.dispatchEvent(new w.PointerEvent('pointermove', {pointerId:1, clientX:120, clientY:110}));
+  nota.dispatchEvent(new w.PointerEvent('pointerup', {pointerId:1}));
+  verificar(editor.capturar().documento.textos.coronal[0].x > 5, 'Arraste deve mover o texto');
   const x = barra.querySelector('[data-texto-x]'); x.value = 30; x.dispatchEvent(new w.Event('input'));
   const painel = d.querySelector('.documento-opcoes'); painel.open = true;
   painel.querySelector('[data-novo-campo]').click();
   const inputs = painel.querySelectorAll('.documento-campo input');
   inputs[0].value = 'Paciente'; inputs[1].value = 'Paciente fictícia de teste'; inputs.forEach(i => i.dispatchEvent(new w.Event('input')));
+  for (const [nome, valor] of [['Data de nascimento','01/01/1990'],['Pedido','12345'],['Solicitante','Médico de teste'],['Data do exame','12/10/2026'],['Convênio','Particular']]) {
+    painel.querySelector('[data-novo-campo]').click(); const camposNovos = painel.querySelector('.documento-campo:last-child').querySelectorAll('input');
+    camposNovos[0].value = nome; camposNovos[1].value = valor; camposNovos.forEach(i => i.dispatchEvent(new w.Event('input')));
+  }
   painel.querySelector('[data-cabecalho-ativo]').click();
   const salvo = editor.capturar();
   verificar(salvo.vistas.coronal.lesoes.length === 0 && salvo.documento.textos.coronal.length === 1, 'Texto deve ser independente');
@@ -50,6 +61,15 @@
   d.querySelector('[data-limpar-mapa]').click(); verificar(editor.capturar().documento.textos.coronal.length === 0, 'Limpar vista deve retirar textos');
   editor.restaurar(salvo); const antigo = JSON.parse(JSON.stringify(vazio)); delete antigo.documento; editor.restaurar(antigo);
   verificar(editor.capturar().documento.textos.coronal.length === 0 && !editor.capturar().documento.cabecalho.ativo, 'Montagens antigas devem abrir sem dados residuais');
+  editor.restaurar(salvo); d.querySelector('[data-modelo]').click();
+  for (const largura of [390, 1280]) {
+    iframe.style.width = largura + 'px'; await new Promise(r => setTimeout(r, 100));
+    const botaoTexto = barra.querySelector('[data-adicionar-texto]').getBoundingClientRect();
+    const ajuste = d.querySelector('[data-controles-lesao]').getBoundingClientRect();
+    verificar(botaoTexto.height > 0 && botaoTexto.bottom <= ajuste.top, 'Botão acima de Ajustar lesão em ' + largura);
+    verificar(d.documentElement.scrollWidth <= largura, 'Painel sem transbordamento em ' + largura);
+  }
+  iframe.style.width = '390px'; await new Promise(r => setTimeout(r, 100));
   editor.restaurar(salvo); d.querySelector('[data-mapa-editor="coronal"]').scrollIntoView({block:'center'});
   resultado.textContent = 'PASSOU: texto sem lesão, edição, posição, vistas independentes, cabeçalho opcional, PNG/JPEG/PDF, captura imutável, restauração, compatibilidade, validação e celular.';
  } catch (e) { resultado.textContent = 'FALHOU: ' + e.message; }
