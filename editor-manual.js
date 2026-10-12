@@ -209,6 +209,7 @@
   const estadoMapa = document.querySelector("[data-estado-mapa-manual]");
   let exportacaoEmAndamento = false;
   let podeExportarDivulgacao = false;
+  const documento = window.endomapaCriarDocumento?.(mapasManuais, vista => { ativarVista(vista); definirCaneta(null); });
   function atualizarPermissaoDivulgacao(perfil) {
     podeExportarDivulgacao = perfil?.pode_exportar_divulgacao === true;
     document.querySelectorAll('[data-opcao-divulgacao]').forEach(item => { item.hidden = !podeExportarDivulgacao; });
@@ -313,7 +314,7 @@
     const editor = camada.closest('[data-tela="editor-manual"]');
     if (!editor || editor.closest("[hidden], [inert]") || evento.defaultPrevented || evento.isComposing || evento.altKey) return;
     const alvo = evento.target;
-    if (alvo instanceof Element && (alvo.closest("input, textarea, select, [role='textbox']") || alvo.isContentEditable)) return;
+    if (alvo instanceof Element && (alvo.closest("input, textarea, select, [role='textbox'], .documento-textos, .documento-opcoes, .documento-texto") || alvo.isContentEditable)) return;
     const tecla = evento.key.toLowerCase();
     const comando = evento.ctrlKey || evento.metaKey;
     if (comando && !evento.shiftKey && tecla === "c" && selecionada?.isConnected) {
@@ -581,6 +582,7 @@
     if (caneta) {
       finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
     }
+    documento?.limpar(vistaAtiva);
     camada.replaceChildren();
     selecionada = null;
     controles.hidden = true;
@@ -625,12 +627,13 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
+    return { versao: 1, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
     // O histórico guarda o caminho sem a versão de cache. Compara no mesmo formato,
     // somente contra imagens conhecidas; ao reabrir usa a URL atual da biblioteca.
+    documento?.validar(montagem?.documento);
     const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [new URL(botao.dataset.modelo, document.baseURI).pathname.replace(/^\//, ''), botao.dataset]));
     const ids = mapasManuais.map(m => m.dataset.mapaEditor);
     const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
@@ -683,6 +686,7 @@
       });
       const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
     });
+    documento?.restaurar(montagem.documento);
     document.querySelector('[data-mapa-especial]').value = montagem.especial;
     const ladoHidrosalpinge = document.querySelector('[data-lado-hidrosalpinge]');
     if (ladoHidrosalpinge) ladoHidrosalpinge.value = montagem.hidrosalpinge || 'hidrosalpinge-direita';
@@ -697,8 +701,8 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length) {
-      estadoMapa.textContent = `Adicione pelo menos uma lesão ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva)) {
+      estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
     definirExportacaoEmAndamento(true);
@@ -769,10 +773,10 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
+        return { vista, documento: documento?.capturar(), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
-      if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta; })) {
-        estadoMapa.textContent = "Adicione pelo menos uma lesão ou um desenho às vistas selecionadas antes de gerar o PDF.";
+      if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta || captura.documento?.textos[captura.vista]?.some(t => t.texto.trim()); })) {
+        estadoMapa.textContent = "Adicione pelo menos uma lesão, um texto ou um desenho às vistas selecionadas antes de gerar o PDF.";
         return;
       }
       const paginas = [];
@@ -780,7 +784,7 @@
         const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza }, false, captura.base, captura.assinatura, captura.caneta);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
-        paginas.push({ vista: captura.vista, canvas });
+        paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista) || canvas });
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
       if (registroPdf) await window.endomapaHistoricoManual.salvarPdf(registroPdf);
@@ -811,10 +815,13 @@
   async function capturarMapa(opcoes = {}) {
     opcoes = { ...opcoes, divulgacao: podeExportarDivulgacao && Boolean(opcoes.divulgacao) };
     const lesoes = fotografarLesoes();
-    const { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
+    const dadosDocumento = documento?.capturar();
+    const vistaDocumento = vistaAtiva;
+    let { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
       obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());
     if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
     if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
+    if (!opcoes.semRotulos && documento) canvas = documento.compor(canvas, dadosDocumento, vistaDocumento);
     if (opcoes.fundoBranco) {
       const contexto = canvas.getContext('2d');
       contexto.save(); contexto.globalCompositeOperation = 'destination-over';

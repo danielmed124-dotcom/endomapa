@@ -21,7 +21,7 @@
     verificar(resposta.ok, 'Não foi possível ler app.html');
     const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
     const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
-    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-manual.js'];
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-documento.js', 'editor-manual.js'];
     dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
     const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
     verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');

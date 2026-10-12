@@ -1,0 +1,57 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Textos e cabeçalho</title>
+<pre id="resultado">Executando</pre><iframe style="width:390px;height:844px;border:0" title="Editor no celular"></iframe>
+<script>
+(async () => {
+ const resultado = document.querySelector('pre');
+ const verificar = (ok, erro) => { if (!ok) throw new Error(erro); };
+ try {
+  const html = new DOMParser().parseFromString(await (await fetch('../app.html')).text(), 'text/html');
+  html.querySelectorAll('script').forEach(s => s.remove()); html.body.classList.remove('autenticacao-pendente');
+  const base = html.createElement('base'); base.href = new URL('../', location.href); html.head.prepend(base);
+  for (const src of ['prototipo.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']) { const s = html.createElement('script'); s.src = src; html.body.append(s); }
+  const iframe = document.querySelector('iframe'); const pronto = new Promise(r => iframe.onload = r); iframe.srcdoc = html.documentElement.outerHTML; await pronto;
+  const w = iframe.contentWindow, d = w.document, editor = w.endomapaEditorManual;
+  const esperar = async funcao => { for (let i = 0; i < 500; i++) { if (funcao()) return; await new Promise(r => setTimeout(r, 20)); } throw new Error('Tempo excedido'); };
+  const downloads = []; w.HTMLAnchorElement.prototype.click = function () { downloads.push(this.download); };
+  d.querySelector('[data-tela-alvo="editor-manual"]').click();
+  verificar(editor, 'Editor não inicializou'); const vazio = editor.capturar();
+  verificar(vazio.documento.cabecalho.ativo === false, 'Cabeçalho deve começar desativado');
+  const barra = d.querySelector('[data-vista-manual="coronal"] .documento-textos');
+  barra.querySelector('[data-adicionar-texto]').click();
+  const campo = barra.querySelector('textarea'); campo.value = 'Observação livre\nSem lesão inserida'; campo.dispatchEvent(new w.Event('input'));
+  const x = barra.querySelector('[data-texto-x]'); x.value = 30; x.dispatchEvent(new w.Event('input'));
+  const painel = d.querySelector('.documento-opcoes'); painel.open = true;
+  painel.querySelector('[data-novo-campo]').click();
+  const inputs = painel.querySelectorAll('.documento-campo input');
+  inputs[0].value = 'Paciente'; inputs[1].value = 'Paciente fictícia de teste'; inputs.forEach(i => i.dispatchEvent(new w.Event('input')));
+  painel.querySelector('[data-cabecalho-ativo]').click();
+  const salvo = editor.capturar();
+  verificar(salvo.vistas.coronal.lesoes.length === 0 && salvo.documento.textos.coronal.length === 1, 'Texto deve ser independente');
+  verificar(salvo.documento.textos.sagital.length === 0 && salvo.documento.textos.coronal[0].x === 30, 'Posição e vistas');
+  const imagem = async () => { const img = new w.Image(); img.src = await w.endomapaCapturarMapaManual({formato:'image/png'}); await img.decode(); return img; };
+  const com = await imagem(); verificar(com.height > 1448, 'Cabeçalho deve acrescentar espaço sem cobrir anatomia');
+  painel.querySelector('[data-cabecalho-ativo]').click(); const sem = await imagem(); verificar(sem.height === 1448, 'Desativar deve remover espaço do cabeçalho');
+  editor.restaurar(salvo); verificar(JSON.stringify(editor.capturar().documento) === JSON.stringify(salvo.documento), 'Reabrir deve preservar textos e cabeçalho');
+  const jpeg = await w.endomapaCapturarMapaManual({formato:'image/jpeg', fundoBranco:true}); verificar(jpeg.startsWith('data:image/jpeg'), 'JPEG deve funcionar com documento');
+  let paginasPdf, arquivoPdf; const gerar = w.endomapaGerarPdfA4;
+  w.endomapaGerarPdfA4 = paginas => { paginasPdf = paginas; arquivoPdf = gerar(paginas); return arquivoPdf; };
+  d.querySelector('input[name="vistas-editor"][value="ambas"]').click();
+  d.querySelector('[data-baixar-pdf-manual]').click();
+  campo.value = 'Edição depois do clique'; campo.dispatchEvent(new w.Event('input'));
+  await esperar(() => downloads.length > 0);
+  verificar(paginasPdf.length === 2 && paginasPdf.every(p => p.canvas.height > d.querySelector(`[data-mapa-editor="${p.vista}"] [data-mapa-base]`).naturalHeight), 'PDF deve incluir cabeçalho nas duas vistas: ' + paginasPdf.map(p => p.vista + ':' + p.canvas.width + 'x' + p.canvas.height).join(',') + ' esperado ' + com.height);
+  verificar(paginasPdf[0].canvas.toDataURL() === com.src, 'PDF deve preservar captura de texto e cabeçalho do instante do clique');
+  verificar(arquivoPdf.size > 1000, 'PDF real deve ser gerado');
+  editor.restaurar(salvo);
+  const invalido = JSON.parse(JSON.stringify(salvo)); invalido.documento.textos.coronal[0].x = -10;
+  let recusado = false; try { editor.restaurar(invalido); } catch { recusado = true; }
+  verificar(recusado && JSON.stringify(editor.capturar().documento) === JSON.stringify(salvo.documento), 'Dados inválidos devem preservar mapa');
+  verificar(d.documentElement.scrollWidth <= 390, 'Não deve transbordar em celular');
+  d.querySelector('[data-limpar-mapa]').click(); verificar(editor.capturar().documento.textos.coronal.length === 0, 'Limpar vista deve retirar textos');
+  editor.restaurar(salvo); const antigo = JSON.parse(JSON.stringify(vazio)); delete antigo.documento; editor.restaurar(antigo);
+  verificar(editor.capturar().documento.textos.coronal.length === 0 && !editor.capturar().documento.cabecalho.ativo, 'Montagens antigas devem abrir sem dados residuais');
+  editor.restaurar(salvo); d.querySelector('[data-mapa-editor="coronal"]').scrollIntoView({block:'center'});
+  resultado.textContent = 'PASSOU: texto sem lesão, edição, posição, vistas independentes, cabeçalho opcional, PNG/JPEG/PDF, captura imutável, restauração, compatibilidade, validação e celular.';
+ } catch (e) { resultado.textContent = 'FALHOU: ' + e.message; }
+})();
+</script></html>

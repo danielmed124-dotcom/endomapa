@@ -198,12 +198,16 @@
     const select=buscar('[data-mapa-especial]');
     for(const opcao of select.options) {
       select.value=opcao.value; select.dispatchEvent(new janela.Event('change',{bubbles:true}));
-      const imagem=painel(opcao.value).querySelector('[data-mapa-base]');
+      const destinos = opcao.value === 'hidrosalpinge' ? Array.from(buscar('[data-lado-hidrosalpinge]').options, o => o.value) : [opcao.value];
+      for (const destino of destinos) {
+      if (opcao.value === 'hidrosalpinge') { const lado = buscar('[data-lado-hidrosalpinge]'); lado.value = destino; lado.dispatchEvent(new janela.Event('change', {bubbles:true})); }
+      const imagem=painel(destino).querySelector('[data-mapa-base]');
       await aguardar(()=>imagem.complete && imagem.naturalWidth, 'Base especial deve carregar');
-      botao(opcao.value,'alternar').click(); desenhar(opcao.value);
-      verificar(pixel(tela(opcao.value))[3]===255, 'Caneta funciona no mapa '+opcao.value);
-      botao(opcao.value,'alternar').click();
-      verificar(janela.getComputedStyle(tela(opcao.value)).pointerEvents==='none','Concluir libera edição');
+      botao(destino,'alternar').click(); desenhar(destino);
+      verificar(pixel(tela(destino))[3]===255, 'Caneta funciona no mapa '+destino);
+      botao(destino,'alternar').click();
+      verificar(janela.getComputedStyle(tela(destino)).pointerEvents==='none','Concluir libera edição');
+      }
     }
     for(const largura of [320,390,768,1280]) {
       quadro.style.width=largura+'px'; await new Promise(resolve=>setTimeout(resolve,60));

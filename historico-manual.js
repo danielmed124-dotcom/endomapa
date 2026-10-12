@@ -12,7 +12,7 @@
   let id = crypto.randomUUID(), versao = 0, ocupado = false, salvo = '';
   let paginas = 0, lista = [], dia = [], leitura = 0;
   const textoData = valor => new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(valor));
-  const conteudo = montagem => Object.values(montagem.vistas).some(v => v.lesoes.length || v.tracos.length);
+  const conteudo = montagem => Object.values(montagem.vistas).some(v => v.lesoes.length || v.tracos.length) || Object.values(montagem.documento?.textos || {}).some(textos => textos.length) || Boolean(montagem.documento?.cabecalho.ativo) || Boolean(montagem.documento?.cabecalho.campos.length);
   const capturar = () => ({ titulo: titulo.value.trim() || 'Mapa sem título', montagem: editor.capturar() });
   const chave = dados => JSON.stringify({ titulo: dados.titulo, montagem: dados.montagem });
   function alterado() { const atual = capturar(); return salvo ? chave(atual) !== salvo : conteudo(atual.montagem) || Boolean(titulo.value.trim()); }
