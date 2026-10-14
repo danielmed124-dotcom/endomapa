@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$Origem, [Parameter(Mandatory=$true)][string]$Destino)
+param([Parameter(Mandatory=$true)][string]$Origem, [Parameter(Mandatory=$true)][string]$Destino, [ValidateRange(0,1)][double]$Opacidade = 1)
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 Add-Type -ReferencedAssemblies System.Drawing -TypeDefinition @'
@@ -7,7 +7,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 public static class FollicleBlue {
-  public static void Convert(string source, string target) {
+  public static void Convert(string source, string target, double opacity) {
     using (var original = new Bitmap(source))
     using (var result = original.Clone(new Rectangle(0,0,original.Width,original.Height),PixelFormat.Format32bppArgb)) {
       var area = new Rectangle(0,0,result.Width,result.Height);
@@ -19,9 +19,10 @@ public static class FollicleBlue {
           Marshal.Copy(ptr,row,0,row.Length);
           for(int i=0;i<row.Length;i+=4) {
             // RGB -> GBR: rotação de matiz de 240 graus, sem arredondamento.
-            // Mantém alfa, luminosidade HSL, saturação, resolução e geometria.
+            // Mantém luminosidade HSL, saturação, resolução e geometria.
             byte b=row[i], g=row[i+1], r=row[i+2];
             row[i]=r; row[i+1]=b; row[i+2]=g;
+            row[i+3]=(byte)Math.Round(row[i+3]*opacity);
           }
           Marshal.Copy(row,0,ptr,row.Length);
         }
@@ -33,12 +34,12 @@ public static class FollicleBlue {
       if(before.Size!=after.Size) throw new Exception("Dimensões alteradas.");
       for(int y=0;y<before.Height;y++) for(int x=0;x<before.Width;x++) {
         var a=before.GetPixel(x,y); var b=after.GetPixel(x,y);
-        if(a.A!=b.A || a.G!=b.R || a.B!=b.G || a.R!=b.B)
+        if((byte)Math.Round(a.A*opacity)!=b.A || a.G!=b.R || a.B!=b.G || a.R!=b.B)
           throw new Exception("Conversão ou transparência divergente.");
       }
-      Console.WriteLine("Conferidos todos os pixels: " + before.Width + " x " + before.Height + "; alfa idêntico e cores convertidas sem perda.");
+      Console.WriteLine("Conferidos todos os pixels: " + before.Width + " x " + before.Height + "; fator de opacidade " + opacity + "; cores convertidas sem perda.");
     }
   }
 }
 '@
-[FollicleBlue]::Convert([IO.Path]::GetFullPath($Origem),[IO.Path]::GetFullPath($Destino))
+[FollicleBlue]::Convert([IO.Path]::GetFullPath($Origem),[IO.Path]::GetFullPath($Destino),$Opacidade)

@@ -30,6 +30,8 @@ Mais para a frente, a IA transformará o ditado médico ao vivo em instruções 
 
 ## 6. FORA DE ESCOPO
 
+Transparência do folículo azul (13/10/2026): por solicitação de maior transparência, o alfa passa a 70% do valor anterior em todos os pixels, com arredondamento para PNG de 8 bits. Mantém os canais de cor da versão azul, os detalhes e as dimensões. Aplica-se a todas as contas e novas exportações. Reproduzir a partir do original rosa com `azular-foliculo.ps1 -Opacidade 0.7`; não aplicar sobre uma versão já convertida.
+
 Folículo azul (13/10/2026): a imagem compartilhada por todas as contas passa de vermelho/rosa para azul, por permutação dos canais RGB para GBR (rotação de matiz de 240°). Preserva exatamente o canal de transparência, as dimensões de 1254 × 1254, a geometria, a saturação e a luminosidade HSL de cada pixel, mantendo textura, sombras e brilhos sem geração por IA. Biblioteca, montagens reabertas e novas exportações usam a imagem azul; arquivos já baixados permanecem como foram gerados. O caminho da imagem permanece compatível com montagens salvas e recebe versão de cache na biblioteca. Conversão reproduzível em `output/estudos-realismo/azular-foliculo.ps1`, usando como origem a versão rosa anterior do histórico Git.
 
 Indicações laterais (13/10/2026): somente a conta autenticada `andreneide@yahoo.com.br` recebe E na margem esquerda e D na margem direita, na metade da altura da folha, fora da anatomia. Aplica-se ao coronal e a todos os mapas especiais, exceto Útero Retrofletido. Sagital e demais contas não recebem as letras. A camada acompanha a assinatura na tela e nas capturas PNG, JPEG e PDF, sem IA.
