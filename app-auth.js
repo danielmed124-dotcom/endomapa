@@ -47,6 +47,7 @@
       }
 
       perfil.pode_exportar_divulgacao = String(data.user.email || "").trim().toLowerCase() === "danielmed124@gmail.com";
+      perfil.indicar_lados_mapas = String(data.user.email || "").trim().toLowerCase() === "andreneide@yahoo.com.br";
       window.endomapaMedico = perfil;
       window.dispatchEvent(
         new CustomEvent("endomapa:perfil-carregado", {

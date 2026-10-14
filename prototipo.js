@@ -94,7 +94,13 @@ function aplicarPerfilMedico(perfil) {
   assinaturasDosMapas.forEach(desenharAssinatura);
 
   document.querySelectorAll("[data-assinatura-manual]").forEach((canvas) => {
-    desenharAssinaturaManual(canvas, primeiroNome);
+    const vista = canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor;
+    const indicarLados = perfil.indicar_lados_mapas === true && [
+      'coronal', 'ooforectomia-direita', 'ooforectomia-esquerda',
+      'ooforectomia-bilateral', 'kissing-ovaries', 'hidrosalpinge-direita',
+      'hidrosalpinge-esquerda', 'hidrosalpinge-bilateral'
+    ].includes(vista);
+    desenharAssinaturaManual(canvas, primeiroNome, indicarLados);
   });
 
   if (assinaturaFinal) {
@@ -103,11 +109,22 @@ function aplicarPerfilMedico(perfil) {
 }
 
 // A mesma assinatura desenhada na tela é copiada para o PNG e para o PDF.
-function desenharAssinaturaManual(canvas, nome) {
+function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const contexto = canvas.getContext("2d");
   contexto.clearRect(0, 0, canvas.width, canvas.height);
-  canvas.hidden = !nome;
-  canvas.setAttribute("aria-label", `Assinatura: ${nome}`);
+  canvas.hidden = !nome && !indicarLados;
+  canvas.setAttribute("aria-label", `Assinatura: ${nome}${indicarLados ? '; E à esquerda e D à direita' : ''}`);
+  // Mesma camada na tela e na captura: margens laterais, fora da anatomia.
+  if (indicarLados) {
+    contexto.save();
+    contexto.font = 'bold 28px Arial';
+    contexto.fillStyle = '#222';
+    contexto.textAlign = 'center';
+    contexto.textBaseline = 'middle';
+    contexto.fillText('E', canvas.width * 0.024, canvas.height / 2);
+    contexto.fillText('D', canvas.width * 0.976, canvas.height / 2);
+    contexto.restore();
+  }
   if (!nome) return;
 
   contexto.save();
