@@ -39,7 +39,7 @@ function atualizarLadosDosMapas() {
   document.querySelectorAll('[data-assinatura-manual]').forEach(canvas => {
     const mapa = canvas.closest('[data-mapa-editor]');
     const vista = mapa?.dataset.mapaEditor;
-    const permitido = perfilDosLados.indicar_lados_mapas === true && vistasComLados.has(vista);
+    const permitido = vistasComLados.has(vista);
     let botao = mapa?.querySelector('[data-inserir-lados]');
     if (permitido && !botao) {
       botao = document.createElement('button');
@@ -48,12 +48,12 @@ function atualizarLadosDosMapas() {
       botao.dataset.inserirLados = vista;
       botao.textContent = 'Inserir lados';
       botao.addEventListener('click', () => {
-        ladosPorVista[vista] = ladosPorVista[vista] === false;
+        ladosPorVista[vista] = !window.endomapaLados.ativo(vista);
         atualizarLadosDosMapas();
       });
       mapa.insertBefore(botao, mapa.querySelector('.mapa-editor__desenho'));
     }
-    const ativo = permitido && ladosPorVista[vista] !== false;
+    const ativo = permitido && window.endomapaLados.ativo(vista);
     if (botao) {
       botao.hidden = !permitido;
       botao.setAttribute('aria-pressed', String(ativo));
@@ -64,7 +64,7 @@ function atualizarLadosDosMapas() {
 }
 
 window.endomapaLados = {
-  ativo: vista => ladosPorVista[vista] !== false,
+  ativo: vista => ladosPorVista[vista] ?? (perfilDosLados ? perfilDosLados.indicar_lados_mapas === true : undefined),
   restaurar: valores => { ladosPorVista = { ...valores }; atualizarLadosDosMapas(); },
 };
 

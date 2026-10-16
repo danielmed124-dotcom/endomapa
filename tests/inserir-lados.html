@@ -17,6 +17,7 @@
   const pronto=new Promise(r=>frame.onload=r);frame.srcdoc=origem.documentElement.outerHTML;await pronto;
   const w=frame.contentWindow,d=w.document;w.history.replaceState=()=>{};
   const perfil=ativo=>w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{id:ativo?'andreneide':'outro',nome:'Andreneide',titulo:'Dra.',assinatura:'Andreneide',clinica_id:'centrus',indicar_lados_mapas:ativo}}));
+  const vazia=w.endomapaEditorManual.capturar();
   perfil(true);w.endomapaAbrirTela('editor-manual');
   const mapa=v=>d.querySelector('[data-mapa-editor="'+v+'"]');
   const assinatura=v=>mapa(v).querySelector('[data-assinatura-manual]');
@@ -54,10 +55,16 @@
   const antiga=structuredClone(salva);Object.values(antiga.vistas).forEach(v=>delete v.lados);
   w.endomapaEditorManual.restaurar(antiga);verificar(temLetra('coronal'),'Montagem antiga inicia ligada');
   perfil(false);
-  verificar([...d.querySelectorAll('[data-inserir-lados]')].every(b=>b.hidden),'Botao oculto em outras contas');
-  verificar(!temLetra('coronal'),'Sem letras em outras contas');
-  w.endomapaEditorManual.restaurar(antiga);verificar(!temLetra('coronal'),'Restauracao nao libera letras em outra conta');
+  verificar([...d.querySelectorAll('[data-inserir-lados]')].every(b=>!b.hidden),'Botao disponivel em outras contas');
+  verificar(!temLetra('coronal'),'Outras contas comecam desligadas');
+  botao.click();verificar(temLetra('coronal'),'Outra conta pode ligar as letras');
+  const outraSalva=w.endomapaEditorManual.capturar();
+  botao.click();verificar(!temLetra('coronal'),'Outra conta pode desligar as letras');
+  w.endomapaEditorManual.restaurar(outraSalva);verificar(temLetra('coronal'),'Outra conta restaura letras ligadas');
+  w.endomapaEditorManual.restaurar(antiga);verificar(!temLetra('coronal'),'Montagem antiga respeita padrao da conta');
+  w.endomapaEditorManual.restaurar(vazia);verificar(!temLetra('coronal'),'Novo mapa de outra conta comeca desligado');
   perfil(true);verificar(temLetra('coronal')&&d.querySelectorAll('[data-inserir-lados]').length===8,'Volta a conta sem duplicar botoes');
+  w.endomapaEditorManual.restaurar(vazia);verificar(temLetra('coronal'),'Novo mapa de Andreneide comeca ligado');
   document.querySelector('#resultado').textContent='PASSOU: botao, celular, oito vistas, alternancia, PNG, captura imutavel, salvamento, compatibilidade e isolamento entre contas.';
  }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.stack}
 })();
