@@ -2,6 +2,8 @@
 
 ## Estado atual — publicação autorizada
 
+Apresentação dos botões: a pedido de Daniel durante a publicação, ambos os nomes usam exatamente duas linhas, com `SOMP` na primeira e `esquerdo`/`direito` na segunda. A quebra é explícita e cada palavra permanece inteira.
+
 Em 16/10/2026, Daniel aprovou também o lado direito e autorizou inserir e publicar ambos no Endomapa. Ordem: Cisto → SOMP esquerdo → SOMP direito → Cisto hemorrágico. Tamanhos iniciais: esquerdo 95%, direito 100%. Esta autorização substitui as observações históricas abaixo sobre aguardar aprovação. A publicação usa somente os arquivos desta entrega, sem as alterações locais anteriores de outras tarefas.
 
 Registro de 16/10/2026. Daniel aprovou o resultado do lado esquerdo e pediu que todo o caminho fosse salvo para repetir no lado direito quando enviar a referência. Não gerar o lado direito por espelhamento ou por suposição: aguardar a imagem enviada.
