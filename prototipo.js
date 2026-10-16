@@ -46,12 +46,14 @@ function atualizarLadosDosMapas() {
       botao.type = 'button';
       botao.className = 'botao botao--secundario mapa-editor__inserir-lados';
       botao.dataset.inserirLados = vista;
-      botao.textContent = 'Inserir lados';
+      botao.textContent = 'Inserir lados (direito/esquerdo)';
       botao.addEventListener('click', () => {
         ladosPorVista[vista] = !window.endomapaLados.ativo(vista);
         atualizarLadosDosMapas();
       });
-      mapa.insertBefore(botao, mapa.querySelector('.mapa-editor__desenho'));
+      let barra = mapa.querySelector('.mapa-editor__barra');
+      if (!barra) { barra = document.createElement('div'); barra.className = 'mapa-editor__barra'; mapa.querySelector('.mapa-editor__desenho').before(barra); }
+      barra.prepend(botao);
     }
     const ativo = permitido && window.endomapaLados.ativo(vista);
     if (botao) {

@@ -23,7 +23,7 @@
   const assinatura=v=>mapa(v).querySelector('[data-assinatura-manual]');
   const temLetra=v=>assinatura(v).getContext('2d').getImageData(10,700,32,48).data.some((n,i)=>i%4===3&&n>0);
   const botao=mapa('coronal').querySelector('[data-inserir-lados]');
-  verificar(botao.textContent==='Inserir lados'&&botao.getAttribute('aria-pressed')==='true','Nome e estado inicial');
+  verificar(botao.textContent==='Inserir lados (direito/esquerdo)'&&botao.getAttribute('aria-pressed')==='true','Nome e estado inicial');
   verificar(d.querySelectorAll('[data-inserir-lados]').length===8,'Oito mapas compativeis');
   verificar(!mapa('sagital').querySelector('[data-inserir-lados]')&&!mapa('utero-retrofletido').querySelector('[data-inserir-lados]'),'Vistas sem laterais');
   const pos=botao.getBoundingClientRect(),desenho=mapa('coronal').querySelector('.mapa-editor__desenho').getBoundingClientRect();

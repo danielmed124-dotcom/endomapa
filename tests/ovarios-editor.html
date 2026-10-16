@@ -1,0 +1,66 @@
+<!doctype html><meta charset="utf-8"><title>Ovários no editor</title>
+<pre id="resultado">Executando</pre><iframe title="Editor no celular" style="width:390px;height:844px;border:0"></iframe>
+<script>
+(async()=>{const ok=(v,m)=>{if(!v)throw Error(m)};try{
+ const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+ html.querySelectorAll('script,base').forEach(e=>e.remove());html.body.classList.remove('autenticacao-pendente');
+ const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+ for(const src of ['prototipo.js','orgaos-deformar.js','orgaos-motor.js','orgaos-editor.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+ const frame=document.querySelector('iframe'),loaded=new Promise(r=>frame.onload=r);frame.srcdoc=html.documentElement.outerHTML;await loaded;
+ const w=frame.contentWindow,d=w.document;w.history.replaceState=()=>{};
+ const perfil=id=>w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{id,nome:'Teste',titulo:'Dr.',assinatura:'Teste',clinica_id:null,indicar_lados_mapas:false}}));
+ perfil('a');w.endomapaAbrirTela('editor-manual');await w.endomapaOrgaos.pronto;
+ const clicar=s=>d.querySelector(s).click(),estado=()=>w.endomapaOrgaos.estado();
+ const mover=d.querySelector('[data-movimentar-ovarios]'),restaurar=d.querySelector('[data-restaurar-ovarios]'),toque=d.querySelector('.mapa-editor__orgaos-toque');
+ const lados=d.querySelector('[data-inserir-lados="coronal"]');
+ ok(!mover.disabled&&mover.textContent==='Movimentar ovários'&&restaurar.textContent==='Restaurar posições originais','Botoes prontos');
+ ok(lados.textContent==='Inserir lados (direito/esquerdo)','Nome de lados atualizado');
+ const a=lados.getBoundingClientRect(),b=mover.getBoundingClientRect();
+ ok(b.left>=a.right&&a.height>=44&&b.height>=44&&d.documentElement.scrollWidth<=392,'Botoes em lados opostos no celular');
+ ok(d.querySelectorAll('[data-movimentar-ovarios]').length===1,'Movimento somente no coronal aprovado');
+ const inicial=w.endomapaEditorManual.capturar();
+ clicar('[data-nome="SOMP esquerdo"]');const lesao=d.querySelector('[data-camada-editor="coronal"] .lesao-editavel'),x=Number(lesao.dataset.x);
+ const pngInicial=await w.endomapaCapturarMapaManual({formato:'image/png'});
+ clicar('[data-movimentar-ovarios]');ok(!toque.hidden&&mover.getAttribute('aria-pressed')==='true','Ativa movimento');
+ toque.setPointerCapture=()=>{};
+ const evento=(x,y,id=1)=>{const r=toque.getBoundingClientRect();return{button:0,pointerId:id,clientX:r.left+x*r.width/1086,clientY:r.top+y*r.height/1448,preventDefault(){}}};
+ toque.onpointerdown(evento(326,710));toque.onpointermove(evento(756,810));toque.onpointerup(evento(756,810));
+ ok(Math.abs(estado().esquerdo.x-430)<.01&&Math.abs(estado().esquerdo.y-100)<.01,'Arraste cruza o centro: '+JSON.stringify(estado()));
+ ok(Math.abs(Number(lesao.dataset.x)-x-430*100/1086)<.01,'Lesao vinculada acompanha');
+ ok(estado().direito.x===0&&!restaurar.disabled,'Outro ovario intacto e restauracao disponivel');
+ const salva=w.endomapaEditorManual.capturar();
+ const pngMovido=await w.endomapaCapturarMapaManual({formato:'image/png'});ok(pngMovido!==pngInicial,'PNG inclui movimento');
+ const capturando=w.endomapaCapturarMapaManual({formato:'image/png'});
+ restaurar.click();ok(await capturando===pngMovido,'Captura preserva posicao do instante do clique');
+ ok(estado().esquerdo.x===0&&Math.abs(Number(lesao.dataset.x)-x)<.01,'Restauracao leva lesao junto');
+ ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===pngInicial,'Restauracao visual exata');
+ w.endomapaEditorManual.restaurar(salva);ok(estado().esquerdo.x===430&&toque.hidden,'Reabrir conserva posicoes sem ativar arraste');
+ ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===pngMovido,'Montagem reaberta igual na exportacao');
+ const jpeg=await w.endomapaCapturarMapaManual({formato:'image/jpeg'});ok(jpeg.startsWith('data:image/jpeg'),'JPEG com ovarios movidos');
+ let paginasPdf,arquivoPdf,baixou=false;const gerar=w.endomapaGerarPdfA4;
+ w.endomapaGerarPdfA4=paginas=>{paginasPdf=paginas;arquivoPdf=gerar(paginas);return arquivoPdf};
+ w.HTMLAnchorElement.prototype.click=function(){baixou=true};
+ clicar('input[name="vistas-editor"][value="coronal"]');clicar('[data-baixar-pdf-manual]');
+ restaurar.click();ok(estado().esquerdo.x===430,'Restaurar bloqueado durante PDF');
+ for(let i=0;i<500&&!baixou;i++)await new Promise(r=>setTimeout(r,20));
+ ok(baixou&&arquivoPdf.size>1000&&paginasPdf[0].canvas.toDataURL()===pngMovido,'PDF real preserva ovarios e lesoes');
+ const invalida=structuredClone(salva);invalida.vistas.coronal.ovarios.esquerdo.x=Infinity;
+ let rejeitada=false;try{w.endomapaEditorManual.restaurar(invalida)}catch{rejeitada=true}ok(rejeitada&&estado().esquerdo.x===430,'Dados invalidos nao alteram mapa aberto');
+ const antiga=structuredClone(salva);delete antiga.vistas.coronal.ovarios;
+ w.endomapaEditorManual.restaurar(antiga);ok(estado().esquerdo.x===0,'Montagens antigas abrem nas posicoes originais');
+ w.endomapaEditorManual.restaurar(salva);perfil('a');ok(estado().esquerdo.x===430,'Mesma conta conserva posicoes');perfil('b');ok(estado().esquerdo.x===0,'Nova conta reinicia posicoes');
+ w.endomapaEditorManual.restaurar(salva);clicar('[data-movimentar-ovarios]');clicar('[data-caneta-alternar]');ok(toque.hidden,'Caneta desativa arraste');
+ clicar('[data-movimentar-ovarios]');ok(!d.querySelector('.mapa-editor__caneta--ativa'),'Arraste desativa caneta');
+ clicar('[data-limpar-mapa]');ok(estado().esquerdo.x===0&&toque.hidden,'Limpar mapa restaura ovarios');
+ w.endomapaEditorManual.restaurar(inicial);
+ clicar('[data-movimentar-ovarios]');
+ toque.onpointerdown(evento(326,710));toque.onpointermove(evento(426,710));toque.onpointerup(evento(426,710));
+ baixou=false;clicar('[data-baixar-mapa-manual]');
+ for(let i=0;i<500&&!baixou;i++)await new Promise(r=>setTimeout(r,20));
+ ok(baixou,'Download permitido apenas com ovarios reposicionados');
+ d.querySelector('[data-mapa-editor="coronal"]').scrollIntoView({block:'start'});
+ w.scrollBy(0,-140);
+ document.querySelector('#resultado').textContent='PASSOU: botoes no celular, arraste, lesoes, captura, persistencia, restauracao, contas e caneta.';
+ }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.stack}
+})();
+</script>

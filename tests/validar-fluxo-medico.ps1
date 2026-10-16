@@ -50,7 +50,7 @@ try {
     }
     $processo = Start-Process -FilePath 'C:\Program Files\Google\Chrome\Application\chrome.exe' -ArgumentList $argumentos -WindowStyle Hidden -Wait -PassThru -RedirectStandardOutput $arquivoSaida -RedirectStandardError $arquivoErro
     $texto = Get-Content $arquivoSaida -Raw -ErrorAction SilentlyContinue
-    if ($processo.ExitCode -ne 0 -or $texto -notmatch '<pre[^>]*>PASSOU:') { throw "Teste $nome falhou. Consulte $arquivoSaida e $arquivoErro." }
+    if ($processo.ExitCode -ne 0 -or [string]::IsNullOrWhiteSpace($texto) -or $texto -notmatch '<pre[^>]*>PASSOU:') { throw "Teste $nome falhou. Consulte $arquivoSaida e $arquivoErro." }
     Write-Output "$nome : PASSOU"
   }
 } finally {

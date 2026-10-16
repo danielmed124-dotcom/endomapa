@@ -127,6 +127,7 @@
   }
 
   function definirCaneta(estado) {
+    if (estado) window.endomapaOrgaos?.desativar();
     if (canetaAtiva) finalizarTraco(canetaAtiva);
     canetaAtiva = estado;
     if (estado) controles.hidden = true;
@@ -345,6 +346,7 @@
   });
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40", dadosCopiados = null) {
+    window.endomapaOrgaos?.desativar();
     definirCaneta(null);
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
@@ -368,6 +370,12 @@
     lesao.dataset.medidaX = String(56 + deslocamento);
     lesao.dataset.medidaY = String(52 + deslocamento);
     if (dadosCopiados) Object.assign(lesao.dataset, dadosCopiados);
+    if (vistaAtiva === 'coronal' && dadosCopiados?.medida1 === undefined) {
+      const ladoSomp = /somp-(esquerdo|direito)\.png/.exec(src)?.[1];
+      const posicao = ladoSomp && window.endomapaOrgaos?.estado()[ladoSomp];
+      if (posicao) { lesao.dataset.x = String(Number(lesao.dataset.x) + posicao.x * 100 / 1086); lesao.dataset.y = String(Number(lesao.dataset.y) + posicao.y * 100 / 1448); }
+      lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+    }
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     lesao.style.setProperty("--proporcao-lesao", proporcao);
     lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
@@ -419,6 +427,7 @@
       atualizarRotuloDeMedidas(lesao);
     };
     const terminar = function () {
+      if (camadaDoMovimento.dataset.camadaEditor === 'coronal') lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
       lesao.removeEventListener("pointermove", mover);
       lesao.removeEventListener("pointerup", terminar);
       lesao.removeEventListener("pointercancel", terminar);
@@ -582,6 +591,7 @@
   }
 
   function limparMapa() {
+    if (vistaAtiva === 'coronal') window.endomapaOrgaos?.restaurar();
     const caneta = canetas.get(vistaAtiva);
     if (caneta) {
       finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
@@ -595,6 +605,22 @@
   }
 
   function mostrar(texto) { mensagem.textContent = texto; }
+  window.addEventListener('endomapa:movimentar-ovarios', () => {
+    ativarVista('coronal'); definirCaneta(null); controles.hidden = true;
+    document.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel').forEach(l => {
+      if (!l.dataset.orgao) l.dataset.orgao = window.endomapaOrgaos.localizar(Number(l.dataset.x), Number(l.dataset.y)) || '';
+    });
+    mostrar('Arraste um ovário. Toque novamente em Movimentar ovários para voltar a ajustar lesões.');
+  });
+  window.addEventListener('endomapa:ovario-movido', e => {
+    const {lado,antes,depois} = e.detail;
+    document.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel').forEach(l => {
+      if (l.dataset.orgao !== lado) return;
+      l.dataset.x = String(limitar(Number(l.dataset.x)+(depois.x-antes.x)*100/1086,0,100));
+      l.dataset.y = String(limitar(Number(l.dataset.y)+(depois.y-antes.y)*100/1448,0,100));
+      atualizarVisual(l); atualizarRotuloDeMedidas(l);
+    });
+  });
   function limitar(valor, minimo, maximo) { return Math.min(maximo, Math.max(minimo, valor)); }
 
   function fotografarLesoes(camadaDaCaptura = camada) {
@@ -625,6 +651,7 @@
       const vista = mapa.dataset.mapaEditor;
       vistas[vista] = {
         lados: window.endomapaLados?.ativo(vista),
+        ovarios: vista === 'coronal' ? window.endomapaOrgaos?.estado() : undefined,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
           return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
@@ -655,9 +682,11 @@
     for (const id of ids) {
       const vista = vistas[id];
       if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
+      if (id === 'coronal') window.endomapaOrgaos?.validar(vista?.ovarios);
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
+        if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
         for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',10,300],['eixoY',10,300]]) {
           if (!Number.isFinite(Number(l.dados[campo])) || Number(l.dados[campo]) < min || Number(l.dados[campo]) > max) falhar();
         }
@@ -675,6 +704,7 @@
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
     window.endomapaLados?.restaurar(Object.fromEntries(ids.map(id => [id, vistas[id].lados])));
+    window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios);
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     atualizarEscalaCinza();
     definirCaneta(null);
@@ -688,6 +718,7 @@
       vistas[id].lesoes.forEach(l => {
         const modelo = modelos.get(l.src);
         const dados = {};
+        if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
         adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
@@ -708,7 +739,7 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva)) {
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !window.endomapaOrgaos?.alterado(vistaAtiva)) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
@@ -780,15 +811,15 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, documento: documento?.capturar(true), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
+        return { vista, orgaos: window.endomapaOrgaos?.fotografar(vista), documento: documento?.capturar(true), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
-      if (!capturas.some(function (captura) { return captura.lesoes.length || captura.caneta || captura.documento?.textos[captura.vista]?.some(t => t.texto.trim()); })) {
+      if (!capturas.some(function (captura) { return captura.lesoes.length || captura.orgaos || captura.caneta || captura.documento?.textos[captura.vista]?.some(t => t.texto.trim()); })) {
         estadoMapa.textContent = "Adicione pelo menos uma lesão, um texto ou um desenho às vistas selecionadas antes de gerar o PDF.";
         return;
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza }, false, captura.base, captura.assinatura, captura.caneta);
+        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza }, false, captura.base, captura.assinatura, captura.caneta, captura.orgaos);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
         paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista) || canvas });
@@ -883,7 +914,7 @@
     }
   }
 
-  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta()) {
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = window.endomapaOrgaos?.fotografar(vistaAtiva)) {
     // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
     const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
     const base = await carregarImagem(fonteBase);
@@ -892,6 +923,7 @@
     canvas.height = base.naturalHeight;
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
+    if (orgaos) contexto.drawImage(orgaos, 0, 0, canvas.width, canvas.height);
     if (escalaCinza) {
       // Conversão por pixels funciona também em celulares sem filtro de canvas.
       // Só a base foi desenhada neste instante; as lesões conservam suas cores.
