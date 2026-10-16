@@ -175,7 +175,10 @@
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     botao.addEventListener("click", function () {
-      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, botao.dataset.tamanhoMinimo);
+      const posicaoInicial = botao.dataset.vistaInicial === vistaAtiva
+        ? { x: botao.dataset.xInicial, y: botao.dataset.yInicial }
+        : null;
+      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, botao.dataset.tamanhoMinimo, posicaoInicial);
     });
   });
   giro.addEventListener("input", aplicarControles);

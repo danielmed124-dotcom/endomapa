@@ -1,0 +1,133 @@
+﻿{
+    "arquivo":  "somp-direito-biblioteca-8x.png",
+    "quantidade":  20,
+    "larguraPixels":  1128,
+    "alturaPixels":  1552,
+    "xNoMapa":  695,
+    "yNoMapa":  626,
+    "larguraNoMapa":  141,
+    "alturaNoMapa":  194,
+    "foliculosCentroXYLarguraAltura":  [
+                                           [
+                                               752,
+                                               645,
+                                               26,
+                                               27
+                                           ],
+                                           [
+                                               731,
+                                               650,
+                                               21,
+                                               21
+                                           ],
+                                           [
+                                               776,
+                                               657,
+                                               30,
+                                               31
+                                           ],
+                                           [
+                                               795,
+                                               662,
+                                               20,
+                                               21
+                                           ],
+                                           [
+                                               722,
+                                               669,
+                                               26,
+                                               26
+                                           ],
+                                           [
+                                               752,
+                                               670,
+                                               25,
+                                               25
+                                           ],
+                                           [
+                                               716,
+                                               695,
+                                               31,
+                                               31
+                                           ],
+                                           [
+                                               780,
+                                               694,
+                                               26,
+                                               27
+                                           ],
+                                           [
+                                               801,
+                                               687,
+                                               26,
+                                               27
+                                           ],
+                                           [
+                                               809,
+                                               713,
+                                               30,
+                                               31
+                                           ],
+                                           [
+                                               719,
+                                               727,
+                                               27,
+                                               28
+                                           ],
+                                           [
+                                               739,
+                                               722,
+                                               21,
+                                               21
+                                           ],
+                                           [
+                                               795,
+                                               734,
+                                               27,
+                                               26
+                                           ],
+                                           [
+                                               820,
+                                               738,
+                                               20,
+                                               20
+                                           ],
+                                           [
+                                               732,
+                                               751,
+                                               31,
+                                               32
+                                           ],
+                                           [
+                                               752,
+                                               747,
+                                               22,
+                                               22
+                                           ],
+                                           [
+                                               755,
+                                               769,
+                                               25,
+                                               25
+                                           ],
+                                           [
+                                               807,
+                                               769,
+                                               48,
+                                               49
+                                           ],
+                                           [
+                                               770,
+                                               788,
+                                               31,
+                                               31
+                                           ],
+                                           [
+                                               799,
+                                               800,
+                                               26,
+                                               27
+                                           ]
+                                       ],
+    "observacao":  "Posicoes e tamanhos aproximados por medicao visual da referencia; textura e transparencia do foliculo da biblioteca; previa sem integracao"
+}
