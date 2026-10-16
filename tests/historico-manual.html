@@ -189,14 +189,16 @@
     h.mapas.get(primeiroId).versao--;
     h.falhar = true; salvar.click(); await esperarSalvo(); verificar(mensagem.textContent.includes('Não foi possível'), 'Falha de rede exibiu sucesso');
     h.falhar = false;
-    // PDF captura o estado no clique, salva antes de baixar e conta uma geração.
+    // PDF nunca salva a montagem; registra somente o contador de geracoes.
+    const versaoAntesPdf=h.mapas.get(primeiroId).versao;
+    titulo.value='Alteracao apenas para PDF';
     const antes = teste.downloads.length;
     buscar('[data-baixar-pdf-manual]').click(); buscar('[data-baixar-pdf-manual]').click();
     await aguardar(() => teste.downloads.length > antes && !buscar('[data-baixar-pdf-manual]').disabled, 'PDF não concluiu');
-    verificar(h.pdfs.length === 1 && h.mapas.size === 1, 'PDF duplicou evento ou mapa');
+    verificar(h.pdfs.length === 1 && h.mapas.size === 1 && h.mapas.get(primeiroId).versao===versaoAntesPdf && h.mapas.get(primeiroId).titulo==='Mapa atualizado', 'PDF nao deve salvar alteracoes na biblioteca');
     h.falhar = true; buscar('[data-baixar-pdf-manual]').click();
     await aguardar(() => !buscar('[data-baixar-pdf-manual]').disabled, 'Falha de PDF bloqueou editor');
-    verificar(teste.downloads.length === antes+1 && h.pdfs.length === 1, 'Falha no registro baixou ou contou PDF'); h.falhar = false;
+    verificar(teste.downloads.length === antes+2 && h.pdfs.length === 1, 'Falha no contador nao deve impedir baixar PDF'); h.falhar = false;
     janela.endomapaAbrirTela('painel-dia');
     await aguardar(() => !buscar('[data-conteudo-painel]').hidden || buscar('[data-estado-painel]').textContent.startsWith('Não foi possível'), 'Painel não iniciou');
     verificar(!buscar('[data-conteudo-painel]').hidden, 'Painel não carregou: '+buscar('[data-estado-painel]').textContent+' '+teste.erros.join(';'));
@@ -205,9 +207,23 @@
     // Paginação deve alcançar mapas além da primeira página.
     for (let n=0;n<32;n++) { const m = structuredClone(h.mapas.get(primeiroId)); m.id = janela.crypto.randomUUID(); m.titulo = 'Extra '+n; h.mapas.set(m.id,m); }
     janela.endomapaAbrirTela('meus-mapas');
-    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] button').length === 30, 'Primeira página incorreta');
+    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] [data-abrir-mapa]').length === 30, 'Primeira página incorreta');
     buscar('[data-mais-mapas]').click();
-    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] button').length === 33, 'Paginação não trouxe os restantes');
+    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] [data-abrir-mapa]').length === 33, 'Paginação não trouxe os restantes');
+    verificar(salvar.textContent==='Salvar na biblioteca','Nome do botao');
+    verificar(!doc.querySelector('[data-ordenar-mapa]'),'Nao deve haver botoes subir ou descer');
+    let artigos=[...doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]')];
+    const origemArraste=artigos[0],destinoArraste=artigos.at(-1),idArrastado=origemArraste.dataset.mapaSalvo;
+    const pegador=origemArraste.querySelector('h3');pegador.setPointerCapture=()=>{};
+    const elementoOriginal=doc.elementFromPoint;doc.elementFromPoint=()=>destinoArraste;
+    const pos=destinoArraste.getBoundingClientRect(),e={button:0,pointerId:9,clientX:pos.left+10,clientY:pos.bottom-2,preventDefault(){}};
+    pegador.onpointerdown(e);pegador.onpointermove(e);pegador.onpointerup(e);doc.elementFromPoint=elementoOriginal;
+    await aguardar(()=>!salvar.disabled&&doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]').length===33,'Arraste nao terminou');
+    verificar([...doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]')].at(-1).dataset.mapaSalvo===idArrastado,'Arraste nao persistiu ordem');
+    const apagar=doc.querySelector('[data-lista-mapas] [data-excluir-mapa]'),idApagar=apagar.dataset.excluirMapa;
+    h.confirmar=false;apagar.click();verificar(h.mapas.has(idApagar),'Cancelar exclusao removeu mapa');
+    h.confirmar=true;apagar.click();await aguardar(()=>!salvar.disabled&&!h.mapas.has(idApagar),'Exclusao nao terminou');
+    verificar(!doc.querySelector('[data-excluir-mapa="'+idApagar+'"]'),'Mapa excluido ainda aparece');
     // Dados incompatíveis nunca removem a montagem atual.
     const snapshot = dados(); const invalida = structuredClone(snapshot); invalida.vistas.coronal.lesoes[0].src = 'https://invalid.example/imagem.png';
     let rejeitou = false; try { janela.endomapaEditorManual.restaurar(invalida); } catch (_) { rejeitou = true; }

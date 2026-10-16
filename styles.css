@@ -284,6 +284,10 @@ button {
   border-radius: 17px;
   background: rgba(25, 33, 28, 0.72);
 }
+.mapa-salvo__acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.mapa-salvo__acoes .botao { min-height: 44px; flex: 1; }
+.mapa-salvo__arrastar { cursor: grab; touch-action: none; min-height: 44px; padding: 8px 0; user-select: none; }
+.mapa-salvo--arrastando { outline: 2px solid var(--dourado); opacity: .75; }
 
 .mapa-salvo__topo {
   display: flex;

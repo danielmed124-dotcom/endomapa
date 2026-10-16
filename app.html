@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endomapa."
     />
     <title>Área de trabalho | Endomapa</title>
-    <link rel="stylesheet" href="styles.css?v=orgaos-1" />
+    <link rel="stylesheet" href="styles.css?v=biblioteca-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -264,7 +264,7 @@
           <div class="selo">Histórico protegido</div>
           <h1 class="titulo-tela" id="titulo-meus-mapas">Meus mapas</h1>
           <p class="texto-apoio">
-            Suas montagens manuais salvas, disponíveis para reabrir e continuar editando.
+            Sua biblioteca de mapas escolhidos. Abra, organize a ordem ou exclua os que não quiser manter.
           </p>
         </header>
 
@@ -669,10 +669,10 @@
           <span class="campo__rotulo">Nome da montagem</span>
           <input type="text" maxlength="100" data-titulo-montagem placeholder="Ex.: exemplo coronal" />
         </label>
-        <button class="botao" type="button" data-salvar-manual>Salvar mapa</button>
+        <button class="botao" type="button" data-salvar-manual>Salvar na biblioteca</button>
         <button class="botao botao--secundario" type="button" data-novo-manual>Iniciar novo mapa</button>
         <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
-        <p class="texto-apoio">Salvar guarda todas as vistas da montagem na sua conta. Gerar PDF também salva; baixar PNG ou JPEG não salva no histórico.</p>
+        <p class="texto-apoio">Somente Salvar na biblioteca guarda esta montagem em Meus mapas. Baixar PDF, PNG ou JPEG não salva o mapa na biblioteca.</p>
         <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
@@ -728,8 +728,8 @@
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=a4-sem-margem-2"></script>
     <script src="editor-documento.js?v=3"></script>
-    <script src="editor-manual.js?v=orgaos-1"></script>
-    <script src="historico-manual.js?v=orgaos-1"></script>
+    <script src="editor-manual.js?v=biblioteca-1"></script>
+    <script src="historico-manual.js?v=biblioteca-1"></script>
     <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>
 </html>

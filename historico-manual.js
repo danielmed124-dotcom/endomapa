@@ -36,7 +36,7 @@
       const mapa = Array.isArray(data) ? data[0] : data;
       if (!mapa || mapa.id !== registro.id || !mapa.versao) throw new Error('Salvamento não confirmado');
       id = mapa.id; versao = mapa.versao; salvo = chave(registro);
-      mensagem(alterado() ? 'Versão salva. Há alterações feitas durante o salvamento; clique em Salvar mapa para guardá-las.' : 'Mapa salvo na sua conta. Você pode reabri-lo em Meus mapas.');
+      mensagem(alterado() ? 'Versão salva. Há alterações feitas durante o salvamento; clique em Salvar na biblioteca para guardá-las.' : 'Mapa salvo na biblioteca. Você pode reabri-lo em Meus mapas.');
       return mapa;
     } catch (erro) {
       const texto = erro.historico ? erro.message : 'Não foi possível confirmar o salvamento na sua conta. Confira a conexão e tente novamente. A montagem permanece aberta.' + (registro.pdf ? ' O PDF não foi baixado nesta tentativa.' : '');
@@ -44,7 +44,10 @@
       throw erroHistorico(texto);
     } finally { bloquear(false); }
   }
-  window.endomapaHistoricoManual = { ocupado: () => ocupado, prepararPdf: () => preparar(true), salvarPdf: gravar };
+  window.endomapaHistoricoManual = { ocupado: () => ocupado, registrarPdf: async pdfId => {
+    const {error}=await cliente.rpc('registrar_pdf_manual',{p_id:pdfId});
+    if(error) mensagem('PDF baixado. Não foi possível atualizar o contador do dia. O mapa não foi salvo na biblioteca.',true);
+  } };
   salvar.addEventListener('click', async () => {
     if (ocupado || editor.ocupado()) return;
     const registro = preparar();
@@ -72,7 +75,7 @@
       if (chave(capturar()) !== antesDeAbrir && !window.confirm('Você editou a montagem durante o carregamento. Abrir o mapa salvo substituirá essas alterações. Continuar?')) return;
       editor.restaurar(data.montagem);
       titulo.value = data.titulo; id = data.id; versao = data.versao; salvo = chave(capturar());
-      mensagem('Mapa aberto. Clique em Salvar mapa para guardar novas alterações.');
+      mensagem('Mapa aberto. Clique em Salvar na biblioteca para guardar novas alterações.');
       window.endomapaAbrirTela('editor-manual');
     } catch (erro) { window.alert(erro.message || 'Não foi possível abrir. A montagem atual foi preservada.'); }
     finally { botao.disabled = false; bloquear(false); }
@@ -81,26 +84,65 @@
     destino.replaceChildren();
     mapas.forEach(mapa => {
       const artigo = document.createElement('article'); artigo.className = 'mapa-salvo';
+      artigo.dataset.mapaSalvo=mapa.id;
       const nome = document.createElement('h3'); nome.textContent = mapa.titulo;
       const data = document.createElement('p'); data.textContent = 'Salvo em ' + textoData(mapa.atualizado_em);
       const botao = document.createElement('button'); botao.type = 'button'; botao.className = 'botao botao--secundario'; botao.textContent = 'Abrir para editar';
       botao.addEventListener('click', () => abrir(mapa.id, botao));
+      botao.dataset.abrirMapa=mapa.id;
       artigo.append(nome, data, botao); destino.append(artigo);
+      if(destino.matches('[data-lista-mapas]')) {
+        const acoes=document.createElement('div');acoes.className='mapa-salvo__acoes';
+        prepararArraste(artigo,nome,mapa,destino);
+        const excluir=document.createElement('button');excluir.type='button';excluir.className='botao botao--perigo';excluir.textContent='Excluir';excluir.dataset.excluirMapa=mapa.id;excluir.setAttribute('aria-label','Excluir '+mapa.titulo);
+        excluir.onclick=()=>alterarBiblioteca(mapa);acoes.append(excluir);artigo.append(acoes);
+      }
     });
   }
-  async function carregarMapas(mais = false) {
+  function prepararArraste(artigo,nome,mapa,destino) {
+    nome.classList.add('mapa-salvo__arrastar');nome.tabIndex=0;nome.title='Arraste para organizar. No teclado, use as setas para cima e para baixo.';
+    const ajuda=document.createElement('small');ajuda.textContent='↕ Arraste o título para organizar';nome.after(ajuda);
+    let arraste=null;
+    nome.onpointerdown=e=>{if(ocupado||editor.ocupado()||e.button!==0||e.isPrimary===false||arraste)return;arraste={ponteiro:e.pointerId};nome.setPointerCapture(e.pointerId);artigo.classList.add('mapa-salvo--arrastando');e.preventDefault()};
+    nome.onpointermove=e=>{
+      if(arraste?.ponteiro!==e.pointerId)return;e.preventDefault();
+      const alvo=document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-mapa-salvo]');
+      if(alvo&&alvo!==artigo&&alvo.parentElement===destino){
+        const r=alvo.getBoundingClientRect(),depois=e.clientY>r.top+r.height/2;
+        destino.insertBefore(artigo,depois?alvo.nextSibling:alvo);nome.setPointerCapture(e.pointerId);arraste.alvo={id:alvo.dataset.mapaSalvo,depois};
+      }
+      if(e.clientY>innerHeight-90)window.scrollBy(0,16);else if(e.clientY<130)window.scrollBy(0,-16);
+    };
+    nome.onpointerup=e=>{if(arraste?.ponteiro!==e.pointerId)return;const alvo=arraste.alvo;arraste=null;artigo.classList.remove('mapa-salvo--arrastando');if(alvo)alterarBiblioteca(mapa,alvo)};
+    nome.onpointercancel=nome.onlostpointercapture=e=>{if(arraste?.ponteiro!==e.pointerId)return;arraste=null;renderizar(destino,lista)};
+    nome.onkeydown=e=>{if(!['ArrowUp','ArrowDown'].includes(e.key)||ocupado)return;e.preventDefault();const alvo=e.key==='ArrowUp'?artigo.previousElementSibling:artigo.nextElementSibling;if(alvo)alterarBiblioteca(mapa,{id:alvo.dataset.mapaSalvo,depois:e.key==='ArrowDown'})};
+  }
+  async function alterarBiblioteca(mapa,alvo=null) {
+    if(ocupado||editor.ocupado())return;
+    if(!alvo&&!window.confirm('Excluir “'+mapa.titulo+'” da sua biblioteca? Os arquivos já baixados no aparelho serão mantidos.'))return;
+    bloquear(true);buscar('[data-lista-mapas]').querySelectorAll('button').forEach(b=>b.disabled=true);
+    const estado=buscar('[data-estado-lista-mapas]');
+    try {
+      const {error}=await cliente.rpc(alvo?'reordenar_mapa_manual':'excluir_mapa_manual',alvo?{p_id:mapa.id,p_destino:alvo.id,p_depois:alvo.depois}:{p_id:mapa.id,p_versao:mapa.versao});
+      if(error)throw error;
+      if(!alvo&&id===mapa.id){id=crypto.randomUUID();versao=0;salvo='';mensagem('Mapa removido da biblioteca. A montagem aberta continua aqui; salve novamente somente se desejar.');}
+      await carregarMapas(false,Math.max(30,paginas*30));
+    } catch(erro){renderizar(buscar('[data-lista-mapas]'),lista);estado.hidden=false;estado.textContent=erro.code==='40001'?'O mapa mudou em outra aba. Recarregue a biblioteca antes de excluir.':'Não foi possível '+(alvo?'alterar a ordem':'excluir')+'. Tente novamente.';buscar('[data-tentar-carregar-mapas]').hidden=false;}
+    finally {bloquear(false);buscar('[data-lista-mapas]').querySelectorAll('[data-abrir-mapa],[data-excluir-mapa]').forEach(b=>b.disabled=false);}
+  }
+  async function carregarMapas(mais = false,quantidade=30) {
     const rodada = ++leitura;
     const estado = buscar('[data-estado-lista-mapas]'), tentar = buscar('[data-tentar-carregar-mapas]'), proxima = buscar('[data-mais-mapas]');
     estado.hidden = false; estado.textContent = 'Carregando seus mapas…'; tentar.hidden = true; proxima.disabled = true;
     if (!mais) { paginas = 0; lista = []; buscar('[data-lista-mapas]').replaceChildren(); }
     try {
-      const { data, error } = await cliente.from('mapas_manuais').select('id,titulo,criado_em,atualizado_em').order('atualizado_em', { ascending: false }).order('id').range(paginas * 30, paginas * 30 + 29);
+      const { data, error } = await cliente.from('mapas_manuais').select('id,titulo,versao,ordem,criado_em,atualizado_em').order('ordem').order('criado_em', { ascending: false }).order('id').range(paginas * 30, paginas * 30 + quantidade-1);
       if (rodada !== leitura) return;
       if (error) throw error;
-      lista.push(...data); paginas++;
+      lista.push(...data); paginas+=quantidade/30;
+      proxima.hidden = data.length < quantidade;
       renderizar(buscar('[data-lista-mapas]'), lista);
-      estado.textContent = 'Nenhum mapa manual salvo. Abra o editor e use Salvar mapa.'; estado.hidden = lista.length > 0;
-      proxima.hidden = data.length < 30;
+      estado.textContent = 'Sua biblioteca está vazia. No editor, use Salvar na biblioteca para guardar os mapas que desejar.'; estado.hidden = lista.length > 0;
     } catch (_) {
       if (rodada !== leitura) return;
       estado.textContent = 'Não foi possível carregar seus mapas. Tente novamente.'; tentar.hidden = false;

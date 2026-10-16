@@ -797,7 +797,7 @@
   async function baixarPdfManual() {
     if (exportacaoEmAndamento) return;
     if (window.endomapaHistoricoManual?.ocupado()) return;
-    const registroPdf = window.endomapaHistoricoManual?.prepararPdf();
+    const registroPdf = crypto.randomUUID();
     const escalaCinza = Boolean(opcaoEscalaCinza?.checked);
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
@@ -825,7 +825,6 @@
         paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista) || canvas });
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
-      if (registroPdf) await window.endomapaHistoricoManual.salvarPdf(registroPdf);
       const endereco = URL.createObjectURL(arquivo);
       const link = document.createElement("a");
       try {
@@ -833,6 +832,7 @@
         link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`;
         document.body.append(link);
         link.click();
+        window.endomapaHistoricoManual?.registrarPdf(registroPdf).catch(() => {});
       } finally {
         link.remove();
         // O aparelho precisa de tempo para abrir ou salvar o arquivo antes da liberação.
