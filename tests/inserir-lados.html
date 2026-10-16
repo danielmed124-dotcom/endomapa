@@ -1,0 +1,64 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8">
+<title>Inserir lados — teste do editor</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Editor no celular" style="width:390px;height:844px;border:0"></iframe>
+<script>
+(async () => {
+ const verificar=(ok,mensagem)=>{if(!ok)throw Error(mensagem)};
+ try {
+  const origem=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+  origem.querySelectorAll('script,base').forEach(e=>e.remove());
+  origem.body.classList.remove('autenticacao-pendente');
+  const base=origem.createElement('base');base.href=new URL('../',location.href);origem.head.prepend(base);
+  for(const src of ['prototipo.js','editor-documento.js','editor-manual.js']){
+   const s=origem.createElement('script');s.src=src;origem.body.append(s);
+  }
+  const frame=document.querySelector('iframe');
+  const pronto=new Promise(r=>frame.onload=r);frame.srcdoc=origem.documentElement.outerHTML;await pronto;
+  const w=frame.contentWindow,d=w.document;w.history.replaceState=()=>{};
+  const perfil=ativo=>w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{id:ativo?'andreneide':'outro',nome:'Andreneide',titulo:'Dra.',assinatura:'Andreneide',clinica_id:'centrus',indicar_lados_mapas:ativo}}));
+  perfil(true);w.endomapaAbrirTela('editor-manual');
+  const mapa=v=>d.querySelector('[data-mapa-editor="'+v+'"]');
+  const assinatura=v=>mapa(v).querySelector('[data-assinatura-manual]');
+  const temLetra=v=>assinatura(v).getContext('2d').getImageData(10,700,32,48).data.some((n,i)=>i%4===3&&n>0);
+  const botao=mapa('coronal').querySelector('[data-inserir-lados]');
+  verificar(botao.textContent==='Inserir lados'&&botao.getAttribute('aria-pressed')==='true','Nome e estado inicial');
+  verificar(d.querySelectorAll('[data-inserir-lados]').length===8,'Oito mapas compativeis');
+  verificar(!mapa('sagital').querySelector('[data-inserir-lados]')&&!mapa('utero-retrofletido').querySelector('[data-inserir-lados]'),'Vistas sem laterais');
+  const pos=botao.getBoundingClientRect(),desenho=mapa('coronal').querySelector('.mapa-editor__desenho').getBoundingClientRect();
+  verificar(Math.abs(pos.left-desenho.left)<2&&pos.bottom<=desenho.top,'Botao acima do canto esquerdo do mapa');
+  verificar(pos.height>=44&&d.documentElement.scrollWidth<=392,'Area de toque e largura no celular');
+  d.querySelector('[data-nome="SOMP esquerdo"]').click();
+  document.querySelector('#resultado').textContent='Executando: captura ligada';
+  const comLados=await w.endomapaCapturarMapaManual({formato:'image/png'});
+  const durante=w.endomapaCapturarMapaManual({formato:'image/png'});
+  botao.click();
+  verificar(await durante===comLados,'Captura preserva escolha do instante do clique');
+  verificar(!temLetra('coronal')&&temLetra('kissing-ovaries'),'Desligamento por mapa');
+  verificar(botao.getAttribute('aria-pressed')==='false','Estado acessivel desligado');
+  document.querySelector('#resultado').textContent='Executando: captura desligada';
+  const semLados=await w.endomapaCapturarMapaManual({formato:'image/png'});
+  verificar(comLados!==semLados,'PNG acompanha o botao');
+  document.querySelector('#resultado').textContent='Executando: pixels exportados';
+  const img=new Image();const imagemPronta=new Promise((r,j)=>{img.onload=r;img.onerror=j});img.src=semLados;await imagemPronta;
+  const c=document.createElement('canvas');c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0);
+  const p=c.getContext('2d').getImageData(10,700,32,48).data;
+  verificar(!p.some((n,i)=>i%4===0&&n<100&&p[i+1]<100&&p[i+2]<100),'Arquivo sem letras na margem');
+  const salva=w.endomapaEditorManual.capturar();verificar(salva.vistas.coronal.lados===false,'Escolha salva');
+  botao.click();verificar(temLetra('coronal'),'Religar');
+  w.endomapaEditorManual.restaurar(salva);verificar(!temLetra('coronal'),'Reabrir conserva desligado');
+  perfil(true);verificar(!temLetra('coronal'),'Atualizar perfil da mesma conta conserva escolha');
+  const invalida=structuredClone(salva);invalida.vistas.coronal.lados='false';
+  let rejeitada=false;try{w.endomapaEditorManual.restaurar(invalida)}catch(e){rejeitada=true}
+  verificar(rejeitada&&!temLetra('coronal'),'Valor invalido rejeitado sem alterar montagem');
+  const antiga=structuredClone(salva);Object.values(antiga.vistas).forEach(v=>delete v.lados);
+  w.endomapaEditorManual.restaurar(antiga);verificar(temLetra('coronal'),'Montagem antiga inicia ligada');
+  perfil(false);
+  verificar([...d.querySelectorAll('[data-inserir-lados]')].every(b=>b.hidden),'Botao oculto em outras contas');
+  verificar(!temLetra('coronal'),'Sem letras em outras contas');
+  w.endomapaEditorManual.restaurar(antiga);verificar(!temLetra('coronal'),'Restauracao nao libera letras em outra conta');
+  perfil(true);verificar(temLetra('coronal')&&d.querySelectorAll('[data-inserir-lados]').length===8,'Volta a conta sem duplicar botoes');
+  document.querySelector('#resultado').textContent='PASSOU: botao, celular, oito vistas, alternancia, PNG, captura imutavel, salvamento, compatibilidade e isolamento entre contas.';
+ }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.stack}
+})();
+</script></html>

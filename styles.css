@@ -1691,6 +1691,18 @@ h1 span {
   gap: 8px;
 }
 
+.mapa-editor__inserir-lados {
+  display: block;
+  width: fit-content;
+  min-height: 44px;
+  margin: 0 0 8px;
+}
+
+.mapa-editor__inserir-lados[aria-pressed="true"] {
+  background: var(--texto);
+  color: var(--superficie-alta);
+}
+
 .modelo-lesao {
   display: grid;
   min-width: 0;

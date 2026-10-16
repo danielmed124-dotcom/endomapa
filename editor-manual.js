@@ -624,6 +624,7 @@
     mapasManuais.forEach(mapa => {
       const vista = mapa.dataset.mapaEditor;
       vistas[vista] = {
+        lados: window.endomapaLados?.ativo(vista) ?? true,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
           return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
@@ -653,6 +654,7 @@
     // Valida tudo antes de remover a montagem aberta. Fontes vêm somente da biblioteca.
     for (const id of ids) {
       const vista = vistas[id];
+      if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
@@ -672,6 +674,7 @@
   function restaurarMontagemEditavel(montagem) {
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
+    window.endomapaLados?.restaurar(Object.fromEntries(ids.map(id => [id, vistas[id].lados !== false])));
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     atualizarEscalaCinza();
     definirCaneta(null);

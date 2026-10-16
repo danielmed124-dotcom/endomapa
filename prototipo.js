@@ -27,6 +27,46 @@ const assinaturaFinal = document.querySelector("[data-assinatura-final]");
 const imagensPorVista = document.querySelectorAll("[data-vista]");
 const mapasBase = document.querySelectorAll("[data-mapa-base]");
 const identificacoesDaClinica = document.querySelectorAll("[data-identificacao-clinica]");
+const vistasComLados = new Set(['coronal', 'ooforectomia-direita', 'ooforectomia-esquerda',
+  'ooforectomia-bilateral', 'kissing-ovaries', 'hidrosalpinge-direita',
+  'hidrosalpinge-esquerda', 'hidrosalpinge-bilateral']);
+let perfilDosLados = null;
+let ladosPorVista = {};
+
+function atualizarLadosDosMapas() {
+  if (!perfilDosLados) return;
+  const nome = perfilDosLados.assinatura || perfilDosLados.nome.trim().split(/\s+/)[0];
+  document.querySelectorAll('[data-assinatura-manual]').forEach(canvas => {
+    const mapa = canvas.closest('[data-mapa-editor]');
+    const vista = mapa?.dataset.mapaEditor;
+    const permitido = perfilDosLados.indicar_lados_mapas === true && vistasComLados.has(vista);
+    let botao = mapa?.querySelector('[data-inserir-lados]');
+    if (permitido && !botao) {
+      botao = document.createElement('button');
+      botao.type = 'button';
+      botao.className = 'botao botao--secundario mapa-editor__inserir-lados';
+      botao.dataset.inserirLados = vista;
+      botao.textContent = 'Inserir lados';
+      botao.addEventListener('click', () => {
+        ladosPorVista[vista] = ladosPorVista[vista] === false;
+        atualizarLadosDosMapas();
+      });
+      mapa.insertBefore(botao, mapa.querySelector('.mapa-editor__desenho'));
+    }
+    const ativo = permitido && ladosPorVista[vista] !== false;
+    if (botao) {
+      botao.hidden = !permitido;
+      botao.setAttribute('aria-pressed', String(ativo));
+      botao.title = ativo ? 'Lados ligados. Clique para ocultar.' : 'Lados desligados. Clique para inserir.';
+    }
+    desenharAssinaturaManual(canvas, nome, ativo);
+  });
+}
+
+window.endomapaLados = {
+  ativo: vista => ladosPorVista[vista] !== false,
+  restaurar: valores => { ladosPorVista = { ...valores }; atualizarLadosDosMapas(); },
+};
 
 function abrirTela(nomeDaTela) {
   if (!Array.from(telas).some((tela) => tela.dataset.tela === nomeDaTela)) return;
@@ -52,6 +92,8 @@ function abrirTela(nomeDaTela) {
 window.endomapaAbrirTela = abrirTela;
 
 function aplicarPerfilMedico(perfil) {
+  if (perfilDosLados?.id !== perfil.id || perfilDosLados?.indicar_lados_mapas !== perfil.indicar_lados_mapas) ladosPorVista = {};
+  perfilDosLados = perfil;
   const nomeDoMedico = `${perfil.titulo} ${perfil.nome}`;
   const primeiroNome = perfil.assinatura || perfil.nome.trim().split(/\s+/)[0];
   const usarIdentidadeCentrus = Boolean(perfil.clinica_id);
@@ -93,15 +135,7 @@ function aplicarPerfilMedico(perfil) {
 
   assinaturasDosMapas.forEach(desenharAssinatura);
 
-  document.querySelectorAll("[data-assinatura-manual]").forEach((canvas) => {
-    const vista = canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor;
-    const indicarLados = perfil.indicar_lados_mapas === true && [
-      'coronal', 'ooforectomia-direita', 'ooforectomia-esquerda',
-      'ooforectomia-bilateral', 'kissing-ovaries', 'hidrosalpinge-direita',
-      'hidrosalpinge-esquerda', 'hidrosalpinge-bilateral'
-    ].includes(vista);
-    desenharAssinaturaManual(canvas, primeiroNome, indicarLados);
-  });
+  atualizarLadosDosMapas();
 
   if (assinaturaFinal) {
     desenharAssinatura(assinaturaFinal);
