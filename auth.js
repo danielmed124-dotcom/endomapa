@@ -232,6 +232,19 @@
 
   function traduzirErro(erro) {
     const textoErro = String(erro.message || "").toLowerCase();
+    const codigo = String(erro.code || "").toLowerCase();
+
+    if (codigo === "over_email_send_rate_limit" || textoErro.includes("email rate limit")) {
+      return "O Endomapa atingiu temporariamente o limite de envio de e-mails. Não foi possível enviar a confirmação. Tente novamente mais tarde. Esse aviso não significa que seu endereço esteja errado.";
+    }
+
+    if (codigo === "email_address_not_authorized" || (textoErro.includes("email") && textoErro.includes("not authorized"))) {
+      return "O serviço de e-mails do Endomapa ainda não está configurado para enviar a confirmação a este endereço. Entre em contato com o responsável pelo sistema.";
+    }
+
+    if (codigo === "over_request_rate_limit" || erro.status === 429 || textoErro.includes("rate limit") || textoErro.includes("security purposes")) {
+      return "Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.";
+    }
 
     if (textoErro.includes("invalid login credentials")) {
       return "E-mail ou senha incorretos. Confira os dados e tente novamente.";
@@ -249,12 +262,12 @@
       return "A senha não foi aceita. Em novos cadastros, use pelo menos 8 caracteres.";
     }
 
-    if (textoErro.includes("email")) {
-      return "O e-mail não foi aceito. Confira se ele foi digitado corretamente.";
+    if (codigo === "email_address_invalid" || (textoErro.includes("email") && (textoErro.includes("invalid") || textoErro.includes("valid email")))) {
+      return "O formato do e-mail não foi aceito. Confira se ele foi digitado corretamente.";
     }
 
-    if (textoErro.includes("rate limit")) {
-      return "Foram feitas muitas tentativas. Aguarde alguns minutos e tente novamente.";
+    if (textoErro.includes("email")) {
+      return "Não foi possível concluir a operação com o serviço de e-mails. Tente novamente mais tarde. Se o problema continuar, entre em contato com o responsável pelo sistema.";
     }
 
     if (textoErro.includes("database error saving new user")) {

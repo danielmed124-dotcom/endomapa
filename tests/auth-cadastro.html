@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8"><title>Erros de cadastro</title>
+<h1 id="titulo-autenticacao"></h1><p id="texto-autenticacao"></p>
+<button data-modo="entrar">Entrar</button><button data-modo="cadastrar">Cadastrar</button>
+<form data-form-autenticacao onsubmit="return false">
+<div data-campos-cadastro><input name="nome" value="Pessoa de teste"><input type="radio" name="titulo" value="Dr." checked></div>
+<input name="email" value="pessoa@example.com"><input name="senha" value="senha-de-teste"><span data-ajuda-senha></span>
+<button type="button" data-botao-auth>Entrar</button></form><p data-mensagem-auth></p><pre id="resultado">Executando...</pre>
+<script>
+let erroSimulado = null;
+let chamadas = 0;
+window.ENDOMAPA_SUPABASE = {projectUrl:'https://example.invalid',publicAnonKey:'simulado'};
+window.supabase = {createClient: () => ({auth:{
+  getSession: async () => ({data:{session:null},error:null}),
+  signUp: async () => {chamadas++;return {data:{session:null},error:erroSimulado};},
+  signInWithPassword: async () => ({error:erroSimulado})
+}})};
+</script><script src="../auth.js"></script><script>
+(async () => {
+  const mensagem = document.querySelector('[data-mensagem-auth]');
+  const casos = [
+    [{code:'over_email_send_rate_limit',message:'email rate limit exceeded',status:429},'limite de envio de e-mails'],
+    [{code:'over_email_send_rate_limit',message:'Mensagem alterada pelo provedor'},'limite de envio de e-mails'],
+    [{message:'email rate limit exceeded'},'limite de envio de e-mails'],
+    [{code:'email_address_not_authorized',message:'Email address not authorized'},'ainda não está configurado'],
+    [{message:'Email address cannot be used as it is not authorized'},'ainda não está configurado'],
+    [{code:'over_request_rate_limit',message:'Too many requests',status:429},'muitas tentativas'],
+    [{message:'For security purposes, you can only request this after 60 seconds.',status:429},'muitas tentativas'],
+    [{code:'email_address_invalid',message:'Invalid email'},'formato do e-mail'],
+    [{code:'validation_failed',message:'Unable to validate email address: invalid format'},'formato do e-mail'],
+    [{message:'Error sending confirmation email',status:500},'serviço de e-mails'],
+    [{message:'User already registered'},'já possui uma conta'],
+    [{message:'Password should contain at least 8 characters'},'senha não foi aceita'],
+    [{message:'Database error saving new user'},'perfil médico'],
+    [{message:'Email not confirmed'},'Confirme seu e-mail'],
+    [{message:'Invalid login credentials'},'E-mail ou senha incorretos'],
+    [{message:'Unexpected failure'},'Não foi possível concluir a operação']
+  ];
+  document.querySelector('[data-modo="cadastrar"]').click();
+  for (const [erro, esperado] of casos) {
+    erroSimulado = erro;
+    document.querySelector('[data-botao-auth]').click();
+    await new Promise(resolve => setTimeout(resolve, 0));
+    if (!mensagem.textContent.includes(esperado)) throw Error(JSON.stringify(erro) + ': ' + mensagem.textContent);
+    if (document.querySelector('[data-botao-auth]').disabled) throw Error('Botão permaneceu bloqueado');
+  }
+  erroSimulado = null;
+  document.querySelector('[data-botao-auth]').click();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  if (!mensagem.textContent.includes('Cadastro criado.') || chamadas !== casos.length + 1) throw Error('Fluxo de sucesso alterado');
+  document.querySelector('#resultado').textContent = 'PASSOU: 16 erros de cadastro e confirmação de sucesso, sem chamadas externas.';
+})().catch(erro => document.querySelector('#resultado').textContent = 'FALHOU: ' + erro.message);
+</script></html>
