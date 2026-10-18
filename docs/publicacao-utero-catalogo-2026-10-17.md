@@ -11,3 +11,5 @@ Daniel aprovou a integração no editor e autorizou a publicação em 17/10/2026
 Testes após a alteração final: `utero-integrado`, `editor-manual-integrado`, `pdf-manual`, `historico-manual`, todos passaram. `git diff --check` sem erros nos arquivos da entrega. Prévia em `output/previa-utero-sagital/editor.html`; não acessa contas ou serviços externos.
 
 Publicação pelo fluxo existente GitHub → Cloudflare Pages. Alterações alheias em AGENTS.md, função de ditado e demais experimentos/arquivos temporários não fazem parte da entrega. Confirmação dos arquivos públicos registrada após o envio.
+
+Entrega funcional publicada no commit `d6884eb`. Conferidos os cinco arquivos públicos: aplicativo, editor manual, motor uterino, controles uterinos e fundo aprovado, todos HTTP 200. Conteúdo textual idêntico à versão local após normalizar finais de linha Windows/Linux; imagem idêntica por SHA-256. A rota pública do aplicativo é `/app` (`app.html` redireciona com HTTP 308). Limpeza posterior de espaço em branco no motor sem alteração de lógica.

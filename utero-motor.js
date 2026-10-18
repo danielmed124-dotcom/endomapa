@@ -79,7 +79,7 @@ window.endomapaCriarUtero=async function(canvas){
   for(let a=-.25;a>=-25;a-=.25){if(tocaBexiga(a))break;limiteAnterior=a;}
   // Substitui o teto fixo de 90° pelo primeiro contato com a parede do reto.
   for(let a=.25;a<=160;a+=.25){if(tocaReto(a)||tocaBexiga(a))break;limitePosterior=a;}
-  
+
   limiteAnterior=Math.ceil(limiteAnterior);
  }
  function tocaBexiga(a){return pontosBorda.some(p=>{const q=transformar(p.x,p.y,a);return ctx.isPointInPath(bexiga,q.x,q.y)});}
