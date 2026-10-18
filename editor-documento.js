@@ -141,7 +141,7 @@
           evento.preventDefault(); selecionar(item); botao.setPointerCapture(evento.pointerId);
           const rect = desenho.getBoundingClientRect(), inicio = { x: evento.clientX, y: evento.clientY, px: item.x, py: item.y };
           botao.onpointermove = e => {
-            item.x = limite(inicio.px + (e.clientX - inicio.x) / rect.width * 100, 60);
+            item.x = limite(inicio.px + (e.clientX - inicio.x) / rect.width * 100, Math.max(0, 100 - imagem.width / 1086 * 100));
             item.y = limite(inicio.py + (e.clientY - inicio.y) / rect.height * 100, Math.max(0, 100 - botao.offsetHeight / rect.height * 100));
             botao.style.left = `${item.x}%`; botao.style.top = `${item.y}%`; selecionar(item);
           };
@@ -154,7 +154,9 @@
       const estado = vistas[id]; estado.camada.replaceChildren();
       estado.textos.forEach(item => {
         const botao = estado.criarBotao(item);
-        // Limita também a altura após editar o texto, para não cortar a anotação.
+        // Mantém a caixa inteira no mapa após editar o texto ou mudar a tela.
+        const largura = botao.firstChild.width / 1086 * 100;
+        item.x = limite(item.x, Math.max(0, 100 - largura)); botao.style.left = `${item.x}%`;
         const altura = botao.firstChild.height / 1448 * 100;
         item.y = limite(item.y, Math.max(0, 100 - altura)); botao.style.top = `${item.y}%`;
         estado.camada.append(botao);
@@ -172,7 +174,7 @@
         dados.cabecalho.campos.forEach(c => { if (!c || typeof c.nome !== 'string' || c.nome.length > 60 || typeof c.valor !== 'string' || c.valor.length > 200) falhar(); });
         Object.entries(dados.textos).forEach(([id, textos]) => {
           if (!Object.hasOwn(vistas, id) || !Array.isArray(textos) || textos.length > 50) falhar();
-          textos.forEach(t => { if (!t || typeof t.texto !== 'string' || t.texto.length > 500 || !Number.isFinite(t.x) || t.x < 0 || t.x > 60 || !Number.isFinite(t.y) || t.y < 0 || t.y > 100) falhar(); });
+          textos.forEach(t => { if (!t || typeof t.texto !== 'string' || t.texto.length > 500 || !Number.isFinite(t.x) || t.x < 0 || t.x > 100 || !Number.isFinite(t.y) || t.y < 0 || t.y > 100) falhar(); });
         });
       },
       restaurar(dados) {

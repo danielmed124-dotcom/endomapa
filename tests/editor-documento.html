@@ -23,9 +23,11 @@
   verificar(Boolean(barra.compareDocumentPosition(d.querySelector('[data-controles-lesao]')) & w.Node.DOCUMENT_POSITION_FOLLOWING), 'Botão deve vir antes de Ajustar lesão');
   const nota = d.querySelector('.documento-texto'); nota.setPointerCapture = () => verificar(nota.isConnected, 'Arrastar deve preservar a caixa selecionada');
   nota.dispatchEvent(new w.PointerEvent('pointerdown', {bubbles:true, pointerId:1, clientX:100, clientY:100}));
-  nota.dispatchEvent(new w.PointerEvent('pointermove', {pointerId:1, clientX:120, clientY:110}));
+  nota.dispatchEvent(new w.PointerEvent('pointermove', {pointerId:1, clientX:3000, clientY:110}));
   nota.dispatchEvent(new w.PointerEvent('pointerup', {pointerId:1}));
   verificar(editor.capturar().documento.textos.coronal[0].x > 5, 'Arraste deve mover o texto');
+  verificar(editor.capturar().documento.textos.coronal[0].x > 60, 'Texto curto deve ultrapassar o antigo limite');
+  verificar(Math.abs(nota.getBoundingClientRect().right - nota.parentElement.getBoundingClientRect().right) < 2, 'Caixa deve alcançar a borda direita sem ultrapassar');
   const posicaoArrastada = editor.capturar().documento.textos.coronal[0].x;
   verificar(!barra.querySelector('input[type="range"]'), 'Posicionamento deve ocorrer somente por arraste');
   const painel = d.querySelector('.documento-opcoes'); painel.open = true;
@@ -40,7 +42,7 @@
   const salvo = editor.capturar();
   verificar(salvo.vistas.coronal.lesoes.length === 0 && salvo.documento.textos.coronal.length === 1, 'Texto deve ser independente');
   verificar(salvo.documento.textos.sagital.length === 0 && salvo.documento.textos.coronal[0].x === posicaoArrastada, 'Posição e vistas');
-  const imagem = async () => { const img = new w.Image(); img.src = await w.endomapaCapturarMapaManual({formato:'image/png'}); await img.decode(); return img; };
+  const imagem = async () => { const img = new w.Image(); const fonte = await w.endomapaCapturarMapaManual({formato:'image/png'}); await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = fonte; }); return img; };
   const com = await imagem(); verificar(com.height > 1448, 'Cabeçalho deve acrescentar espaço sem cobrir anatomia');
   painel.querySelector('[data-cabecalho-ativo]').click(); const sem = await imagem(); verificar(sem.height === 1448, 'Desativar deve remover espaço do cabeçalho');
   editor.restaurar(salvo); verificar(JSON.stringify(editor.capturar().documento) === JSON.stringify(salvo.documento), 'Reabrir deve preservar textos e cabeçalho');
@@ -69,6 +71,8 @@
     const ajuste = d.querySelector('[data-controles-lesao]').getBoundingClientRect();
     verificar(botaoTexto.height > 0 && botaoTexto.bottom <= ajuste.top, 'Botão acima de Ajustar lesão em ' + largura);
     verificar(d.documentElement.scrollWidth <= largura, 'Painel sem transbordamento em ' + largura);
+    const caixa = d.querySelector('.documento-texto');
+    verificar(caixa.getBoundingClientRect().right <= caixa.parentElement.getBoundingClientRect().right + 2, 'Texto dentro do mapa em ' + largura);
   }
   iframe.style.width = '390px'; await new Promise(r => setTimeout(r, 100));
   editor.restaurar(salvo); d.querySelector('[data-mapa-editor="coronal"]').scrollIntoView({block:'center'});
