@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Endomapa — teste do útero</title>
+<style>body{margin:0;background:#0c1811;color:#fff;font:16px Arial}header{padding:14px 24px;display:flex;gap:20px;align-items:center}header p{margin:5px 0;color:#d4ddd5}button{background:#d8ba65;color:#14271e;border:0;border-radius:8px;padding:14px 20px;font:bold 16px Arial;cursor:pointer}iframe{display:block;width:100%;height:calc(100vh - 110px);border:0;background:#0c1811}iframe:fullscreen{height:100vh;width:100vw}#resultado{white-space:pre-wrap;font:14px Arial;margin:0 24px 10px}</style>
+<header><div><strong>Teste local — útero no editor</strong><p>Use Movimentar útero no mapa sagital. Esta página não salva na sua conta.</p></div><button id="tela" disabled>Abrir em tela cheia</button></header>
+<pre id="resultado">Preparando…</pre><iframe title="Editor real para gravação local" allowfullscreen></iframe>
+<script>
+(async()=>{
+ const status=document.querySelector('#resultado'),quadro=document.querySelector('iframe'),botao=document.querySelector('#tela');
+ try{
+ const resposta=await fetch('../../app.html');if(!resposta.ok)throw Error('Não foi possível carregar o editor.');
+ const doc=new DOMParser().parseFromString(await resposta.text(),'text/html');
+ doc.querySelectorAll('script,base').forEach(e=>e.remove());doc.body.classList.remove('autenticacao-pendente');
+ const base=doc.createElement('base');base.href=new URL('../../',location.href).href;doc.head.prepend(base);
+ const politica=doc.createElement('meta');politica.httpEquiv='Content-Security-Policy';politica.content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";doc.head.prepend(politica);
+ doc.querySelectorAll('[data-src-visitante]').forEach(e=>e.src=e.dataset.srcVisitante);
+ doc.querySelectorAll('[data-assinatura-mapa],[data-assinatura-final],[data-medico-selecionado]').forEach(e=>e.textContent='');
+ const ambiente=doc.createElement('script');ambiente.textContent='history.replaceState=function(){};';doc.head.append(ambiente);
+ ['prototipo.js','orgaos-deformar.js','orgaos-motor.js','orgaos-editor.js','utero-motor.js','utero-editor.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js'].forEach(src=>{const s=doc.createElement('script');s.src=src;doc.body.append(s)});
+ const pronto=new Promise(r=>quadro.onload=r);quadro.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;await pronto;
+ const d=quadro.contentDocument;await Promise.all([quadro.contentWindow.endomapaUtero.pronto,quadro.contentWindow.endomapaOrgaos.pronto]);d.querySelector('[data-tela-alvo="editor-manual"]').click();d.querySelector('[name="vistas-editor"][value="sagital"]').click();
+ const mapa=d.querySelector('[data-camada-editor="sagital"]');if(!mapa)throw Error('Mapa não encontrado.');
+ mapa.scrollIntoView({block:'center'});
+ if(!d.querySelector('[data-mapa-base]').naturalWidth)throw Error('O mapa ainda não carregou. Atualize esta página.');
+ if(!d.querySelector('[data-modelo][data-nome="Adenomiose"]'))throw Error('Catálogo não carregado.');
+ status.textContent='PASSOU: editor pronto com mapa neutro. Não salva na sua conta.';
+ mapa.scrollIntoView({block:'center'});
+ botao.disabled=false;botao.onclick=async()=>{await quadro.requestFullscreen();mapa.scrollIntoView({block:'center'});};
+ window.dispatchEvent(new Event('gravacao:pronta'));
+ }catch(e){status.textContent='Não foi possível preparar: '+e.message}
+})();
+</script></html>

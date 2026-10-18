@@ -128,6 +128,7 @@
 
   function definirCaneta(estado) {
     if (estado) window.endomapaOrgaos?.desativar();
+    if (estado) window.endomapaUtero?.desativar();
     if (canetaAtiva) finalizarTraco(canetaAtiva);
     canetaAtiva = estado;
     if (estado) controles.hidden = true;
@@ -188,7 +189,7 @@
   eixoY.addEventListener("input", aplicarControles);
   nomeNoMapa.addEventListener("input", function () {
     if (!selecionada) return;
-    selecionada.dataset.nomeNoMapa = nomeNoMapa.value;
+    selecionada.dataset.nomeNoMapa = normalizarNomeLesao(nomeNoMapa.value);
     atualizarRotuloDeMedidas(selecionada);
   });
   document.querySelectorAll("[data-medida]").forEach(function (campo) {
@@ -347,12 +348,14 @@
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40", dadosCopiados = null) {
     window.endomapaOrgaos?.desativar();
+    window.endomapaUtero?.desativar();
     definirCaneta(null);
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
     lesao.type = "button";
     lesao.className = "lesao-editavel";
     lesao.dataset.id = String(proximoId++);
+    nome=normalizarNomeLesao(nome);
     lesao.dataset.nome = nome;
     lesao.dataset.nomeNoMapa = "";
     lesao.dataset.proporcao = proporcao;
@@ -370,6 +373,7 @@
     lesao.dataset.medidaX = String(56 + deslocamento);
     lesao.dataset.medidaY = String(52 + deslocamento);
     if (dadosCopiados) Object.assign(lesao.dataset, dadosCopiados);
+    lesao.dataset.nomeNoMapa=normalizarNomeLesao(lesao.dataset.nomeNoMapa);
     if (vistaAtiva === 'coronal' && dadosCopiados?.medida1 === undefined) {
       const ladoSomp = /somp-(esquerdo|direito)\.png/.exec(src)?.[1];
       const posicao = ladoSomp && window.endomapaOrgaos?.estado()[ladoSomp];
@@ -377,6 +381,8 @@
       lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
     }
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
+    if(vistaAtiva==='sagital'&&dadosCopiados?.uteroX===undefined) vincularUtero(lesao);
+    if(vistaAtiva!=='sagital'){delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
     lesao.style.setProperty("--proporcao-lesao", proporcao);
     lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
@@ -428,6 +434,7 @@
     };
     const terminar = function () {
       if (camadaDoMovimento.dataset.camadaEditor === 'coronal') lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+      if (camadaDoMovimento.dataset.camadaEditor === 'sagital') vincularUtero(lesao);
       lesao.removeEventListener("pointermove", mover);
       lesao.removeEventListener("pointerup", terminar);
       lesao.removeEventListener("pointercancel", terminar);
@@ -592,6 +599,7 @@
 
   function limparMapa() {
     if (vistaAtiva === 'coronal') window.endomapaOrgaos?.restaurar();
+    if (vistaAtiva === 'sagital') window.endomapaUtero?.restaurar();
     const caneta = canetas.get(vistaAtiva);
     if (caneta) {
       finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
@@ -605,6 +613,28 @@
   }
 
   function mostrar(texto) { mensagem.textContent = texto; }
+  function normalizarNomeLesao(nome) {
+    return String(nome||'').replace(/\bmiomas?\b/gi,m=>m.toLowerCase().endsWith('s')?'Leiomiomas':'Leiomioma').replace(/^Adenomiose 1$/i,'Adenomiose');
+  }
+  function vincularUtero(lesao) {
+    const p=window.endomapaUtero?.vincular(Number(lesao.dataset.x),Number(lesao.dataset.y));
+    if(p){lesao.dataset.uteroX=String(p.x);lesao.dataset.uteroY=String(p.y)}
+    else {delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
+  }
+  function fotografarOrgaos(vista) { return window.endomapaUtero?.fotografar(vista)||window.endomapaOrgaos?.fotografar(vista); }
+  window.addEventListener('endomapa:movimentar-utero',()=>{
+    ativarVista('sagital');definirCaneta(null);controles.hidden=true;
+    document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(vincularUtero);
+    mostrar('Arraste o corpo do útero. Toque novamente em Movimentar útero para voltar a ajustar lesões.');
+  });
+  window.addEventListener('endomapa:utero-movido',()=>{
+    document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(l=>{
+      if(l.dataset.uteroX===undefined)return;
+      const p=window.endomapaUtero.posicao(Number(l.dataset.uteroX),Number(l.dataset.uteroY));
+      if(!p)return;l.dataset.x=String(limitar(p.x*100/1087,0,100));l.dataset.y=String(limitar(p.y*100/1447,0,100));
+      atualizarVisual(l);atualizarRotuloDeMedidas(l);
+    });
+  });
   window.addEventListener('endomapa:movimentar-ovarios', () => {
     ativarVista('coronal'); definirCaneta(null); controles.hidden = true;
     document.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel').forEach(l => {
@@ -652,6 +682,7 @@
       vistas[vista] = {
         lados: window.endomapaLados?.ativo(vista),
         ovarios: vista === 'coronal' ? window.endomapaOrgaos?.estado() : undefined,
+        utero: vista === 'sagital' ? window.endomapaUtero?.estado() : undefined,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
           return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
@@ -669,6 +700,7 @@
     const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [new URL(botao.dataset.modelo, document.baseURI).pathname.replace(/^\//, ''), botao.dataset]));
     const ids = mapasManuais.map(m => m.dataset.mapaEditor);
     const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
+    especiais.push('utero-retrofletido'); // Compatibilidade com montagens anteriores.
     const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
     const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
@@ -683,10 +715,14 @@
       const vista = vistas[id];
       if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
       if (id === 'coronal') window.endomapaOrgaos?.validar(vista?.ovarios);
+      if (id === 'sagital') window.endomapaUtero?.validar(vista?.utero);
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
         if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
+        if (l.dados.uteroX !== undefined || l.dados.uteroY !== undefined) {
+          if(id!=='sagital'||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
+        }
         for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',10,300],['eixoY',10,300]]) {
           if (!Number.isFinite(Number(l.dados[campo])) || Number(l.dados[campo]) < min || Number(l.dados[campo]) > max) falhar();
         }
@@ -705,6 +741,7 @@
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
     window.endomapaLados?.restaurar(Object.fromEntries(ids.map(id => [id, vistas[id].lados])));
     window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios);
+    window.endomapaUtero?.restaurar(vistas.sagital.utero);
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     atualizarEscalaCinza();
     definirCaneta(null);
@@ -719,13 +756,19 @@
         const modelo = modelos.get(l.src);
         const dados = {};
         if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
+        if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
         adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
       const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
     });
     documento?.restaurar(montagem.documento);
-    document.querySelector('[data-mapa-especial]').value = montagem.especial;
+    const seletorEspecial=document.querySelector('[data-mapa-especial]');
+    if(montagem.especial==='utero-retrofletido'&&!seletorEspecial.querySelector('[value="utero-retrofletido"]')) {
+      const legado=document.createElement('option');legado.value='utero-retrofletido';
+      legado.textContent='Útero retrofletido (mapa salvo)';legado.hidden=true;legado.disabled=true;seletorEspecial.append(legado);
+    }
+    seletorEspecial.value = montagem.especial;
     const ladoHidrosalpinge = document.querySelector('[data-lado-hidrosalpinge]');
     if (ladoHidrosalpinge) ladoHidrosalpinge.value = montagem.hidrosalpinge || 'hidrosalpinge-direita';
     document.querySelector(`input[name="vistas-editor"][value="${montagem.escolha}"]`).checked = true;
@@ -739,7 +782,7 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !window.endomapaOrgaos?.alterado(vistaAtiva)) {
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !window.endomapaOrgaos?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva)) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
@@ -811,7 +854,7 @@
       const capturas = vistas.map(function (vista) {
         const mapa = mapasManuais.find(function (item) { return item.dataset.mapaEditor === vista; });
         const camadaDaCaptura = mapa.querySelector("[data-camada-editor]");
-        return { vista, orgaos: window.endomapaOrgaos?.fotografar(vista), documento: documento?.capturar(true), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
+        return { vista, orgaos: fotografarOrgaos(vista), documento: documento?.capturar(true), base: obterFonteDaBase(camadaDaCaptura, divulgacao), assinatura: divulgacao ? null : fotografarAssinatura(camadaDaCaptura), lesoes: fotografarLesoes(camadaDaCaptura), caneta: fotografarCaneta(camadaDaCaptura) };
       });
       if (!capturas.some(function (captura) { return captura.lesoes.length || captura.orgaos || captura.caneta || captura.documento?.textos[captura.vista]?.some(t => t.texto.trim()); })) {
         estadoMapa.textContent = "Adicione pelo menos uma lesão, um texto ou um desenho às vistas selecionadas antes de gerar o PDF.";
@@ -914,7 +957,7 @@
     }
   }
 
-  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = window.endomapaOrgaos?.fotografar(vistaAtiva)) {
+  async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = fotografarOrgaos(vistaAtiva)) {
     // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
     const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
     const base = await carregarImagem(fonteBase);
@@ -979,7 +1022,7 @@
       contexto.ellipse(0, 0, largura / 2, altura / 2, 0, 0, Math.PI * 2);
       contexto.clip();
     }
-    if (opcoes.miomaIntegradoId === lesao.dataset.id && lesao.dataset.nome.startsWith("Mioma")) {
+    if (opcoes.miomaIntegradoId === lesao.dataset.id && /^(?:Leio)?mioma/i.test(lesao.dataset.nome)) {
       // A sombra é isolada em outra camada para preservar até os pixels translúcidos do mioma.
       const margem = Math.ceil(Math.max(20, largura * 0.35));
       const sombra = document.createElement("canvas");

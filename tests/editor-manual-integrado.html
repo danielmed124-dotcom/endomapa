@@ -154,7 +154,7 @@
     preencher(medida, '2,5');
     verificar(rotulo.textContent === 'Endometrioma esquerdo\n2,5 cm', 'Nome acima das medidas');
     verificar(janela.getComputedStyle(rotulo).whiteSpace === 'pre', 'Quebra de linha visível');
-    buscar('[data-modelo][data-nome="Adenomiose 1"]').click();
+    buscar('[data-modelo][data-nome="Adenomiose"]').click();
     verificar(campo.value === '', 'Nome independente para cada lesão');
     preencher(campo, 'Adenomiose');
     primeira.click();

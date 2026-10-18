@@ -1,0 +1,75 @@
+<!doctype html><meta charset="utf-8"><title>Útero integrado ao editor</title>
+<pre id="resultado">Executando</pre><iframe style="width:390px;height:900px;border:0" src="../output/previa-utero-sagital/editor.html"></iframe><div id="previas"></div>
+<script>
+(async()=>{const ok=(v,m)=>{if(!v)throw Error(m)},f=document.querySelector('iframe'),saida=document.querySelector('#resultado');try{
+ await new Promise(r=>f.onload=r);const outer=f.contentWindow;
+ if(!outer.document.querySelector('#resultado').textContent.startsWith('PASSOU:'))await new Promise(r=>outer.addEventListener('gravacao:pronta',r,{once:true}));
+ const w=outer.document.querySelector('iframe').contentWindow,d=w.document,u=w.endomapaUtero;
+ await u.pronto;ok(!d.querySelector('[data-movimentar-utero]').disabled,'Motor carregado');
+ const catalogo=[...d.querySelectorAll('[data-modelo]')].map(b=>b.dataset.nome);
+ ok(!catalogo.some(n=>/\bMioma\b/i.test(n))&&catalogo.includes('Leiomioma 1'),'Nomes atualizados para Leiomioma');
+ ok(catalogo.indexOf('Adenomiose')===catalogo.indexOf('SOMP direito')+1&&catalogo.indexOf('Cisto hemorrágico')===catalogo.indexOf('Corpo Lúteo')+1,'Troca exata das posições do catálogo');
+ ok(!d.querySelector('[data-mapa-especial] option[value="utero-retrofletido"]'),'Mapa retrofletido retirado de novas seleções');
+ const mapa=d.querySelector('[data-mapa-editor="sagital"]'),t=d.querySelector('[data-utero-toque]'),btn=d.querySelector('[data-movimentar-utero]');
+ ok(btn.closest('.mapa-editor__barra')?.parentElement===mapa,'Botões na barra do sagital');
+ ok(d.querySelectorAll('[data-movimentar-utero]').length===1,'Não duplica controles');
+ ok(mapa.getBoundingClientRect().width<=390,'Mapa cabe no celular');
+ const erros=[];w.addEventListener('error',e=>erros.push(e.message));
+ d.querySelector('[data-modelo][data-nome="Adenomiose"]').click();
+ const l=mapa.querySelector('.lesao-editavel');l.dataset.x=String(510*100/1087);l.dataset.y=String(450*100/1447);
+ // Atualiza posição do achado usando a restauração pública do editor.
+ const m=w.endomapaEditorManual.capturar();delete m.vistas.sagital.lesoes[0].dados.uteroX;delete m.vistas.sagital.lesoes[0].dados.uteroY;w.endomapaEditorManual.restaurar(m);
+ const lesao=mapa.querySelector('.lesao-editavel'),x0=Number(lesao.dataset.x),y0=Number(lesao.dataset.y);
+ btn.click();ok(!t.hidden&&btn.getAttribute('aria-pressed')==='true','Ativa movimento');
+ const key=k=>t.dispatchEvent(new w.KeyboardEvent('keydown',{key:k,bubbles:true}));
+ for(let i=0;i<40;i++)key('ArrowRight');
+ ok(u.estado().angulo===40,'Teclado movimenta');ok(Math.abs(Number(lesao.dataset.x)-x0)>1,'Lesão acompanha útero');
+ const copia=u.fotografar('sagital'),bytes=copia.getContext('2d').getImageData(0,0,1087,1447).data;
+ ok(bytes.some((v,i)=>i%4===3&&v>0),'Camada móvel visível');ok(bytes[3]===0,'Cabeçalho da conta não é coberto');
+ saida.textContent='Capturando PNG';const png=await w.endomapaCapturarMapaManual({formato:'image/png'});
+ saida.textContent='Decodificando PNG';const img=new Image();img.src=png;await new Promise((r,j)=>{if(img.complete&&img.naturalWidth)r();else{img.onload=r;img.onerror=j}});document.querySelector('#previas').append(img);img.style.width='420px';
+ saida.textContent='Salvamento e restauração';const salvo=w.endomapaEditorManual.capturar();ok(salvo.vistas.sagital.utero.angulo===40,'Montagem guarda a posição');
+ d.querySelector('[data-restaurar-utero]').click();ok(u.estado().angulo===0,'Restaura anatomia');
+ ok(Math.abs(Number(lesao.dataset.x)-x0)<.001&&Math.abs(Number(lesao.dataset.y)-y0)<.001,'Restaura lesão vinculada');ok(!u.fotografar('sagital'),'Restauração remove camada');
+ w.endomapaEditorManual.restaurar(salvo);ok(u.estado().angulo===40,'Reabre montagem na posição salva');
+ const invalido=structuredClone(salvo);invalido.vistas.sagital.utero.angulo=999;let recusou=false;try{w.endomapaEditorManual.restaurar(invalido)}catch{recusou=true}ok(recusou&&u.estado().angulo===40,'Dados inválidos não destroem mapa');
+ // Captura já obtida é imutável durante alterações posteriores.
+ ok(copia.getContext('2d').getImageData(0,0,1087,1447).data.every((v,i)=>v===bytes[i]),'Captura independente do movimento seguinte');
+ const antigo=structuredClone(salvo);delete antigo.vistas.sagital.utero;w.endomapaEditorManual.restaurar(antigo);ok(u.estado().angulo===0,'Montagem antiga abre na posição original');
+ // PDF usa a mesma composição do PNG, incluindo a anatomia reposicionada.
+ w.endomapaEditorManual.restaurar(salvo);saida.textContent='Conferindo PDF e escala de cinza';
+ let pdf,paginasPdf;const gerar=w.endomapaGerarPdfA4;
+ w.endomapaGerarPdfA4=function(paginas){paginasPdf=paginas;pdf=gerar(paginas);return pdf};
+ w.HTMLAnchorElement.prototype.click=function(){};
+ const baixarPdf=d.querySelector('[data-baixar-pdf-manual]');baixarPdf.click();
+ for(let i=0;i<400&&(!pdf||w.endomapaEditorManual.ocupado());i++)await new Promise(r=>setTimeout(r,25));
+ ok(pdf?.type==='application/pdf'&&paginasPdf.length===1,'PDF sagital gerado');
+ ok(paginasPdf[0].canvas.toDataURL('image/png')===png,'PDF e PNG preservam a mesma anatomia e lesão');
+ const pdfTexto=new TextDecoder('latin1').decode(await pdf.arrayBuffer());ok(pdfTexto.startsWith('%PDF-')&&pdfTexto.trimEnd().endsWith('%%EOF'),'PDF completo');
+ const cinza=d.querySelector('[data-mapa-escala-cinza]');cinza.checked=true;cinza.dispatchEvent(new w.Event('change',{bubbles:true}));
+ ok(w.getComputedStyle(d.querySelector('[data-utero]')).filter.includes('grayscale'),'Camada do útero em escala de cinza');
+ const cinzaPNG=await w.endomapaCapturarMapaManual({formato:'image/png',semRotulos:true,semLesoes:true});
+ const ci=new w.Image();const carregada=new Promise((r,j)=>{ci.onload=r;ci.onerror=j});ci.src=cinzaPNG;await carregada;
+ const cv=d.createElement('canvas');cv.width=ci.width;cv.height=ci.height;cv.getContext('2d').drawImage(ci,0,0);const am=cv.getContext('2d').getImageData(400,350,350,400).data;
+ ok(am.every((v,i)=>i%4!==0||(v===am[i+1]&&v===am[i+2])),'Exportação converte anatomia móvel para cinza');
+ cinza.checked=false;cinza.dispatchEvent(new w.Event('change',{bubbles:true}));
+ btn.click();d.querySelector('[aria-controls=caneta-opcoes-sagital]').click();ok(t.hidden,'Caneta desativa o movimento');btn.click();ok(d.querySelector('[aria-controls=caneta-opcoes-sagital]').getAttribute('aria-pressed')==='false','Movimento desativa caneta');
+ btn.click();u.restaurar();
+ btn.click();for(let i=0;i<120;i++)key('ArrowRight');ok(u.estado().angulo===110.5,'Limite posterior aprovado');
+ key('Home');t.setPointerCapture=()=>{};
+ const ev=(x,y,id=1)=>{const r=t.getBoundingClientRect();return{button:0,pointerId:id,clientX:r.left+x*r.width/1087,clientY:r.top+y*r.height/1447,preventDefault(){}}};
+ t.onpointerdown(ev(510,450));t.onpointermove(ev(550,420));ok(u.estado().angulo>0,'Arraste por toque');const a=u.estado().angulo;t.onpointermove(ev(600,400,2));ok(u.estado().angulo===a,'Segundo toque ignorado');t.onpointercancel(ev(550,420));t.onpointermove(ev(600,400));ok(u.estado().angulo===a,'Cancelamento encerra gesto');
+ const mesmo={id:'teste-utero',nome:'Teste',titulo:'Dra.',assinatura:'Teste'};
+ w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:mesmo}));ok(u.estado().angulo===0,'Troca de conta restaura útero');
+ btn.click();key('ArrowRight');w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:mesmo}));ok(u.estado().angulo===1,'Atualizar mesma conta preserva posição');
+ w.dispatchEvent(new w.Event('endomapa:vistas-alteradas'));ok(t.hidden,'Troca de vista desativa gesto');
+ const legado=structuredClone(salvo);legado.especial='utero-retrofletido';legado.escolha='especiais';legado.ativa='utero-retrofletido';
+ const antiga=structuredClone(legado.vistas.sagital.lesoes[0]);antiga.src='assets/lesoes/mioma-1-referencia.png';antiga.dados.nomeNoMapa='Mioma intramural';delete antiga.dados.uteroX;delete antiga.dados.uteroY;
+ legado.vistas['utero-retrofletido'].lesoes=[antiga];w.endomapaEditorManual.restaurar(legado);
+ const antigaAberta=d.querySelector('[data-camada-editor="utero-retrofletido"] .lesao-editavel');
+ ok(antigaAberta.dataset.nome==='Leiomioma 1'&&antigaAberta.dataset.nomeNoMapa==='Leiomioma intramural','Montagem antiga preservada com nomes atualizados');
+ ok(d.querySelector('[data-mapa-especial] option[value="utero-retrofletido"]').hidden,'Compatibilidade não reintroduz opção no catálogo');
+ ok(!erros.length,'Sem erros: '+erros.join(';'));
+ saida.textContent='PASSOU: botões, celular, lesões vinculadas, captura, salvar/reabrir, compatibilidade, validação, restauração, limites, toque e troca de conta.';
+ }catch(e){saida.textContent='FALHOU: '+e.stack}})();
+</script>
