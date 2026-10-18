@@ -1,5 +1,7 @@
 # Especificação do MVP
 
+Recuperação no domínio próprio (18/10/2026): Daniel autorizou prosseguir após confirmar login em endomapa.com.br. Novos pedidos de recuperação passam a indicar https://endomapa.com.br/recuperar-senha. Lista de destinos permitidos no Supabase ampliada preservando o destino antigo; endereço principal do serviço de autenticação mantido nesta alteração. Modelo local de e-mail acompanha o novo domínio, mas o serviço usa o modelo padrão (sem personalização ativa). Não há encaminhamento automático de pages.dev para o domínio novo. Teste real com conta temporária validou recuperação no novo domínio, recarregamento da página e login com a nova senha; conta removida ao final, sem envio de e-mails.
+
 ## 1. O PROBLEMA
 
 Médicos radiologistas gastam de dois a três minutos desenhando lesões manualmente em um mapa anatômico de papel.
