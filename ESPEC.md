@@ -1,5 +1,7 @@
 # Especificação do MVP
 
+Ajuste de redução das lesões (18/10/2026): a pedido de Daniel, Retrocervical, Adenomiose, Cisto, os cinco modelos de Leiomioma e Pólipo passam a aceitar tamanho mínimo 5 em vez de 40. Tamanhos iniciais de inserção, limite máximo e demais modelos preservados. O limite é definido pelo catálogo, inclusive ao reabrir montagens salvas.
+
 Lesão Intestinal — publicação autorizada (18/10/2026): Daniel aprovou publicar a lesão com bordas suavizadas após o teste local. Imagem PNG transparente baseada na referência intestinal, em `assets/lesoes/intestinal.png`, com os controles existentes de posição, tamanho, rotação e medidas. Ordem inicial solicitada: Ligamento uterossacro, Retrocervical, Intestinal, Adenomiose, SOMP direito, SOMP esquerdo, Folículo e Cisto. Demais modelos preservados na sequência anterior.
 
 Recuperação no domínio próprio (18/10/2026): Daniel autorizou prosseguir após confirmar login em endomapa.com.br. Novos pedidos de recuperação passam a indicar https://endomapa.com.br/recuperar-senha. Lista de destinos permitidos no Supabase ampliada preservando o destino antigo; endereço principal do serviço de autenticação mantido nesta alteração. Modelo local de e-mail acompanha o novo domínio, mas o serviço usa o modelo padrão (sem personalização ativa). Não há encaminhamento automático de pages.dev para o domínio novo. Teste real com conta temporária validou recuperação no novo domínio, recarregamento da página e login com a nova senha; conta removida ao final, sem envio de e-mails.
