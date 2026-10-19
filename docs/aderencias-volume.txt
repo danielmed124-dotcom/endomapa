@@ -1,0 +1,8 @@
+Atualização das três aderências da biblioteca, autorizada em 18/10/2026.
+Edição com imagegen integrada, fundo transparente. Aderência 1 aprovada como referência para as versões 2 e 3.
+Arquivos: assets/lesoes/aderencia-1-marrom-escuro.png, aderencia-2-marrom-escuro.png e aderencia-3-marrom-escuro.png.
+Mantidos endereços, nomes, proporções e tamanhos de inserção. Versões do catálogo renovadas.
+Verificação local: inserção das três aderências, captura PNG, PDF, celular e salvar/reabrir passaram.
+
+Prompt das versões 2 e 3 (substituir N pelo número):
+Use case: precise-object-edit. Image 1 is the EDIT TARGET adhesion N. Image 2 is ONLY the approved surface lighting/style reference, never copy its shape. Edit image 1 to match the warmer brown dimensional fiber relief and soft ridge highlights of image 2. Preserve image 1 canvas proportions, exact position, silhouette, branch layout, all thin strands and all transparent openings. Do not thicken bands or change attachment points. Only enhance surface volume with warm soft highlights along existing ridges, deeper brown shading along edges and existing crossings, natural fibrous tissue texture. Transparent background and openings, no added organs, no text, no external shadows, no black outline, not metallic. Maintain whole original shape within same framing. Match the restrained yet clearly perceptible 3D relief of reference 2.

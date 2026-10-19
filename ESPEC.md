@@ -1,5 +1,7 @@
 # Especificação do MVP
 
+Relevo das aderências (18/10/2026): após aprovar o exemplo da Aderências 1, Daniel autorizou aplicar o acabamento às três aderências presentes na biblioteca e publicar. As imagens recebem contraste entre sombras marrons e reflexos nas fibras para maior volume aparente, com fundo transparente. Mantidos os nomes, tamanhos iniciais, proporções e endereços dos arquivos; identificadores de versão atualizados para carregar o novo acabamento. Imagens editadas com imagegen, usando a primeira aprovada como referência de acabamento para as demais.
+
 Integração aprovada da trompa sagital (18/10/2026): Daniel aprovou a emenda suavizada e autorizou incorporar e publicar a continuação fixa atrás do útero. O motor principal passa a usar `assets/trompa-sagital-fundo.png` nas máscaras locais de remoção do ramo anterior e sua sombra, mantendo o arco e a continuação aprovada. O corpo uterino é desenhado por cima. A captura sagital inclui a correção também no ângulo zero, para preservar a mesma aparência na tela, PNG e PDF. Esta decisão substitui o estado de prévia local das anotações abaixo.
 
 Emenda da continuação sagital (18/10/2026): Daniel aprovou o trajeto e o comportamento da continuação fixa e pediu suavização da emenda. A prévia aplica transparência gradual apenas na junção da faixa nova com o arco original, preservando curva e sobreposição. Conferência em oito posições passou. Alteração ainda local.
