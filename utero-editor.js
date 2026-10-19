@@ -23,7 +23,7 @@
   restaurar(v){validar(v);modo(false);pendente={...(v||{angulo:0})};motor?.restaurar(pendente);atualizar()},
   vincular(x,y){if(!motor||!motor.localizar(x*1087/100,y*1447/100))return null;return motor.origem(x*1087/100,y*1447/100)},
   posicao:(x,y)=>motor?.transformar(x,y),
-  fotografar(v){if(v!=='sagital'||!estado().angulo)return null;if(!motor)throw Error('Aguarde o carregamento do útero.');const c=Object.assign(document.createElement('canvas'),{width:1087,height:1447});c.getContext('2d').drawImage(tela,0,0);return c;}
+  fotografar(v){if(v!=='sagital')return null;if(!motor)throw Error('Aguarde o carregamento do útero.');const c=Object.assign(document.createElement('canvas'),{width:1087,height:1447});c.getContext('2d').drawImage(tela,0,0);return c;}
  };
  botao.onclick=()=>{if(!ocupado())modo(!ativo)};
  restaurar.onclick=()=>{if(!ocupado()){arraste=null;mover(0)}};
