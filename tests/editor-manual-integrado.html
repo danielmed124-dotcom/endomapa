@@ -361,7 +361,7 @@
       preencher(tamanho, '5');
       verificar(foliculo.dataset.tamanho === '5', 'Controle deslizante também permite 5%');
       buscar('[data-modelo][data-nome="Cisto"]').click();
-      verificar(tamanho.min === '40', 'Outros modelos mantêm o limite anterior');
+      verificar(tamanho.min === '5', 'Cisto respeita o limite reduzido aprovado');
       foliculo.click();
       verificar(tamanho.value === '5' && tamanho.min === '5', 'Resselecionar restaura tamanho reduzido');
       await janela.endomapaCapturarMapaManual({ formato: 'image/png' });

@@ -54,7 +54,7 @@ window.endomapaCriarOrgaos = async function(canvas) {
   ctx.restore();
   ctx.drawImage(camadas[lado].frente,g.x,g.y);
  }
- await Promise.all(Object.entries({base:'assets/mapa-base-coronal-aberto-visitante.png',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
+ await Promise.all(Object.entries({base:'assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
  Object.keys(grupos).forEach(prepararCamada);
  function renderizar(){
   ctx.clearRect(0,0,W,H);
