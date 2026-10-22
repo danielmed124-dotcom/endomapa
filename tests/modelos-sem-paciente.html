@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Verificação do histórico manual</title>
+<pre id="resultado">Executando</pre>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<script>
+(async function () {
+  const saida = document.querySelector('#resultado');
+  const verificar = (condicao, mensagem) => { if (!condicao) throw new Error(mensagem); };
+  const aguardar = async (condicao, mensagem) => {
+    for (let tentativa = 0; tentativa < 240; tentativa++) {
+      if (condicao()) return;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    throw new Error(mensagem);
+  };
+  try {
+    const resposta = await fetch('../app.html');
+    verificar(resposta.ok, 'Não foi possível ler app.html');
+    const origem = new DOMParser().parseFromString(await resposta.text(), 'text/html');
+    const scripts = Array.from(origem.scripts, script => script.getAttribute('src') || '');
+    const dependencias = ['prototipo.js', 'assets/vendor/jspdf-4.2.1.umd.min.js', 'pdf-manual.js', 'editor-documento.js', 'editor-manual.js', 'historico-manual.js'];
+    dependencias.forEach(src => verificar(scripts.some(item => item.split('?')[0] === src), 'O aplicativo não carrega ' + src));
+    const indiceScript = nome => scripts.findIndex(src => src.split('?')[0] === nome);
+    verificar(indiceScript(dependencias[1]) < indiceScript('pdf-manual.js') && indiceScript('pdf-manual.js') < indiceScript('editor-manual.js'), 'Biblioteca e gerador PDF devem carregar antes do editor');
+    verificar(origem.querySelector('[data-baixar-pdf-manual]'), 'Botão de PDF ausente no aplicativo real');
+
+    // O teste mantém o HTML, CSS, imagens, navegação, editor e gerador reais.
+    // Somente autenticação, serviços externos e o download no aparelho são isolados.
+    origem.querySelectorAll('script, base, meta[http-equiv="refresh"]').forEach(elemento => elemento.remove());
+    origem.body.classList.remove('autenticacao-pendente');
+    const base = origem.createElement('base');
+    base.href = new URL('../', location.href).href;
+    origem.head.prepend(base);
+    const politica = origem.createElement('meta');
+    politica.httpEquiv = 'Content-Security-Policy';
+    politica.content = "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'none'; form-action 'none'";
+    origem.head.prepend(politica);
+    const ambiente = origem.createElement('script');
+    ambiente.textContent = `
+      window.__teste = { chamadas: [], downloads: [], erros: [], blobs: new Map(), liberacoes: [], temporizadoresLongos: new Map() };
+      history.replaceState = function () {};
+      window.fetch = function (url) {
+        window.__teste.chamadas.push(String(url));
+        return Promise.reject(new Error('Rede desativada no teste de PDF'));
+      };
+      XMLHttpRequest.prototype.open = function (metodo, url) {
+        window.__teste.chamadas.push(String(url));
+        throw new Error('Rede desativada no teste de PDF');
+      };
+      window.addEventListener('error', evento => { if (evento.message) window.__teste.erros.push(evento.message); });
+      window.addEventListener('unhandledrejection', evento => window.__teste.erros.push(String(evento.reason)));
+      const criarEndereco = URL.createObjectURL;
+      URL.createObjectURL = function (blob) {
+        const endereco = criarEndereco.call(this, blob);
+        window.__teste.blobs.set(endereco, blob);
+        return endereco;
+      };
+      const liberarEndereco = URL.revokeObjectURL;
+      URL.revokeObjectURL = function (endereco) {
+        window.__teste.liberacoes.push(endereco);
+        return liberarEndereco.call(this, endereco);
+      };
+      // Avançamos a limpeza tardia manualmente após conferir todos os PDFs.
+      // O relógio virtual do Chrome não deve saltar 60 segundos enquanto
+      // FileReader e Blob ainda estão concluindo suas leituras assíncronas.
+      const agendar = window.setTimeout;
+      const cancelar = window.clearTimeout;
+      let proximoTemporizador = -1;
+      window.setTimeout = function (callback, atraso, ...argumentos) {
+        if (Number(atraso) >= 60000 && typeof callback === 'function') {
+          const identificador = proximoTemporizador--;
+          window.__teste.temporizadoresLongos.set(identificador, () => callback(...argumentos));
+          return identificador;
+        }
+        return agendar.call(window, callback, atraso, ...argumentos);
+      };
+      window.clearTimeout = function (identificador) {
+        if (!window.__teste.temporizadoresLongos.delete(identificador)) cancelar.call(window, identificador);
+      };
+      const cliqueOriginal = HTMLAnchorElement.prototype.click;
+      HTMLAnchorElement.prototype.click = function () {
+        if (this.hasAttribute('download')) {
+          window.__teste.downloads.push({ nome: this.download, endereco: this.href });
+          return;
+        }
+        return cliqueOriginal.apply(this, arguments);
+      };
+    `;
+    origem.head.append(ambiente);
+    const simulador = origem.createElement('script');
+    simulador.src = 'tests/simulador-historico.js';
+    origem.head.append(simulador);
+    dependencias.forEach(src => {
+      const script = origem.createElement('script');
+      script.src = src;
+      origem.body.append(script);
+    });
+    const quadro = document.querySelector('iframe');
+    const carregado = new Promise(resolve => quadro.addEventListener('load', resolve, { once: true }));
+    quadro.srcdoc = '<!doctype html>\n' + origem.documentElement.outerHTML;
+    await carregado;
+    const janela = quadro.contentWindow;
+    const doc = janela.document;
+    const teste = janela.__teste;
+    const buscar = seletor => {
+      const elemento = doc.querySelector(seletor);
+      verificar(elemento, 'Elemento ausente: ' + seletor);
+      return elemento;
+    };
+    verificar(typeof janela.endomapaGerarPdfA4 === 'function', 'Gerador real de PDF não inicializou');
+    verificar(typeof janela.endomapaCapturarMapaManual === 'function', 'Editor real não inicializou');
+    janela.endomapaAbrirTela('editor-manual');
+    const h = janela.__historico, editor = janela.endomapaEditorManual;
+    const salvar = buscar('[data-salvar-manual]'), titulo = buscar('[data-titulo-montagem]');
+    const esperar = () => aguardar(() => !salvar.disabled, 'Operação não concluiu');
+    buscar('[data-modelo]').click();
+    const modelo = editor.capturar();
+    modelo.documento.cabecalho = { ativo: true, campos: [
+      { nome: 'Nome da paciente', valor: 'Paciente fictícia anterior' },
+      { nome: 'Identificação', valor: 'TESTE-123' },
+      { nome: 'Data', valor: '01/01/2000' },
+    ] };
+    editor.restaurar(modelo); titulo.value = 'Modelo de teste';
+    salvar.click(); await esperar();
+    verificar(h.mapas.size === 1, 'Salvar explícito deve criar um registro');
+    const id = [...h.mapas.keys()][0];
+    const registroOriginal = JSON.stringify(h.mapas.get(id));
+    const abrir = async (tela = 'meus-mapas') => {
+      janela.endomapaAbrirTela(tela);
+      const lista = tela === 'meus-mapas' ? '[data-lista-mapas]' : '[data-lista-painel]';
+      await aguardar(() => doc.querySelector(lista + ' [data-abrir-mapa]'), 'Lista não carregou');
+      doc.querySelector(lista + ' [data-abrir-mapa]').click(); await esperar();
+    };
+    h.confirmar = true;
+    await abrir();
+    const aberto = editor.capturar();
+    verificar(aberto.documento.cabecalho.campos.every(c => c.valor === ''), 'Paciente anterior reapareceu');
+    verificar(JSON.stringify(aberto.documento.cabecalho.campos.map(c => c.nome)) === JSON.stringify(modelo.documento.cabecalho.campos.map(c => c.nome)), 'Nomes dos campos foram alterados');
+    verificar(JSON.stringify(aberto.vistas) === JSON.stringify(modelo.vistas), 'Limpeza alterou o desenho');
+    verificar(JSON.stringify(h.mapas.get(id)) === registroOriginal, 'Abrir modificou o banco');
+    const pngSemPaciente = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+    const imagem = new janela.Image();
+    await new Promise((resolve, reject) => { imagem.onload = resolve; imagem.onerror = reject; imagem.src = pngSemPaciente; });
+    verificar(imagem.naturalHeight === 1448, 'Cabeçalho vazio ainda aparece no arquivo');
+    const campoValor = buscar('[data-campos-paciente] input[maxlength="200"]');
+    campoValor.value = 'Paciente fictícia atual'; campoValor.dispatchEvent(new janela.Event('input'));
+    titulo.value = 'Alteração não salva'; buscar('[data-modelo]').click();
+    await new Promise(resolve => setTimeout(resolve, 250));
+    verificar(JSON.stringify(h.mapas.get(id)) === registroOriginal, 'Editar salvou automaticamente');
+    for (const seletor of ['[data-baixar-mapa-manual]', '[data-baixar-jpeg-manual]', '[data-baixar-pdf-manual]']) {
+      const antes = teste.downloads.length;
+      buscar(seletor).click();
+      await aguardar(() => teste.downloads.length > antes && !buscar(seletor).disabled, 'Download não concluiu: ' + seletor);
+      verificar(JSON.stringify(h.mapas.get(id)) === registroOriginal, 'Exportação modificou o modelo salvo');
+    }
+    await abrir();
+    verificar(editor.capturar().documento.cabecalho.campos.every(c => c.valor === ''), 'Reabrir carregou paciente');
+    verificar(JSON.stringify(editor.capturar().vistas) === JSON.stringify(modelo.vistas), 'Edição sem salvar persistiu');
+    verificar(titulo.value === 'Modelo de teste', 'Título sem salvar persistiu');
+    const novoCampo = buscar('[data-campos-paciente] input[maxlength="200"]');
+    novoCampo.value = 'Paciente fictícia nova'; novoCampo.dispatchEvent(new janela.Event('input'));
+    salvar.click(); await esperar();
+    verificar(h.mapas.get(id).montagem.documento.cabecalho.campos[0].valor === 'Paciente fictícia nova', 'Clique em Salvar não gravou a edição');
+    verificar(h.mapas.get(id).versao === 2, 'Gravou uma versão sem clique explícito');
+    await abrir('painel-dia');
+    verificar(editor.capturar().documento.cabecalho.campos.every(c => c.valor === ''), 'Painel do dia reutilizou paciente');
+    verificar(h.mapas.get(id).versao === 2, 'Limpeza ao abrir gravou versão');
+    // Registros anteriores ao cabeçalho continuam abrindo.
+    delete h.mapas.get(id).montagem.documento;
+    await abrir();
+    verificar(editor.capturar().documento.cabecalho.campos.length === 0, 'Modelo antigo manteve dados residuais');
+    verificar(!teste.erros.length && !teste.chamadas.length, 'Erros ou chamadas externas inesperados');
+    saida.textContent = 'PASSOU: campos da paciente limpos em Meus mapas e Painel do dia; nomes dos campos e desenho preservados; edição e PNG/JPEG/PDF não salvam; apenas Salvar grava; modelos antigos compatíveis; teste com largura de celular.';
+  } catch (erro) { saida.textContent = 'FALHOU: ' + erro.message; }
+})();
+</script>
+</html>

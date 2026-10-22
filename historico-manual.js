@@ -73,9 +73,14 @@
       if (error || !data) throw new Error('Não foi possível abrir o mapa. Tente novamente.');
       // O usuário pode ter continuado editando enquanto a consulta estava em andamento.
       if (chave(capturar()) !== antesDeAbrir && !window.confirm('Você editou a montagem durante o carregamento. Abrir o mapa salvo substituirá essas alterações. Continuar?')) return;
-      editor.restaurar(data.montagem);
+      // A biblioteca fornece o desenho e os nomes dos campos, nunca os dados
+      // da paciente anterior. A cópia evita modificar o registro carregado.
+      const montagemAberta = structuredClone(data.montagem);
+      const camposPaciente = montagemAberta.documento?.cabecalho?.campos;
+      if (Array.isArray(camposPaciente)) camposPaciente.forEach(campo => { campo.valor = ''; });
+      editor.restaurar(montagemAberta);
       titulo.value = data.titulo; id = data.id; versao = data.versao; salvo = chave(capturar());
-      mensagem('Mapa aberto. Clique em Salvar na biblioteca para guardar novas alterações.');
+      mensagem('Mapa aberto com os dados da paciente em branco. Os nomes dos campos foram mantidos. Alterações só serão gravadas ao clicar em Salvar na biblioteca.');
       window.endomapaAbrirTela('editor-manual');
     } catch (erro) { window.alert(erro.message || 'Não foi possível abrir. A montagem atual foi preservada.'); }
     finally { botao.disabled = false; bloquear(false); }

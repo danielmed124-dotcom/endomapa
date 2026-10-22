@@ -10,7 +10,7 @@
     let cabecalho = { ativo: false, campos: [] };
     const painel = document.createElement('details');
     painel.className = 'documento-opcoes';
-    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><label><input type="checkbox" data-cabecalho-ativo> Mostrar cabeçalho da paciente</label><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Defina os nomes e os valores dos campos. Somente campos preenchidos aparecem no mapa. Ao salvar o mapa ou gerar PDF, esses dados ficam na montagem salva na sua conta.</p>`;
+    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><label><input type="checkbox" data-cabecalho-ativo> Mostrar cabeçalho da paciente</label><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Preencha os dados da paciente deste exame. Ao abrir um mapa salvo, os valores vêm em branco e os nomes dos campos são mantidos. Baixar PDF, PNG ou JPEG não salva alterações na biblioteca; somente o botão Salvar na biblioteca faz isso.</p>`;
     document.querySelector('.editor-manual__area').prepend(painel);
     const campos = painel.querySelector('[data-campos-paciente]');
     const ativo = painel.querySelector('input');
