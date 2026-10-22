@@ -16,6 +16,60 @@
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
+  // Identificação do Endomapa independente da assinatura e da clínica.
+  // Mesma composição proporcional na tela e nos arquivos de todas as vistas.
+  function desenharContatosEndomapa(canvas) {
+    const contexto = canvas.getContext("2d");
+    contexto.save();
+    const escala = canvas.width / 1086;
+    contexto.scale(escala, escala);
+    const altura = canvas.height / escala;
+    contexto.fillStyle = "rgba(161, 111, 32, 0.62)";
+    contexto.strokeStyle = contexto.fillStyle;
+    contexto.lineWidth = 1.4;
+    contexto.lineCap = 'round';
+    contexto.lineJoin = 'round';
+    contexto.font = '18px Arial, sans-serif';
+    contexto.textAlign = "left";
+    contexto.textBaseline = "alphabetic";
+    const xTexto = 1086 * 0.94 - contexto.measureText('endomapa.com.br').width;
+    const xIcone = xTexto - 28;
+    const linhas = [['instagram', '@endomapa', altura * 0.958], ['site', 'endomapa.com.br', altura * 0.98]];
+    linhas.forEach(([tipo, texto, y]) => {
+      contexto.save();
+      contexto.translate(xIcone, y - 15);
+      contexto.beginPath();
+      if (tipo === 'instagram') {
+        contexto.roundRect(0, 0, 18, 18, 5);
+        contexto.stroke();
+        contexto.beginPath(); contexto.arc(9, 9, 4.2, 0, Math.PI * 2); contexto.stroke();
+        contexto.beginPath(); contexto.arc(14, 4, 1.1, 0, Math.PI * 2); contexto.fill();
+      } else {
+        contexto.arc(9, 9, 9, 0, Math.PI * 2); contexto.stroke();
+        contexto.beginPath(); contexto.ellipse(9, 9, 4, 9, 0, 0, Math.PI * 2); contexto.stroke();
+        contexto.beginPath(); contexto.moveTo(0, 9); contexto.lineTo(18, 9); contexto.stroke();
+      }
+      contexto.restore();
+      contexto.fillText(texto, xTexto, y);
+    });
+    contexto.restore();
+  }
+  mapasManuais.forEach(mapa => {
+    const base = mapa.querySelector('[data-mapa-base]');
+    const contatos = document.createElement('canvas');
+    contatos.className = 'mapa-editor__assinatura';
+    contatos.dataset.contatosEndomapa = '';
+    contatos.setAttribute('role', 'img');
+    contatos.setAttribute('aria-label', 'Instagram: @endomapa. Site: endomapa.com.br');
+    mapa.querySelector('.mapa-editor__desenho').append(contatos);
+    const atualizar = () => {
+      contatos.width = base.naturalWidth || 1086;
+      contatos.height = base.naturalHeight || 1448;
+      desenharContatosEndomapa(contatos);
+    };
+    base.addEventListener('load', atualizar);
+    atualizar();
+  });
   const opcaoEscalaCinza = document.querySelector('[data-mapa-escala-cinza]');
   function atualizarEscalaCinza() {
     mapasManuais.forEach(mapa => mapa.classList.toggle('mapa-editor--cinza', Boolean(opcaoEscalaCinza?.checked)));
@@ -979,6 +1033,7 @@
       contexto.putImageData(imagem, 0, 0);
     }
     if (assinatura) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
+    if (!incluirMascaras) desenharContatosEndomapa(canvas);
     const mascaras = [];
     // Uma única tela reutilizada mantém a rasterização nas coordenadas absolutas
     // originais. O resultado guarda somente os recortes alfa, nunca a anatomia.

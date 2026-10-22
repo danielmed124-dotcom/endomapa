@@ -117,6 +117,12 @@
       detail: { id: 'teste', titulo: 'Dr(a).', nome: 'Daniel Carneiro', assinatura: 'Daniel', clinica_id: clinica ? 'centrus' : null, pode_exportar_divulgacao: autorizado },
     }));
     const escolher = vista => {
+      if (vista === 'utero-retrofletido') {
+        const legado = janela.endomapaEditorManual.capturar();
+        legado.especial = vista; legado.escolha = 'especiais'; legado.ativa = vista;
+        janela.endomapaEditorManual.restaurar(legado);
+        return;
+      }
       if (['coronal', 'sagital', 'ambas'].includes(vista)) buscar(`input[name="vistas-editor"][value="${vista}"]`).click();
       else {
         buscar('input[name="vistas-editor"][value="especiais"]').click();
@@ -162,6 +168,9 @@
       const base = mapa.querySelector('[data-mapa-base]');
       const assinatura = mapa.querySelector('[data-assinatura-manual]');
       await aguardar(() => base.complete && base.naturalWidth > 0 && !assinatura.hidden, 'Base ou assinatura ausente');
+      const contatos = mapa.querySelector('[data-contatos-endomapa]');
+      verificar(contatos && contatos.getAttribute('aria-label').includes('@endomapa') && contatos.getAttribute('aria-label').includes('endomapa.com.br'), 'Contatos ausentes na tela: ' + vista);
+      verificar(janela.getComputedStyle(contatos).pointerEvents === 'none', 'Rodapé não pode bloquear o toque no mapa');
       buscar('[data-modelo]').click();
       const nome = buscar('[data-controle-nome-lesao]');
       nome.value = 'Exemplo ilustrativo'; nome.dispatchEvent(new janela.Event('input'));
@@ -194,6 +203,16 @@
       const png = await exportar(false, true, vista);
       saida.dataset.etapa = vista + ': PNG';
       verificar(png === esperada, 'PNG deve coincidir com a montagem neutra: ' + vista);
+      // Confere a presença real do rodapé no arquivo, mesmo sem assinatura.
+      const pixelsContatos = contatos.getContext('2d').getImageData(0, 0, contatos.width, contatos.height).data;
+      const pixelsPng = await pixelsDe(png);
+      let letrasNoArquivo = 0;
+      for (let i = 0; i < pixelsContatos.length; i += 4) {
+        if (pixelsContatos[i + 3] < 100) continue;
+        verificar(pixelsPng[i] > pixelsPng[i + 1] && pixelsPng[i + 1] > pixelsPng[i + 2], 'Rodapé deve manter o dourado no PNG: ' + vista);
+        letrasNoArquivo++;
+      }
+      verificar(letrasNoArquivo > 200, 'Texto do rodapé ausente no arquivo: ' + vista);
       const jpegEsperado = await janela.endomapaCapturarMapaManual({ formato: 'image/jpeg', qualidade: 0.95, fundoBranco: true, divulgacao: true });
       const inicioJpeg = teste.downloads.length;
       buscar('[data-baixar-jpeg-manual]').click(); buscar('[data-baixar-jpeg-manual]').click();
@@ -299,7 +318,20 @@
       verificar(quadroAuth.contentWindow.endomapaMedico.pode_exportar_divulgacao === (email === 'danielmed124@gmail.com'), 'Permissão incorreta para ' + email);
       quadroAuth.remove();
     }
-    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/JPEG/PDF nas dez vistas, PDF Ambas, montagem preservada e celular de 320px.';
+    const previa = document.createElement('img');
+    previa.id = 'previa-contatos'; previa.alt = 'Mapa exportado com Instagram e site do Endomapa';
+    previa.src = esperadas.get('coronal'); previa.style.cssText = 'display:block;max-width:600px;width:100%;height:auto';
+    quadro.hidden = true; document.body.append(previa);
+    escolher('coronal');
+    janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
+      detail: { id: 'previa-carolina', titulo: 'Dra.', nome: 'Carolina Leão', assinatura: 'Dra. Carolina Leão', clinica_id: null },
+    }));
+    verificar(buscar('[data-mapa-editor="coronal"] [data-assinatura-manual]').getAttribute('aria-label').includes('Dra. Carolina Leão'), 'Assinatura completa ausente');
+    const previaCarolina = document.createElement('img'); previaCarolina.id = 'previa-carolina';
+    previaCarolina.alt = 'Mapa com assinatura Dra. Carolina Leão e contatos do Endomapa';
+    previaCarolina.src = await janela.endomapaCapturarMapaManual({ formato: 'image/png', semLesoes: true, semRotulos: true });
+    previaCarolina.style.cssText = previa.style.cssText; document.body.append(previaCarolina);
+    saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/JPEG/PDF nas dez vistas, PDF Ambas, contatos dourados no rodapé, montagem preservada e celular de 320px.';
   } catch (erro) {
     saida.textContent = 'FALHOU: ' + erro.message;
     console.error(erro);
