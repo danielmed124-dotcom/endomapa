@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><base href="/experimentos/hidrosalpinge-extensao/">
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>Endomapa — teste da extensão da hidrosalpinge</title>
+ <link rel="stylesheet" href="teste.css?v=9">
+</head>
+<body>
+<main>
+ <header><span class="selo">TESTE SEPARADO — VERSÃO 9</span><h1>Hidrosalpinge e afilamento das tubas</h1><p>I e T ajustam a dilatação. A e B selecionam o trecho da tuba que será afinado, sem modificar a hidrosalpinge.</p></header>
+ <section class="painel" aria-label="Controles do teste">
+  <label class="rotulo" for="modelo">Mapa</label>
+  <select id="modelo" disabled><option value="direita">Hidrosalpinge direita</option><option value="esquerda">Hidrosalpinge esquerda</option><option value="bilateral">Hidrosalpinge bilateral</option></select>
+  <div id="controles"></div>
+  <div class="acoes"><button id="restaurar" disabled>Restaurar desenho original</button><button id="marcacoes" aria-pressed="true" disabled>Ocultar marcações</button></div>
+  <button id="baixar-pdf" disabled>Baixar PDF</button>
+  <p class="ajuda">PDF A4 do modelo selecionado, com os ajustes atuais e sem os marcadores.</p>
+  <p id="estado-pdf" role="status" aria-live="polite"></p>
+  <p class="ajuda">Arraste os marcadores no mapa ou use as barras. Os percentuais indicam a posição no desenho, não medidas em centímetros. Os lados seguem os nomes da biblioteca.</p>
+  <p class="ajuda">A e B afinam somente os trechos sem dilatação, até um terço da espessura. Se a hidrosalpinge ocupar todo o trecho, ela permanece intacta. Restaurar desenho original desfaz os dois tipos de ajuste.</p>
+  <p id="estado" role="status" aria-live="polite">Preparando os três modelos…</p>
+ </section>
+ <section class="mapa" aria-label="Prévia do mapa">
+  <div class="desenho"><canvas id="mapa" width="1086" height="1448" aria-label="Mapa com o trecho dilatado ajustável"></canvas><div id="marcadores"></div></div>
+ </section>
+ <p class="limite">Prévia para avaliar a extensão, as junções e o PDF. Não salva exames nem altera o site publicado. O acabamento ainda precisa de avaliação visual.</p>
+</main>
+<script src="afilar.js?v=7"></script>
+<script src="tubas.js?v=9"></script>
+<script src="teste.js?v=9"></script>
+<script src="../../assets/vendor/jspdf-4.2.1.umd.min.js"></script>
+<script src="../../pdf-manual.js"></script>
+<script src="pdf.js?v=4"></script>
+</body>
+</html>
