@@ -32,6 +32,25 @@ const vistasComLados = new Set(['coronal', 'ooforectomia-direita', 'ooforectomia
   'hidrosalpinge-esquerda', 'hidrosalpinge-bilateral']);
 let perfilDosLados = null;
 let ladosPorVista = {};
+const logoSemeare = new Image();
+window.endomapaLogoSemearePronta = new Promise((resolve, reject) => {
+  logoSemeare.onload = () => { atualizarLadosDosMapas(); resolve(); };
+  logoSemeare.onerror = () => reject(new Error('Não foi possível carregar a logo da Semeare.'));
+});
+// Evita rejeição sem tratamento nas contas que não utilizam esta logo.
+window.endomapaLogoSemearePronta.catch(() => {});
+logoSemeare.src = 'assets/clinicas/semeare.jpg';
+const logoGranvitta = new Image();
+window.endomapaLogoGranvittaPronta = new Promise((resolve, reject) => {
+  logoGranvitta.onload = () => { atualizarLadosDosMapas(); resolve(); };
+  logoGranvitta.onerror = () => reject(new Error('Não foi possível carregar a logo da Granvittà.'));
+});
+window.endomapaLogoGranvittaPronta.catch(() => {});
+logoGranvitta.src = 'assets/clinicas/granvitta.jpg';
+
+function logoDoPerfil(perfil) {
+  return perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
+}
 
 function atualizarLadosDosMapas() {
   if (!perfilDosLados) return;
@@ -98,7 +117,8 @@ function aplicarPerfilMedico(perfil) {
   perfilDosLados = perfil;
   const nomeDoMedico = `${perfil.titulo} ${perfil.nome}`;
   const primeiroNome = perfil.assinatura || perfil.nome.trim().split(/\s+/)[0];
-  const usarIdentidadeCentrus = Boolean(perfil.clinica_id);
+  const logoPersonalizada = logoDoPerfil(perfil);
+  const usarIdentidadeCentrus = Boolean(perfil.clinica_id) && !logoPersonalizada;
 
   document.body.dataset.medicoId = perfil.id;
 
@@ -116,6 +136,20 @@ function aplicarPerfilMedico(perfil) {
 
   mapasBase.forEach((mapa) => {
     mapa.src = usarIdentidadeCentrus ? mapa.dataset.srcClinica : mapa.dataset.srcVisitante;
+    if (!mapa.closest('[data-mapa-editor]')) {
+      let logo = mapa.parentElement.querySelector('[data-logo-personalizada]');
+      if (!logo) {
+        logo = document.createElement('img');
+        logo.dataset.logoPersonalizada = '';
+        logo.style.cssText = 'position:absolute;top:1.8%;right:2.6%;width:17.5%;height:auto;pointer-events:none';
+        mapa.parentElement.append(logo);
+      }
+      if (logoPersonalizada) {
+        logo.src = logoPersonalizada.src;
+        logo.alt = perfil.logo_granvitta ? 'Granvittà' : 'Semeare — diagnóstico de precisão';
+      }
+      logo.hidden = !logoPersonalizada;
+    }
   });
 
   const desenharAssinatura = (assinatura) => {
@@ -148,7 +182,13 @@ function aplicarPerfilMedico(perfil) {
 function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const contexto = canvas.getContext("2d");
   contexto.clearRect(0, 0, canvas.width, canvas.height);
-  canvas.hidden = !nome && !indicarLados;
+  const logoPersonalizada = logoDoPerfil(perfilDosLados);
+  canvas.hidden = !nome && !indicarLados && !logoPersonalizada;
+  if (logoPersonalizada?.naturalWidth) {
+    const larguraLogo = canvas.width * 0.175;
+    contexto.drawImage(logoPersonalizada, canvas.width * 0.799, canvas.height * 0.018,
+      larguraLogo, larguraLogo * logoPersonalizada.naturalHeight / logoPersonalizada.naturalWidth);
+  }
   canvas.setAttribute("aria-label", `Assinatura: ${nome}${indicarLados ? '; E à esquerda e D à direita' : ''}`);
   // Mesma camada na tela e na captura: margens laterais, fora da anatomia.
   if (indicarLados) {

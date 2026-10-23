@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teste — logo Semeare</title>
+<style>body{margin:0;background:#f5f5f1;font:16px Arial}header{padding:16px}select,button{padding:10px;max-width:100%;margin:4px 0}iframe{display:block;width:100%;height:85vh;border:0;background:white}#resultado{white-space:pre-wrap}</style>
+<header><strong>Prévia da logo Semeare</strong><p>A logo aparece no canto superior direito. Teste isolado, sem acesso ou gravação nas contas reais.</p>
+<label>Simular conta <select id="conta"><option>amandagoncalves1612@gmail.com</option><option>marcoaureliosala@gmail.com</option><option value="neutra@example.com">Conta neutra (sem logo)</option></select></label>
+<button id="largura">Alternar celular / computador</button><p id="resultado">Preparando…</p></header>
+<img id="previa" alt="Prévia do mapa com a identidade da conta selecionada" style="display:block;width:390px;max-width:100%;margin:0 auto 20px">
+<iframe title="Editor de teste Semeare" style="width:390px;max-width:100%;margin:auto"></iframe>
+<script>
+const quadro=document.querySelector('iframe'), status=document.querySelector('#resultado');
+const contaSolicitada=new URLSearchParams(location.search).get('conta');
+if([...document.querySelector('#conta').options].some(o=>o.value===contaSolicitada))document.querySelector('#conta').value=contaSolicitada;
+document.querySelector('#largura').onclick=()=>{quadro.style.width=quadro.style.width==='390px'?'100%':'390px';quadro.style.maxWidth='100%';quadro.style.margin='auto';};
+async function iniciar(){
+ status.textContent='Preparando…';
+ try {
+ const email=document.querySelector('#conta').value;
+ const doc=new DOMParser().parseFromString(await (await fetch('../app.html')).text(),'text/html');
+ doc.querySelectorAll('script,base').forEach(e=>e.remove());
+ const base=doc.createElement('base');base.href=new URL('../',location.href).href;doc.head.prepend(base);
+ const ambiente=doc.createElement('script');
+ ambiente.textContent=`history.replaceState=function(){};window.ENDOMAPA_SUPABASE={};window.supabase={createClient:()=>({auth:{getUser:async()=>({data:{user:{id:'teste',email:${JSON.stringify(email)}}}})},from:()=>({select:()=>({eq:()=>({single:async()=>({data:{id:'teste',nome:'Teste',titulo:'',assinatura:'Teste',ativo:'sim',clinica_id:null}})})})})})};`;
+ doc.head.append(ambiente);
+ ['prototipo.js','app-auth.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js'].forEach(src=>{const s=doc.createElement('script');s.src=src;doc.body.append(s);});
+ const pronto=new Promise(r=>quadro.onload=r);quadro.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;await pronto;
+ const w=quadro.contentWindow,d=w.document;
+ await w.endomapaLogoSemearePronta;
+ for(let i=0;i<100&&!w.endomapaMedico;i++)await new Promise(r=>setTimeout(r,20));
+ const verificar=(ok,msg)=>{if(!ok)throw Error(msg);};
+ verificar(!!w.endomapaMedico,'Perfil de teste não carregou');
+ const semeare=email!=='neutra@example.com';
+ verificar(w.endomapaMedico.logo_semeare===semeare,'Vínculo do e-mail incorreto');
+ verificar([...d.querySelectorAll('[data-mapa-base]')].every(img=>img.src===new URL(img.dataset.srcVisitante,w.document.baseURI).href),'Base contém identidade de outra clínica');
+ const camadas=[...d.querySelectorAll('[data-assinatura-manual]')];
+ verificar(camadas.length===10,'Quantidade de mapas inesperada');
+ camadas.forEach(c=>verificar((c.getContext('2d').getImageData(Math.round(c.width*.82),Math.round(c.height*.03),1,1).data[3]>0)===semeare,'Logo incorreta em uma vista'));
+ w.endomapaAbrirTela('editor-manual');
+ d.querySelector('[data-modelo][data-nome="Cisto"]').click();
+ const captura=await w.endomapaCapturarMapaManual({formato:'image/png',semRotulos:true});
+ verificar(!!captura,'Falha na exportação PNG');
+ document.querySelector('#previa').src=captura;
+ if(semeare){
+ const img=new Image();img.src=captura;await img.decode();
+ const c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;c.getContext('2d').drawImage(img,0,0);
+ const pixel=c.getContext('2d').getImageData(Math.round(c.width*.82),Math.round(c.height*.03),1,1).data;
+ verificar(pixel[0]>210&&pixel[0]<245&&pixel[2]<235,'Logo ausente na exportação');
+ }
+ verificar(d.documentElement.scrollWidth<=quadro.clientWidth+2,'Página excede a largura da tela');
+ status.textContent='Conferido: conta, dez mapas, ausência da Centrus e exportação PNG. Você pode alternar as vistas e baixar PNG, JPEG ou PDF usando o editor abaixo. A lesão de exemplo pode ser removida.';
+ }catch(e){status.textContent='FALHOU: '+e.message;}
+}
+document.querySelector('#conta').onchange=iniciar;
+iniciar();
+</script>
+</html>

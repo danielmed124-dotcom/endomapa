@@ -49,6 +49,10 @@
       perfil.pode_exportar_divulgacao = String(data.user.email || "").trim().toLowerCase() === "danielmed124@gmail.com";
       // Estado inicial das letras; o botão Inserir lados está disponível para todas as contas.
       perfil.indicar_lados_mapas = String(data.user.email || "").trim().toLowerCase() === "andreneide@yahoo.com.br";
+      perfil.logo_semeare = ['amandagoncalves1612@gmail.com', 'marcoaureliosala@gmail.com'].includes(String(data.user.email || '').trim().toLowerCase());
+      if (perfil.logo_semeare) await window.endomapaLogoSemearePronta;
+      perfil.logo_granvitta = String(data.user.email || '').trim().toLowerCase() === 'claudetegrandi@hotmail.com';
+      if (perfil.logo_granvitta) await window.endomapaLogoGranvittaPronta;
       window.endomapaMedico = perfil;
       window.dispatchEvent(
         new CustomEvent("endomapa:perfil-carregado", {
