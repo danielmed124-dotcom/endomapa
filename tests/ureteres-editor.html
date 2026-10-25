@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8"><title>Ureteres e ovários no editor</title>
+<pre id="resultado">Executando…</pre><iframe title="Editor no celular" style="width:390px;height:1100px;border:0"></iframe><div id="capturas"></div>
+<script>
+(async()=>{const ok=(v,m)=>{if(!v)throw Error(m)};try{
+ const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+ html.querySelectorAll('script,base').forEach(e=>e.remove());html.body.classList.remove('autenticacao-pendente');
+ const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+ for(const src of ['prototipo.js','orgaos-deformar.js','orgaos-motor.js','orgaos-editor.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+ const frame=document.querySelector('iframe'),loaded=new Promise(r=>frame.onload=r);frame.srcdoc=html.documentElement.outerHTML;await loaded;
+ const w=frame.contentWindow,d=w.document;w.history.replaceState=()=>{};
+ const perfil=id=>w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{id,nome:'Teste',titulo:'Dr.',assinatura:'Teste',clinica_id:null,indicar_lados_mapas:false}}));
+ perfil('a');w.endomapaAbrirTela('editor-manual');await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;
+ const clicar=s=>d.querySelector(s).click(), api=w.endomapaOrgaos, ed=w.endomapaEditorManual;
+ const inserir=d.querySelector('[data-inserir-ureteres]'),restaurar=d.querySelector('[data-restaurar-ovarios]'),tela=d.querySelector('.mapa-editor__orgaos');
+ ok(!inserir.disabled&&!api.ureteres()&&inserir.textContent==='Inserir ureteres','Começa sem ureteres');
+ ok(!d.querySelector('[data-editar-vista="coronal"],[data-editar-vista="sagital"]'),'Botões redundantes removidos');
+ const a=inserir.getBoundingClientRect(),b=restaurar.getBoundingClientRect();ok(a.right<=b.left&&a.top===b.top&&a.height>=44&&d.documentElement.scrollWidth<=392,'Ureteres à esquerda de restaurar também no celular');
+ const inicial=ed.capturar(),pngOriginal=await w.endomapaCapturarMapaManual({formato:'image/png'});
+ inserir.click();ok(api.ureteres()&&inserir.textContent==='Remover ureteres','Alterna para remover');
+ const pngUreteres=await w.endomapaCapturarMapaManual({formato:'image/png'});ok(pngUreteres!==pngOriginal,'PNG inclui ureteres sem mover ovários');
+ const salva=ed.capturar();ok(salva.vistas.coronal.ureteres===true,'Salva presença dos ureteres');
+ inserir.click();ok(!api.ureteres()&&await w.endomapaCapturarMapaManual({formato:'image/png'})===pngOriginal,'Remover recupera a base exata');
+ ed.restaurar(salva);ok(api.ureteres()&&await w.endomapaCapturarMapaManual({formato:'image/png'})===pngUreteres,'Reabrir conserva ureteres');
+ // Sobrepõe cada ovário a um ponto conhecido do ureter. Alternar o ureter
+ // não pode alterar os pixels no interior opaco do ovário que o encobre.
+ const pontos=[[440,670],[665,680]];
+ const pixel=(x,y)=>Array.from(tela.getContext('2d').getImageData(x,y,1,1).data);
+ for(const [lado,x,y,cx,cy] of [['esquerdo',440,670,326,710],['direito',665,680,765,724]]){
+  const montagem=structuredClone(salva);montagem.vistas.coronal.ovarios[lado]={x:x-cx,y:y-cy};ed.restaurar(montagem);
+  const com=pixel(x,y);ok(com[3]===255,'Ovário opaco cobrindo ureter '+lado);
+  inserir.click();ok(pixel(x,y).every((v,i)=>v===com[i]),'Ureter fica atrás do ovário '+lado);inserir.click();
+ }
+ // Os dois ovários se movem sobre os ureteres, sem apagar seus trechos livres.
+ const cruzada=structuredClone(salva);cruzada.vistas.coronal.ovarios={esquerdo:{x:114,y:-40},direito:{x:-100,y:-44}};ed.restaurar(cruzada);
+ const antes=api.estado();const pngMovido=await w.endomapaCapturarMapaManual({formato:'image/png'});
+ const foto=new Image();foto.src=pngMovido;foto.width=540;foto.alt='Ovários sobre os ureteres';document.querySelector('#capturas').append(foto);
+ inserir.click();ok(JSON.stringify(api.estado())===JSON.stringify(antes),'Remover ureteres não move ovários');inserir.click();
+ const captura=w.endomapaCapturarMapaManual({formato:'image/png'});restaurar.click();ok(await captura===pngMovido,'Captura conserva o instante do clique');
+ ok(api.ureteres()&&Object.values(api.estado()).every(p=>p.x===0&&p.y===0),'Restaurar posições mantém ureteres');
+ ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===pngUreteres,'Restaurar posições recupera montagem inicial com ureteres');
+ ed.restaurar(cruzada);
+ const jpeg=await w.endomapaCapturarMapaManual({formato:'image/jpeg'});ok(jpeg.startsWith('data:image/jpeg'),'JPEG disponível');
+ const carregar=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.src=src});
+ const png=await carregar(pngMovido),c=d.createElement('canvas');c.width=1086;c.height=1448;c.getContext('2d').drawImage(png,0,0);
+ for(const [x,y] of pontos){const a=c.getContext('2d').getImageData(x,y,1,1).data,b=pixel(x,y);ok(b.every((v,i)=>v===a[i]),'Exportação mantém ovário em primeiro plano')}
+ let paginas,arquivo,baixou=false;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=p=>{paginas=p;arquivo=gerar(p);return arquivo};w.HTMLAnchorElement.prototype.click=function(){baixou=true};
+ clicar('input[name="vistas-editor"][value="ambas"]');clicar('[data-baixar-pdf-manual]');inserir.click();ok(api.ureteres(),'Alteração bloqueada durante PDF');
+ for(let i=0;i<500&&!baixou;i++)await new Promise(r=>setTimeout(r,20));
+ ok(baixou&&arquivo.size>1000&&paginas.length===2&&paginas[0].canvas.toDataURL()===pngMovido,'PDF de ambas conserva ureteres e ovários');
+ d.querySelector('[data-mapa-editor="sagital"]').focus();ok(ed.capturar().ativa==='sagital','Seleciona sagital pelo teclado');
+ d.querySelector('[data-mapa-editor="coronal"]').dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true}));ok(ed.capturar().ativa==='coronal','Seleciona coronal pelo toque');
+ const invalida=structuredClone(salva);invalida.vistas.coronal.ureteres='sim';let rejeitou=false;try{ed.restaurar(invalida)}catch{rejeitou=true}ok(rejeitou&&api.ureteres(),'Estado inválido preserva montagem');
+ const antiga=structuredClone(salva);delete antiga.vistas.coronal.ureteres;ed.restaurar(antiga);ok(!api.ureteres(),'Mapa antigo abre sem ureteres');
+ ed.restaurar(salva);perfil('a');ok(api.ureteres(),'Mesma conta conserva ureteres');perfil('b');ok(!api.ureteres(),'Outra conta reinicia ureteres');
+ ed.restaurar(salva);clicar('[data-limpar-mapa]');ok(!api.ureteres(),'Limpar mapa remove ureteres');
+ ed.restaurar(cruzada);d.querySelector('[data-mapa-editor="coronal"]').scrollIntoView({block:'start'});w.scrollBy(0,-180);
+ document.querySelector('#resultado').textContent='PASSOU: botões e celular, ovários SOBRE ureteres, captura, PNG/JPEG/PDF, salvar/reabrir, mapas antigos, contas e teclado.';
+ }catch(e){document.querySelector('#resultado').textContent='FALHOU: '+e.stack}
+})();
+</script>

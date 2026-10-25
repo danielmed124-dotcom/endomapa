@@ -9,6 +9,7 @@ window.endomapaCriarOrgaos = async function(canvas) {
  const grupos={esquerdo:{x:0,y:0,cx:326,cy:710},direito:{x:0,y:0,cx:765,cy:724}};
  const limites={esquerdo:{minX:-90,maxX:530},direito:{minX:-530,maxX:90}};
  const imagens={},camadas={},paths={};
+ let ureteresAtivos=false,camadaUreteres;
  const novoCanvas=()=>Object.assign(document.createElement('canvas'),{width:W,height:H});
  const carregar=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('Não foi possível carregar '+src));img.src=src});
  const suavizar=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
@@ -56,12 +57,26 @@ window.endomapaCriarOrgaos = async function(canvas) {
  }
  await Promise.all(Object.entries({base:'assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
  Object.keys(grupos).forEach(prepararCamada);
+ // Reutiliza a imagem aprovada; o recorte mantém corpo opaco e sombra adjacente.
+ const ureteresProntos=carregar('assets/orgaos/ureteres-referencia-aprovada.png').then(imagem=>{
+  const mascara=novoCanvas(),m=mascara.getContext('2d');m.filter='blur(2px)';m.fillStyle='white';
+  m.fill(new Path2D('M410 540 C432 539 443 568 452 607 C465 663 457 706 432 750 C411 785 388 814 376 852 L365 878 L347 872 C351 834 365 803 385 771 C410 734 424 708 427 668 C431 626 415 584 410 558 Z'));
+  m.fill(new Path2D('M670 540 L698 545 C690 579 680 611 678 651 C674 696 687 730 708 763 C731 798 744 836 746 877 L728 886 C718 842 704 812 685 785 C657 749 645 713 645 669 C643 624 655 575 670 540 Z'));
+  camadaUreteres=novoCanvas();const u=camadaUreteres.getContext('2d');u.drawImage(imagem,0,0,W,H);u.globalCompositeOperation='destination-in';u.drawImage(mascara,0,0);
+  renderizar();
+ });
+ // A falha dessa imagem não impede o movimento dos ovários.
+ ureteresProntos.catch(()=>{});
  function renderizar(){
   ctx.clearRect(0,0,W,H);
   for(const lado of Object.keys(grupos))if(grupos[lado].x||grupos[lado].y)ctx.drawImage(camadas[lado].fundo,0,0);
-  for(const lado of Object.keys(grupos))if(grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
+  if(ureteresAtivos&&camadaUreteres)ctx.drawImage(camadaUreteres,0,0);
+  // Limpeza do lugar antigo -> ureteres fixos -> ovários em primeiro plano.
+  for(const lado of Object.keys(grupos))if(ureteresAtivos||grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
  }
  return {
+  ureteresProntos,
+  definirUreteres(valor){ureteresAtivos=valor===true;renderizar()},
   estado:()=>Object.fromEntries(Object.entries(grupos).map(([lado,g])=>[lado,{x:g.x,y:g.y}])),
   mover(lado,x,y){const g=grupos[lado],lim=limites[lado];g.x=Math.max(lim.minX,Math.min(lim.maxX,x));g.y=Math.max(-360,Math.min(200,y));renderizar()},
   restaurar(valores){for(const lado of Object.keys(grupos)){grupos[lado].x=valores?.[lado]?.x||0;grupos[lado].y=valores?.[lado]?.y||0}renderizar()},

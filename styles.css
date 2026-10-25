@@ -1707,6 +1707,9 @@ h1 span {
 .mapa-editor__barra .botao { min-width: 0; min-height: 44px; white-space: normal; padding: 8px; font-size: .82rem; }
 .mapa-editor__orgaos-acoes { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-left: auto; flex: 0 1 56%; }
 .mapa-editor__orgaos-acoes [aria-pressed="true"] { outline: 2px solid var(--dourado); }
+.mapa-editor__ureteres-restaurar { display: flex; gap: 6px; width: 100%; }
+.mapa-editor__ureteres-restaurar > button { flex: 1 1 0; }
+.mapa-editor:focus-visible { outline: 2px solid var(--dourado); outline-offset: 3px; }
 .mapa-editor__orgaos { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .mapa-editor__orgaos-toque { position: absolute; inset: 0; z-index: 6; touch-action: none; cursor: grab; }
 .mapa-editor__orgaos-toque[hidden] { display: none; }

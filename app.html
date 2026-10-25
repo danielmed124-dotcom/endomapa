@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=biblioteca-1" />
+    <link rel="stylesheet" href="styles.css?v=ureteres-1" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -495,8 +495,7 @@
         <p class="texto-apoio" id="ajuda-escala-cinza">Aplica-se a todas as vistas e aos arquivos PNG, JPEG e PDF. As lesões permanecem coloridas.</p>
         <section class="vista-manual" data-vista-manual="coronal" aria-labelledby="titulo-mapa-manual">
           <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
-          <button class="botao botao--secundario" type="button" data-editar-vista="coronal" aria-pressed="true">Editar vista coronal</button>
-          <figure class="mapa-visual mapa-editor" data-mapa-editor="coronal">
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="coronal" tabindex="0" aria-label="Mapa coronal. Toque ou selecione pelo teclado para editar esta vista.">
             <div class="mapa-editor__desenho">
               <img src="assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapa-base-coronal-aberto.png?v=reto-20261019" data-src-visitante="assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019" alt="Mapa anatômico coronal sem lesões" draggable="false" />
               <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
@@ -507,8 +506,7 @@
         </section>
         <section class="vista-manual" data-vista-manual="sagital" aria-labelledby="titulo-mapa-manual-sagital">
           <h2 class="secao-dados__titulo" id="titulo-mapa-manual-sagital">Vista sagital</h2>
-          <button class="botao botao--secundario" type="button" data-editar-vista="sagital" aria-pressed="false">Editar vista sagital</button>
-          <figure class="mapa-visual mapa-editor" data-mapa-editor="sagital">
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="sagital" tabindex="0" aria-label="Mapa sagital. Toque ou selecione pelo teclado para editar esta vista.">
             <div class="mapa-editor__desenho">
               <img src="assets/mapa-base-sagital-novo-visitante-suave.png" data-mapa-base data-src-clinica="assets/mapa-base-sagital-novo-suave.png" data-src-visitante="assets/mapa-base-sagital-novo-visitante-suave.png" alt="Mapa anatômico sagital sem lesões" draggable="false" />
               <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
@@ -725,15 +723,15 @@
     <script src="app-auth.js?v=endocarta-f2955c816a36"></script>
     <script src="prototipo.js?v=endocarta-b56fab889c40"></script>
     <script src="orgaos-deformar.js?v=1"></script>
-    <script src="orgaos-motor.js?v=reto-20261019"></script>
-    <script src="orgaos-editor.js?v=1"></script>
+    <script src="orgaos-motor.js?v=ureteres-1"></script>
+    <script src="orgaos-editor.js?v=ureteres-1"></script>
     <script src="utero-motor.js?v=2"></script>
     <script src="utero-editor.js?v=2"></script>
     <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=endocarta-8cbab657ce1a"></script>
     <script src="editor-documento.js?v=paciente-em-branco-1"></script>
-    <script src="editor-manual.js?v=endocarta-c916fed51692"></script>
+    <script src="editor-manual.js?v=ureteres-1"></script>
     <script src="historico-manual.js?v=paciente-em-branco-1"></script>
     <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>

@@ -228,3 +228,5 @@ Revisão do acabamento de superfície: após novo resultado Lite com traços esc
 - **Medida igual a zero ou negativa:** não inserir a lesão e pedir ao médico uma medida válida por voz.
 - **Nome obrigatório em branco:** não iniciar o ditado enquanto o médico não selecionar seu nome na lista.
 - **Dois toques rápidos em confirmar e gerar PDF:** aceitar somente o primeiro comando e gerar apenas um PDF.
+
+Ureteres — entrega aprovada em 25/10/2026: botão Inserir/Remover ureteres à esquerda de Restaurar posições originais no coronal comum; ovários se movem em primeiro plano sobre os ureteres. Restaurar posições conserva os ureteres. Presença salva na montagem e incluída nas capturas PNG/JPEG/PDF; montagens antigas abrem sem ureteres. Removidos botões Editar vista coronal/sagital, preservando seleção por toque e foco do teclado. Testes ureteres-editor e ovarios-editor passaram sobre esta entrega Endocarta. Publicação autorizada por Daniel; envio remoto ainda pendente no momento deste registro, quando pediu salvar por oscilações de energia.

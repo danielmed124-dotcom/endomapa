@@ -284,6 +284,7 @@
   });
   mapasManuais.forEach(function (mapa) {
     mapa.addEventListener("pointerdown", function () { ativarVista(mapa.dataset.mapaEditor); });
+    mapa.addEventListener('focus', function () { ativarVista(mapa.dataset.mapaEditor); });
     mapa.querySelector("[data-mapa-base]")?.addEventListener("load", atualizarTodasAsLinhas);
   });
   window.addEventListener("endomapa:vistas-alteradas", function (evento) {
@@ -736,6 +737,7 @@
       vistas[vista] = {
         lados: window.endomapaLados?.ativo(vista),
         ovarios: vista === 'coronal' ? window.endomapaOrgaos?.estado() : undefined,
+        ureteres: vista === 'coronal' ? window.endomapaOrgaos?.ureteres() : undefined,
         utero: vista === 'sagital' ? window.endomapaUtero?.estado() : undefined,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
@@ -769,6 +771,7 @@
       const vista = vistas[id];
       if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
       if (id === 'coronal') window.endomapaOrgaos?.validar(vista?.ovarios);
+      if (id === 'coronal' && vista?.ureteres !== undefined && typeof vista.ureteres !== 'boolean') falhar();
       if (id === 'sagital') window.endomapaUtero?.validar(vista?.utero);
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
@@ -794,7 +797,7 @@
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
     window.endomapaLados?.restaurar(Object.fromEntries(ids.map(id => [id, vistas[id].lados])));
-    window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios);
+    window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios,vistas.coronal.ureteres);
     window.endomapaUtero?.restaurar(vistas.sagital.utero);
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     atualizarEscalaCinza();
