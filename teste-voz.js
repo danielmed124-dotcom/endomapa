@@ -220,7 +220,7 @@
       if (usuario && usuario.id !== data.user.id) throw new Error('A conta conectada mudou. Atualize esta página para iniciar um teste com essa conta.');
       const { data: perfil, error: erroPerfil } = await comPrazo(cliente.from('medicos').select('id, titulo, nome, assinatura, clinica_id, ativo').eq('user_id', data.user.id).single());
       if (tentativa !== versaoAcesso) return;
-      if (erroPerfil || !perfil || perfil.ativo !== 'sim') throw new Error('Não foi possível confirmar seu perfil ativo. Toque em Tentar novamente ou entre novamente no Endomapa.');
+      if (erroPerfil || !perfil || perfil.ativo !== 'sim') throw new Error('Não foi possível confirmar seu perfil ativo. Toque em Tentar novamente ou entre novamente no Endocarta.');
       usuario = data.user;
       window.dispatchEvent(new CustomEvent('endomapa:perfil-carregado', { detail: perfil }));
       acessoValido = true;

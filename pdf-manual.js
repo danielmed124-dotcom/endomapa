@@ -8,7 +8,7 @@
     const pdf = new window.jspdf.jsPDF({
       orientation: "portrait", unit: "mm", format: "a4", compress: true,
     });
-    pdf.setProperties({ title: "Endomapa - mapa manual", creator: "Endomapa" });
+    pdf.setProperties({ title: "Endocarta - mapa manual", creator: "Endocarta" });
     paginas.forEach(function (pagina, indice) {
       if (indice) pdf.addPage("a4", "portrait");
       const larguraPagina = pdf.internal.pageSize.getWidth();

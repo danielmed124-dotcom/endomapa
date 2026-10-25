@@ -170,12 +170,12 @@
 
     if (modo === "cadastrar") {
       titulo.textContent = "Crie sua conta";
-      texto.textContent = "Cadastre seu e-mail e escolha uma senha para acessar o Endomapa.";
+      texto.textContent = "Cadastre seu e-mail e escolha uma senha para acessar o Endocarta.";
       botaoEnviar.textContent = "Criar conta";
       campoSenha.autocomplete = "new-password";
       ajudaSenha.textContent = "Crie uma senha com pelo menos 8 caracteres.";
     } else {
-      titulo.textContent = "Entre no Endomapa";
+      titulo.textContent = "Entre no Endocarta";
       texto.textContent = "Use seu e-mail e sua senha para acessar seus próprios mapas.";
       botaoEnviar.textContent = "Entrar";
       campoSenha.autocomplete = "current-password";
@@ -217,7 +217,7 @@
       : "login.html";
 
     if (parametros.get("motivo") === "acesso") {
-      mostrarMensagem("Entre para acessar a área protegida do Endomapa.", true);
+      mostrarMensagem("Entre para acessar a área protegida do Endocarta.", true);
       window.history.replaceState({}, "", enderecoLogin);
     }
 
@@ -235,11 +235,11 @@
     const codigo = String(erro.code || "").toLowerCase();
 
     if (codigo === "over_email_send_rate_limit" || textoErro.includes("email rate limit")) {
-      return "O Endomapa atingiu temporariamente o limite de envio de e-mails. Não foi possível enviar a confirmação. Tente novamente mais tarde. Esse aviso não significa que seu endereço esteja errado.";
+      return "O Endocarta atingiu temporariamente o limite de envio de e-mails. Não foi possível enviar a confirmação. Tente novamente mais tarde. Esse aviso não significa que seu endereço esteja errado.";
     }
 
     if (codigo === "email_address_not_authorized" || (textoErro.includes("email") && textoErro.includes("not authorized"))) {
-      return "O serviço de e-mails do Endomapa ainda não está configurado para enviar a confirmação a este endereço. Entre em contato com o responsável pelo sistema.";
+      return "O serviço de e-mails do Endocarta ainda não está configurado para enviar a confirmação a este endereço. Entre em contato com o responsável pelo sistema.";
     }
 
     if (codigo === "over_request_rate_limit" || erro.status === 429 || textoErro.includes("rate limit") || textoErro.includes("security purposes")) {

@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
 <title>Verificação do PDF A4 da montagem manual</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -142,10 +142,12 @@
     let ultimaTela;
     contexto.roundRect = function (x, y, largura, altura, raio) {
       ultimaTela = this.canvas;
-      operacoesDaTela(this.canvas).caixas.push({ x, y, largura, altura, raio, fundo: this.fillStyle });
+      operacoesDaTela(this.canvas).caixas.push({ x, y, largura, altura, raio, fundo: this.fillStyle, fonte: this.font, textos: [] });
       return arredondar.apply(this, arguments);
     };
     contexto.fillText = function (texto) {
+      const caixas = operacoesDaTela(this.canvas).caixas;
+      if (caixas.length) caixas[caixas.length - 1].textos.push(texto);
       operacoesDaTela(this.canvas).textos.push(texto);
       operacoesDaTela(this.canvas).fontes.push(this.font);
       return escrever.apply(this, arguments);
@@ -239,13 +241,15 @@
         await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
         verificar(ultimaTela, 'Exportação deve desenhar cantos arredondados');
         const registro = operacoesDaTela(ultimaTela);
-        const caixa = registro.caixas[0];
+        const nomeEsperado = vista === 'coronal' ? 'Endometrioma coronal' : 'Adenomiose sagital';
+        const caixa = registro.caixas.find(item => item.textos.includes(nomeEsperado));
+        verificar(caixa, 'Caixa da lesão ausente; ícones do rodapé não podem substituir esta medição');
         verificar(Math.abs(caixa.largura / escala - retangulo.width) < 0.15, 'Largura da caixa difere da tela em ' + larguraTela);
         verificar(Math.abs(caixa.altura / escala - retangulo.height) < 0.15, 'Altura da caixa difere da tela em ' + larguraTela);
         verificar(Math.abs(caixa.raio / escala - parseFloat(estilo.borderTopLeftRadius)) < 0.01, 'Raio deve seguir o editor');
         const medidor = doc.createElement('canvas').getContext('2d');
         medidor.font = `${estilo.fontWeight} ${parseFloat(estilo.fontSize) * escala}px ${estilo.fontFamily}`;
-        verificar(registro.fontes[0] === medidor.font, 'Fonte e tamanho devem seguir o editor');
+        verificar(caixa.fonte === medidor.font, 'Fonte e tamanho devem seguir o editor');
       }
     }
     const esperadoCoronal = await capturarVista('coronal');
@@ -276,7 +280,7 @@
     });
     escolher('coronal');
     perfil(true);
-    const paginasIniciais = await conferirPdf(0, 'endomapa-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronal, esperadoSagital]);
+    const paginasIniciais = await conferirPdf(0, 'endocarta-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronal, esperadoSagital]);
     verificar(geracoes.length === 1 && teste.downloads.length === 1, 'Dois toques e tentativa de PNG durante PDF devem gerar apenas um arquivo');
     paginasIniciais.forEach((pagina, indice) => {
       verificar(pagina.imagens[0] === basesVisitante[indice], 'Base do perfil deve ser congelada antes de carregar as imagens');
@@ -291,13 +295,13 @@
     const baseClinica = baseDaVista('coronal').src;
     verificar(baseClinica !== basesVisitante[0], 'Perfil da clínica deve ter uma base diferente do visitante');
     botaoPdf.click();
-    const paginasClinica = await conferirPdf(1, 'endomapa-manual-coronal-a4.pdf', ['coronal'], [esperadoClinica]);
+    const paginasClinica = await conferirPdf(1, 'endocarta-manual-coronal-a4.pdf', ['coronal'], [esperadoClinica]);
     verificar(paginasClinica[0].imagens[0] === baseClinica && paginasClinica[0].textos.includes('Mudança posterior coronal'), 'Nova exportação deve refletir o perfil e a montagem atuais');
     perfil(false);
     escolher('sagital');
     const esperadoSagitalUnica = await capturarVista('sagital');
     botaoPdf.click();
-    await conferirPdf(2, 'endomapa-manual-sagital-a4.pdf', ['sagital'], [esperadoSagitalUnica]);
+    await conferirPdf(2, 'endocarta-manual-sagital-a4.pdf', ['sagital'], [esperadoSagitalUnica]);
 
     buscar('[data-limpar-mapa]').click();
     botaoPdf.click();
@@ -307,7 +311,7 @@
     const esperadoCoronalAtual = await capturarVista('coronal');
     const esperadoSagitalVazia = await capturarVista('sagital');
     botaoPdf.click();
-    await conferirPdf(3, 'endomapa-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronalAtual, esperadoSagitalVazia]);
+    await conferirPdf(3, 'endocarta-manual-ambas-a4.pdf', ['coronal', 'sagital'], [esperadoCoronalAtual, esperadoSagitalVazia]);
 
     // Uma imagem realmente inválida deve acionar o caminho de erro, sem substituir o gerador.
     escolher('coronal');
@@ -322,7 +326,7 @@
     verificar(fotografarEstado() === estadoAntesFalha, 'Erro de exportação deve preservar toda a montagem');
     imagemLesao.src = srcValido;
     botaoPdf.click();
-    await conferirPdf(4, 'endomapa-manual-coronal-a4.pdf', ['coronal'], [esperadoCoronalAtual]);
+    await conferirPdf(4, 'endocarta-manual-coronal-a4.pdf', ['coronal'], [esperadoCoronalAtual]);
     verificar(teste.liberacoes.length === 0, 'Endereços de download não devem ser liberados antes do prazo de salvamento');
     const limpezas = Array.from(teste.temporizadoresLongos.values());
     teste.temporizadoresLongos.clear();

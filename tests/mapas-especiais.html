@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
 <title>Verificação dos mapas especiais</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -138,7 +138,7 @@
       const antes = teste.downloads.length;
       buscar(formato === 'pdf' ? '[data-baixar-pdf-manual]' : formato === 'jpeg' ? '[data-baixar-jpeg-manual]' : '[data-baixar-mapa-manual]').click();
       await aguardar(() => teste.downloads.length > antes && !buscar('[data-baixar-pdf-manual]').disabled, 'Exportação não concluiu: ' + id + ' ' + formato);
-      verificar(teste.downloads[antes].nome === 'endomapa-manual-' + id + (formato === 'pdf' ? '-a4.pdf' : formato === 'jpeg' ? '.jpg' : '.png'), 'Arquivo deve identificar o mapa escolhido');
+      verificar(teste.downloads[antes].nome === 'endocarta-manual-' + id + (formato === 'pdf' ? '-a4.pdf' : formato === 'jpeg' ? '.jpg' : '.png'), 'Arquivo deve identificar o mapa escolhido');
       if (formato === 'jpeg') {
         const endereco = teste.downloads[antes].endereco;
         verificar(endereco.startsWith('data:image/jpeg;base64,/9j/'), 'JPEG deve ter conteúdo JPEG real');

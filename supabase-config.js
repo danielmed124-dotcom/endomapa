@@ -1,4 +1,4 @@
-// Configuração pública da conexão do Endomapa com o Supabase.
+// Configuração pública da conexão do Endocarta com o Supabase.
 // Este arquivo pode chegar ao navegador: ele não contém senha nem chave secreta.
 window.ENDOMAPA_SUPABASE = Object.freeze({
   projectUrl: "https://qjhvclotbkjoqprwrjjv.supabase.co",

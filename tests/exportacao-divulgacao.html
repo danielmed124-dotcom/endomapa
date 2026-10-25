@@ -1,10 +1,10 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
 <title>Verificação da exportação para divulgação</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -145,7 +145,7 @@
       verificar(opcao.disabled, 'Opção deve ficar bloqueada durante a exportação');
       await aguardar(() => teste.downloads.length > antes && !opcao.disabled, 'Exportação não terminou: ' + vista);
       const arquivo = teste.downloads.at(-1);
-      verificar(arquivo.nome === `endomapa-${divulgacao ? 'divulgacao' : 'manual'}-${vista}${pdf ? '-a4.pdf' : '.png'}`, 'Nome incorreto: ' + arquivo.nome);
+      verificar(arquivo.nome === `endocarta-${divulgacao ? 'divulgacao' : 'manual'}-${vista}${pdf ? '-a4.pdf' : '.png'}`, 'Nome incorreto: ' + arquivo.nome);
       if (pdf) verificar(teste.blobs.get(arquivo.endereco)?.type === 'application/pdf', 'PDF real ausente');
       return pdf ? geracoes.at(-1) : arquivo.endereco;
     };
@@ -167,9 +167,10 @@
       const mapa = buscar(`[data-mapa-editor="${vista}"]`);
       const base = mapa.querySelector('[data-mapa-base]');
       const assinatura = mapa.querySelector('[data-assinatura-manual]');
+      base.scrollIntoView({ block: 'center' });
       await aguardar(() => base.complete && base.naturalWidth > 0 && !assinatura.hidden, 'Base ou assinatura ausente');
       const contatos = mapa.querySelector('[data-contatos-endomapa]');
-      verificar(contatos && contatos.getAttribute('aria-label').includes('@endomapa') && contatos.getAttribute('aria-label').includes('endomapa.com.br'), 'Contatos ausentes na tela: ' + vista);
+      verificar(contatos && contatos.getAttribute('aria-label').includes('@endocarta') && contatos.getAttribute('aria-label').includes('endocarta.com.br'), 'Contatos ausentes na tela: ' + vista);
       verificar(janela.getComputedStyle(contatos).pointerEvents === 'none', 'Rodapé não pode bloquear o toque no mapa');
       buscar('[data-modelo]').click();
       const nome = buscar('[data-controle-nome-lesao]');
@@ -218,7 +219,7 @@
       buscar('[data-baixar-jpeg-manual]').click(); buscar('[data-baixar-jpeg-manual]').click();
       await aguardar(() => teste.downloads.length > inicioJpeg && !opcao.disabled, 'JPEG não concluiu');
       verificar(teste.downloads.length === inicioJpeg + 1, 'Clique duplicado gerou dois JPEGs');
-      verificar(teste.downloads.at(-1).nome === 'endomapa-divulgacao-' + vista + '.jpg' && teste.downloads.at(-1).endereco === jpegEsperado, 'JPEG deve preservar divulgação e composição: ' + vista);
+      verificar(teste.downloads.at(-1).nome === 'endocarta-divulgacao-' + vista + '.jpg' && teste.downloads.at(-1).endereco === jpegEsperado, 'JPEG deve preservar divulgação e composição: ' + vista);
       const pdf = await exportar(true, true, vista);
       verificar(pdf.length === 1 && pdf[0].imagem === esperada, 'PDF deve coincidir com PNG neutro: ' + vista);
       verificar(base.src === fonteAntes && !assinatura.hidden && assinatura.toDataURL() === assinaturaAntes, 'Exportação alterou a identidade na tela');
@@ -275,7 +276,7 @@
       const inicio = teste.downloads.length;
       buscar(pdf === 'jpeg' ? '[data-baixar-jpeg-manual]' : pdf ? '[data-baixar-pdf-manual]' : '[data-baixar-mapa-manual]').click();
       await aguardar(() => teste.downloads.length > inicio && !opcao.disabled, 'Download comum não concluiu');
-      verificar(teste.downloads.at(-1).nome.startsWith('endomapa-manual-'), 'Outro perfil não pode exportar divulgação');
+      verificar(teste.downloads.at(-1).nome.startsWith('endocarta-manual-'), 'Outro perfil não pode exportar divulgação');
       if (pdf === 'jpeg') verificar(teste.downloads.at(-1).endereco === await janela.endomapaCapturarMapaManual({ formato: 'image/jpeg', qualidade: 0.95, fundoBranco: true }), 'JPEG não autorizado perdeu identidade');
       else if (!pdf) verificar(teste.downloads.at(-1).endereco === normal, 'PNG comum alterado');
       else verificar(geracoes.at(-1)[0].imagem === normal, 'PDF comum alterado');
@@ -319,7 +320,7 @@
       quadroAuth.remove();
     }
     const previa = document.createElement('img');
-    previa.id = 'previa-contatos'; previa.alt = 'Mapa exportado com Instagram e site do Endomapa';
+    previa.id = 'previa-contatos'; previa.alt = 'Mapa exportado com Instagram e site do Endocarta';
     previa.src = esperadas.get('coronal'); previa.style.cssText = 'display:block;max-width:600px;width:100%;height:auto';
     quadro.hidden = true; document.body.append(previa);
     escolher('coronal');
@@ -328,7 +329,7 @@
     }));
     verificar(buscar('[data-mapa-editor="coronal"] [data-assinatura-manual]').getAttribute('aria-label').includes('Dra. Carolina Leão'), 'Assinatura completa ausente');
     const previaCarolina = document.createElement('img'); previaCarolina.id = 'previa-carolina';
-    previaCarolina.alt = 'Mapa com assinatura Dra. Carolina Leão e contatos do Endomapa';
+    previaCarolina.alt = 'Mapa com assinatura Dra. Carolina Leão e contatos do Endocarta';
     previaCarolina.src = await janela.endomapaCapturarMapaManual({ formato: 'image/png', semLesoes: true, semRotulos: true });
     previaCarolina.style.cssText = previa.style.cssText; document.body.append(previaCarolina);
     saida.textContent = 'PASSOU: autenticação autoriza somente Daniel; opção oculta e downloads normais para outros perfis; PNG/JPEG/PDF nas dez vistas, PDF Ambas, contatos dourados no rodapé, montagem preservada e celular de 320px.';

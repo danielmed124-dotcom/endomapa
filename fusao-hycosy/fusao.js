@@ -308,7 +308,7 @@
       captura.toBlob(blob=>{
         try{
           if(!blob)throw new Error();
-          const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`endomapa-fusao-hycosy.${formato==='jpeg'?'jpg':'png'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+          const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`endocarta-fusao-hycosy.${formato==='jpeg'?'jpg':'png'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
           estado(`Composição ${formato.toUpperCase()} preparada nas dimensões da imagem 3D. Os arquivos originais foram preservados.`);
         }catch{estado(`Não foi possível preparar o ${formato.toUpperCase()}. As imagens continuam na tela.`,true);}
         finally{exportando=false;desenharResultado();habilitar();}
@@ -330,7 +330,7 @@
       desenharResultado();estado("Preparando PDF A4…");
       await new Promise(r=>setTimeout(r,0));
       const blob=window.hycosyGerarPdf(captura);
-      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="endomapa-fusao-hycosy.pdf";a.click();
+      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="endocarta-fusao-hycosy.pdf";a.click();
       setTimeout(()=>URL.revokeObjectURL(url),60000);
       estado("PDF A4 preparado com a composição completa, sem cortes e com as proporções preservadas.");
     }catch{estado("Não foi possível gerar o PDF. As imagens e os ajustes continuam disponíveis.",true);}

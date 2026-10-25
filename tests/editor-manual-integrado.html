@@ -2,9 +2,9 @@
 <html lang="pt-BR">
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
-<title>Verificação do editor manual no Endomapa</title>
+<title>Verificação do editor manual no Endocarta</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -127,7 +127,7 @@
       escolherVistas('vistas-editor', 'sagital');
     }
     botaoAbrir.click();
-    verificar(!editor.hidden && buscar('[data-tela="novo-mapa"]').hidden, 'Botão abre editor dentro do Endomapa');
+    verificar(!editor.hidden && buscar('[data-tela="novo-mapa"]').hidden, 'Botão abre editor dentro do Endocarta');
     verificar(janela.__teste.destinos.some(destino => destino.endsWith('#editor-manual')), 'Navegação deve registrar o endereço do editor');
     verificar(new URL(mapaBase.src).pathname === new URL(mapaBase.dataset.srcVisitante, doc.baseURI).pathname, 'Visitante deve usar anatomia sem marca da clínica');
 
@@ -267,7 +267,7 @@
       const downloadsAntesSagital = janela.__teste.downloads.length;
       botaoBaixar.click();
       await aguardar(() => janela.__teste.downloads.length === downloadsAntesSagital + 1, 'Download da sagital não concluiu');
-      verificar(janela.__teste.downloads[downloadsAntesSagital].nome === 'endomapa-manual-sagital.png', 'Nome do arquivo deve identificar a vista sagital');
+      verificar(janela.__teste.downloads[downloadsAntesSagital].nome === 'endocarta-manual-sagital.png', 'Nome do arquivo deve identificar a vista sagital');
       verificar(bases[0] === baseSagital.src && textos.some(item => item.texto === 'Lesão sagital') && textos.some(item => item.texto === '1,7 cm') && !textos.some(item => item.texto === 'Endometrioma esquerdo'), 'Download deve usar anatomia e rótulos somente da vista sagital ativa');
       perfil(true);
       verificar(assinaturas.every(item => item.getAttribute('aria-label') === 'Assinatura: Daniel'), 'Assinatura Daniel nas duas vistas Centrus');
@@ -317,7 +317,7 @@
       const downloadsAntesCoronal = janela.__teste.downloads.length;
       botaoBaixar.click();
       await aguardar(() => janela.__teste.downloads.length === downloadsAntesCoronal + 1, 'Botão não concluiu o download local');
-      verificar(janela.__teste.downloads[downloadsAntesCoronal].nome === 'endomapa-manual-coronal.png', 'Arquivo baixado precisa ser PNG e identificar a vista coronal');
+      verificar(janela.__teste.downloads[downloadsAntesCoronal].nome === 'endocarta-manual-coronal.png', 'Arquivo baixado precisa ser PNG e identificar a vista coronal');
       verificar(/^(?:data:image\/png;base64,|blob:)/.test(janela.__teste.downloads[downloadsAntesCoronal].endereco), 'Download precisa usar imagem local');
       verificar(bases[0] === mapaBase.src && textos.some(item => item.texto === 'Endometrioma esquerdo') && textos.some(item => item.texto === '2,5 cm'), 'Download deve preservar anatomia do perfil, nome e medidas');
       voltar.click();

@@ -97,7 +97,7 @@
     if (botaoPrepararTeste.disabled || chamadaUnicaIniciada) return;
     const lesoes = [...document.querySelectorAll(".lesao-editavel")];
     if (!lesoes.length) return mostrar(estadoMapaApi, "Adicione pelo menos uma lesão ao mapa.", true);
-    if (window.location.protocol === "file:") return mostrar(estadoMapaApi, "Abra o editor no site do Endomapa para preparar o teste.", true);
+    if (window.location.protocol === "file:") return mostrar(estadoMapaApi, "Abra o editor no site do Endocarta para preparar o teste.", true);
     botaoPrepararTeste.disabled = true;
     botaoMapaApi.disabled = true;
     preparacaoTeste = null;
@@ -106,7 +106,7 @@
     mostrar(estadoMapaApi, "Preparando as entradas e o prompt. Nenhuma imagem será gerada ou cobrada.", false);
     try {
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
-      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa antes de preparar o teste.");
+      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endocarta antes de preparar o teste.");
       const assinatura = assinaturaMapa();
       const composicao = await window.endomapaCapturarMapaManual({ semRotulos: true });
       const imagem = await carregarImagem(composicao);
@@ -195,7 +195,7 @@
         document.querySelector("[data-texto-relato-suporte]").textContent = [
           "Possível falso positivo em ilustração anatômica didática; classificação não confirmada como erro.",
           `Horário UTC: ${diagnostico.horario_utc}`,
-          `Operação Endomapa: ${diagnostico.operacao_id || "não informado"}`,
+          `Operação Endocarta: ${diagnostico.operacao_id || "não informado"}`,
           `Pedido OpenAI: ${diagnostico.pedido_openai || "não informado"}`,
           `Modelo: ${diagnostico.modelo}; endpoint: ${diagnostico.endpoint}; prompt: ${diagnostico.versao_prompt}`,
           `HTTP OpenAI: ${diagnostico.http_status_openai || "não informado"}; código: ${diagnostico.error_code || "não informado"}`,
@@ -316,7 +316,7 @@
     mostrar(estadoFinalRealista, "Preparando a sua montagem manual para o Gemini Lite em 1K…", false);
     try {
       const { data: sessao, error: erroSessao } = await cliente.auth.getSession();
-      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endomapa. Nenhuma geração foi solicitada.");
+      if (erroSessao || !sessao?.session) throw new Error("Entre na sua conta do Endocarta. Nenhuma geração foi solicitada.");
 
       // A proteção usa a mesma captura que será enviada. A máscara permanece
       // no navegador; a API recebe apenas a montagem, sem imagem de referência.
@@ -340,14 +340,14 @@
 
       // A comparação usa a mesma captura enviada ao servidor, com os rótulos originais.
       original.src = montagemOriginal;
-      disponibilizarDownload("[data-baixar-montagem-comparacao]", montagemOriginal, `endomapa-manual-${identificadorComparacao}.png`);
+      disponibilizarDownload("[data-baixar-montagem-comparacao]", montagemOriginal, `endocarta-manual-${identificadorComparacao}.png`);
       resultado.hidden = false;
       mostrar(estadoFinalRealista, "O Gemini Lite está gerando em 1K. O resultado será aplicado somente às áreas autorizadas e suas bordas. Aguarde para editar novamente; esta geração é paga.", false);
       envioPagoIniciado = true;
       const { resposta, dados } = await chamarFuncaoUmaVez({ ...entrada,
         mapa_sha256: preflight.dados.imagem_1.sha256, prompt_sha256: preflight.dados.prompt_sha256 }, sessao.session, "finalizar-mapa-manual-gemini");
       const suporte = dados?.pedido_id ? ` Pedido Gemini: ${dados.pedido_id}.` : "";
-      const operacao = dados?.operacao_id ? ` Operação Endomapa: ${dados.operacao_id}.` : "";
+      const operacao = dados?.operacao_id ? ` Operação Endocarta: ${dados.operacao_id}.` : "";
       if (!resposta.ok) throw new Error((dados?.erro || "Falha técnica na geração.") + operacao + suporte);
       if (!dados?.imagem_base64) throw new Error("O Gemini respondeu sem imagem utilizável." + operacao + suporte);
       const formato = dados.formato || "image/png";
@@ -411,7 +411,7 @@
     mostrar(estado, "Verificando login, chave da OpenAI e acesso ao modelo. Nenhuma imagem será gerada.", false);
     try {
       if (window.location.protocol === "file:") {
-        mostrar(estado, "Abra o editor no site do Endomapa para verificar a conexão.", true);
+        mostrar(estado, "Abra o editor no site do Endocarta para verificar a conexão.", true);
         return;
       }
       if (navigator.onLine === false) {
@@ -421,7 +421,7 @@
       const { data, error } = await cliente.auth.getSession();
       if (error) throw error;
       if (!data?.session) {
-        mostrar(estado, "Não há uma sessão conectada. Entre no Endomapa em outra aba e volte aqui para verificar novamente, mantendo sua montagem aberta.", true);
+        mostrar(estado, "Não há uma sessão conectada. Entre no Endocarta em outra aba e volte aqui para verificar novamente, mantendo sua montagem aberta.", true);
         return;
       }
       etapa = "servidor";
@@ -434,12 +434,12 @@
         return;
       }
       const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(resposta.data.pedido_id || "") ? ` Pedido OpenAI: ${resposta.data.pedido_id}.` : "";
-      mostrar(estado, `Login, servidor do Endomapa, chave da OpenAI e acesso ao modelo gpt-image-2.5-sunburst confirmados.${pedido} Nenhuma imagem foi gerada. Este teste não confirma que uma imagem específica será aceita.`, false);
+      mostrar(estado, `Login, servidor do Endocarta, chave da OpenAI e acesso ao modelo gpt-image-2.5-sunburst confirmados.${pedido} Nenhuma imagem foi gerada. Este teste não confirma que uma imagem específica será aceita.`, false);
     } catch (erro) {
       let detalhe;
       try { detalhe = (await erro.context?.json())?.erro; } catch (_erro) {}
       const status = erro.context?.status;
-      if (!detalhe && status === 401) detalhe = "Sua sessão não foi aceita. Entre no Endomapa em outra aba e volte para verificar novamente.";
+      if (!detalhe && status === 401) detalhe = "Sua sessão não foi aceita. Entre no Endocarta em outra aba e volte para verificar novamente.";
       if (!detalhe && status === 403) detalhe = "O acesso foi recusado. Confirme que o editor foi aberto no endereço endomapa.pages.dev.";
       if (!detalhe) detalhe = etapa === "login"
         ? "Não foi possível consultar seu login neste navegador."
@@ -464,7 +464,7 @@
     }
     const { data: sessao } = await cliente.auth.getSession();
     if (!sessao.session) {
-      mostrar(estado, "Entre na sua conta do Endomapa antes de usar a geração com IA.", true);
+      mostrar(estado, "Entre na sua conta do Endocarta antes de usar a geração com IA.", true);
       return;
     }
     gerando[provedor] = true;
@@ -544,7 +544,7 @@
         const pedido = /^req_[a-zA-Z0-9_-]{1,180}$/.test(corpo.pedido_id || "") && !corpo.erro.includes(corpo.pedido_id)
           ? ` Pedido OpenAI: ${corpo.pedido_id}.` : "";
         const operacao = /^[a-f0-9-]{36}$/i.test(corpo.operacao_id || "")
-          ? ` Operação Endomapa: ${corpo.operacao_id}.` : "";
+          ? ` Operação Endocarta: ${corpo.operacao_id}.` : "";
         return `${corpo.erro}${pedido}${operacao}`;
       }
     } catch (_erro) {}
@@ -717,7 +717,7 @@
     }
     const { data: sessao } = await cliente.auth.getSession();
     if (!sessao?.session) {
-      mostrar(estado, "Entre na sua conta do Endomapa antes de gerar a imagem.", true);
+      mostrar(estado, "Entre na sua conta do Endocarta antes de gerar a imagem.", true);
       return;
     }
     gerando.detalhe = true;

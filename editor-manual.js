@@ -16,7 +16,7 @@
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
-  // Identificação do Endomapa independente da assinatura e da clínica.
+  // Identificação do Endocarta independente da assinatura e da clínica.
   // Mesma composição proporcional na tela e nos arquivos de todas as vistas.
   function desenharContatosEndomapa(canvas) {
     const contexto = canvas.getContext("2d");
@@ -32,9 +32,9 @@
     contexto.font = '18px Arial, sans-serif';
     contexto.textAlign = "left";
     contexto.textBaseline = "alphabetic";
-    const xTexto = 1086 * 0.94 - contexto.measureText('endomapa.com.br').width;
+    const xTexto = 1086 * 0.94 - contexto.measureText('endocarta.com.br').width;
     const xIcone = xTexto - 28;
-    const linhas = [['instagram', '@endomapa', altura * 0.958], ['site', 'endomapa.com.br', altura * 0.98]];
+    const linhas = [['instagram', '@endocarta', altura * 0.958], ['site', 'endocarta.com.br', altura * 0.98]];
     linhas.forEach(([tipo, texto, y]) => {
       contexto.save();
       contexto.translate(xIcone, y - 15);
@@ -60,7 +60,7 @@
     contatos.className = 'mapa-editor__assinatura';
     contatos.dataset.contatosEndomapa = '';
     contatos.setAttribute('role', 'img');
-    contatos.setAttribute('aria-label', 'Instagram: @endomapa. Site: endomapa.com.br');
+    contatos.setAttribute('aria-label', 'Instagram: @endocarta. Site: endocarta.com.br');
     mapa.querySelector('.mapa-editor__desenho').append(contatos);
     const atualizar = () => {
       contatos.width = base.naturalWidth || 1086;
@@ -846,7 +846,7 @@
       const imagem = await capturarMapa({ formato: `image/${formato}`, qualidade: 0.95, fundoBranco: formato === 'jpeg', divulgacao });
       const link = document.createElement("a");
       link.href = imagem;
-      link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.${formato === 'jpeg' ? 'jpg' : 'png'}`;
+      link.download = `endocarta-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.${formato === 'jpeg' ? 'jpg' : 'png'}`;
       document.body.append(link);
       link.click();
       link.remove();
@@ -926,7 +926,7 @@
       const link = document.createElement("a");
       try {
         link.href = endereco;
-        link.download = `endomapa-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`;
+        link.download = `endocarta-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`;
         document.body.append(link);
         link.click();
         window.endomapaHistoricoManual?.registrarPdf(registroPdf).catch(() => {});

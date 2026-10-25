@@ -140,7 +140,7 @@
   $('baixar-jpeg').click();$('baixar-jpeg').click();
   afirmar($('baixar').disabled && $('baixar-jpeg').disabled && $('baixar-pdf').disabled,'JPEG bloqueia downloads simultâneos');
   await ate(()=>jpegExportado && !$('baixar-jpeg').disabled);
-  afirmar(totalJpeg===1 && nomeJpeg==='endomapa-fusao-hycosy.jpg','Um único JPEG com extensão correta');
+  afirmar(totalJpeg===1 && nomeJpeg==='endocarta-fusao-hycosy.jpg','Um único JPEG com extensão correta');
   const bytesJpeg=new Uint8Array(await jpegExportado.arrayBuffer());
   afirmar(bytesJpeg[0]===255 && bytesJpeg[1]===216,'JPEG contém assinatura binária correta');
   const imgJpeg=new Image(),urlJpeg=URL.createObjectURL(jpegExportado);imgJpeg.src=urlJpeg;await imgJpeg.decode();

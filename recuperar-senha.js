@@ -124,7 +124,7 @@
 
     try {
       const { error } = await clienteSupabase.auth.resetPasswordForEmail(email, {
-        redirectTo: "https://endomapa.com.br/recuperar-senha",
+        redirectTo: "https://endocarta.com.br/recuperar-senha",
       });
 
       if (error) {
