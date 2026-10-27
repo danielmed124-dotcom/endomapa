@@ -229,14 +229,104 @@
     alternarControles.textContent = recolhido ? "Mostrar ajustes" : "Recolher";
   }
 
+  const sompEsquerdo = document.querySelector('[data-modelo][data-nome="SOMP esquerdo"]');
+  const sompDireito = document.querySelector('[data-modelo][data-nome="SOMP direito"]');
+  if (sompEsquerdo && sompDireito) {
+    const parSomp = document.createElement('div');
+    parSomp.className = 'modelos-somp';
+    parSomp.setAttribute('role', 'group');
+    parSomp.setAttribute('aria-label', 'SOMP: lados correspondentes ao mapa');
+    sompDireito.before(parSomp);
+    parSomp.append(sompEsquerdo, sompDireito);
+  }
+
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
+    const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(botao.dataset.nome);
+    const bilateral = ovariano || botao.dataset.nome === 'Ligamento uterossacro';
+    let lado, quantidade;
+    if (bilateral) {
+      const grupo = document.createElement('div');
+      grupo.className = 'modelo-insercao';
+      grupo.setAttribute('role', 'group');
+      grupo.setAttribute('aria-label', `Inserir ${botao.dataset.nome}`);
+      botao.before(grupo);
+      grupo.append(botao);
+      const opcoes = document.createElement('div');
+      opcoes.className = 'modelo-insercao__opcoes';
+      opcoes.innerHTML = '<label>Lado <select data-lado-insercao><option value="direito">Direito</option><option value="esquerdo">Esquerdo</option></select></label>';
+      if (botao.dataset.nome === 'Folículo') opcoes.innerHTML += `<label>Quantidade <select data-quantidade-foliculos>${Array.from({length:19}, (_,i)=>`<option value="${i+1}">${i+1}</option>`).join('')}</select></label>`;
+      grupo.append(opcoes);
+      lado = opcoes.querySelector('select');
+      lado.setAttribute('aria-label', `Lado: ${botao.dataset.nome}`);
+      quantidade = opcoes.querySelector('[data-quantidade-foliculos]');
+      const inserir = document.createElement('button');
+      inserir.type = 'button';
+      inserir.className = 'modelo-insercao__inserir';
+      inserir.textContent = 'Inserir';
+      inserir.setAttribute('aria-label', `Inserir ${botao.dataset.nome} com as opções escolhidas`);
+      inserir.addEventListener('click', () => botao.click());
+      grupo.append(inserir);
+    }
     botao.addEventListener("click", function () {
-      const posicaoInicial = botao.dataset.vistaInicial === vistaAtiva
+      const ladoAtual = lado?.value;
+      if (ovariano && (vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
+        mostrar('Este ovário foi retirado no mapa escolhido. Escolha o outro lado ou outro mapa.');
+        return;
+      }
+      const total = quantidade ? limitar(Number(quantidade.value) || 1, 1, 19) : 1;
+      for (let indice = 0; indice < total; indice++) {
+      const posicaoInicial = posicaoDeInsercao(botao.dataset.nome, ladoAtual, indice, total) || (botao.dataset.vistaInicial === vistaAtiva
         ? { x: botao.dataset.xInicial, y: botao.dataset.yInicial }
-        : null;
+        : null);
       adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, botao.dataset.tamanhoMinimo, posicaoInicial);
+      }
+      if (total > 1) mostrar(`${total} folículos inseridos no ovário ${ladoAtual}. Você pode ajustar cada um separadamente.`);
     });
   });
+
+  function posicaoDeInsercao(nome, lado, indice, total) {
+    const sagital = vistaAtiva === 'sagital';
+    const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(nome);
+    const cavidade = /^(Pólipo|DIU|Leiomioma endocavitário)/.test(nome);
+    let ponto;
+    if (ovariano) {
+      ponto = sagital ? [45, 26.5] : vistaAtiva === 'kissing-ovaries' ? [lado === 'direito' ? 57 : 44, 51] : [lado === 'direito' ? 70.5 : 30, lado === 'direito' ? 50 : 49];
+      if (vistaAtiva === 'coronal') {
+        const deslocamento = window.endomapaOrgaos?.estado()[lado];
+        if (deslocamento) ponto = [ponto[0] + deslocamento.x * 100 / 1086, ponto[1] + deslocamento.y * 100 / 1448];
+      }
+    } else if (nome === 'Ligamento uterossacro') ponto = sagital ? [70, 47] : [lado === 'direito' ? 59 : 42.5, lado === 'direito' ? 52 : 51.5];
+    else if (nome === 'Intestinal') ponto = sagital ? [81, 43] : [46, 68];
+    else if (cavidade) ponto = sagital ? [54, 37] : [50.5, nome.startsWith('DIU') ? 39 : 36.5];
+    else if (/^(Adenomiose|Leiomioma)/.test(nome)) ponto = sagital ? [51, 32] : [43.5, 36.5];
+    if (!ponto) return null;
+    const dados = { x: ponto[0], y: ponto[1], medidaX: ponto[0] < 50 ? 18 : 82, medidaY: ponto[1] + 9 };
+    if (nome === 'Ligamento uterossacro') {
+      dados.nomeNoMapa = `Ligamento uterossacro ${lado}`;
+      if (!sagital) {
+        dados.giro = lado === 'direito' ? 90 : 0;
+        dados.medidaX = lado === 'direito' ? 62.5 : 39.5;
+        dados.medidaY = 63.5;
+      }
+    }
+    if (ovariano && vistaAtiva === 'coronal') dados.orgao = lado;
+    if (nome === 'Folículo' && total > 1) {
+      // Distribuição determinística em uma elipse, com diâmetros variados.
+      const raio = Math.sqrt((indice + 0.5) / total), angulo = indice * 2.399963229728653;
+      dados.x += Math.cos(angulo) * raio * (sagital ? 2.2 : 3.8);
+      dados.y += Math.sin(angulo) * raio * (sagital ? 1.5 : 4);
+      dados.tamanho = (sagital ? 7 : 11) + (indice * 7 % 9);
+    }
+    if (sagital && (cavidade || /^(Adenomiose|Leiomioma)/.test(nome))) {
+      if (nome.startsWith('DIU')) {
+        dados.giro = -38 + (window.endomapaUtero?.estado().angulo || 0);
+        dados.tamanho = nome === 'DIU hormonal' ? 110 : 65;
+      }
+      const p = window.endomapaUtero?.posicao(dados.x * 1087 / 100, dados.y * 1447 / 100);
+      if (p) { dados.x = p.x * 100 / 1087; dados.y = p.y * 100 / 1447; }
+    }
+    return dados;
+  }
   giro.addEventListener("input", aplicarControles);
   tamanho.addEventListener("input", aplicarControles);
   eixoX.addEventListener("input", aplicarControles);
@@ -244,7 +334,7 @@
   nomeNoMapa.addEventListener("input", function () {
     if (!selecionada) return;
     selecionada.dataset.nomeNoMapa = normalizarNomeLesao(nomeNoMapa.value);
-    atualizarRotuloDeMedidas(selecionada);
+    atualizarTodasAsLinhas();
   });
   document.querySelectorAll("[data-medida]").forEach(function (campo) {
     campo.addEventListener("input", aplicarMedidas);
@@ -310,6 +400,26 @@
   };
 
   aplicarVistasManuais(document.querySelector('input[name="vistas-editor"]:checked')?.value || "coronal");
+
+  // A prévia e o editor sem conexão também precisam iniciar uma montagem vazia.
+  // Quando a biblioteca está disponível, ela cuida da confirmação e do vínculo salvo.
+  const montagemInicialVazia = capturarMontagemEditavel();
+  document.querySelector('[data-novo-manual]')?.addEventListener('click', () => {
+    if (window.endomapaHistoricoManual) return;
+    if (window.endomapaEditorManual.ocupado()) {
+      mostrar('Aguarde a exportação ou o carregamento terminar.');
+      return;
+    }
+    const atual = capturarMontagemEditavel();
+    const titulo = document.querySelector('[data-titulo-montagem]');
+    const temConteudo = Boolean(titulo?.value.trim()) || JSON.stringify(atual) !== JSON.stringify(montagemInicialVazia);
+    if (temConteudo && !window.confirm('Deseja descartar a montagem atual e iniciar um novo mapa?')) return;
+    restaurarMontagemEditavel(structuredClone(montagemInicialVazia));
+    if (titulo) titulo.value = '';
+    const aviso = document.querySelector('[data-estado-salvar-manual]');
+    if (aviso) { aviso.textContent = ''; aviso.hidden = true; }
+    mostrar('Novo mapa iniciado.');
+  });
 
   function aplicarVistasManuais(escolha) {
     if (!mapasManuais.length) return;
@@ -412,7 +522,7 @@
     lesao.dataset.id = String(proximoId++);
     nome=normalizarNomeLesao(nome);
     lesao.dataset.nome = nome;
-    lesao.dataset.nomeNoMapa = "";
+    lesao.dataset.nomeNoMapa = nome.replace(/\s+[123]$/, '');
     lesao.dataset.proporcao = proporcao;
     lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
@@ -429,11 +539,18 @@
     lesao.dataset.medidaY = String(52 + deslocamento);
     if (dadosCopiados) Object.assign(lesao.dataset, dadosCopiados);
     lesao.dataset.nomeNoMapa=normalizarNomeLesao(lesao.dataset.nomeNoMapa);
+    if (dadosCopiados?.medida1 === undefined) {
+      const existentes = Array.from(camada.querySelectorAll('.lesao-editavel'));
+      const ocupados = existentes.filter(item => item.dataset.nomeNoMapa && item.dataset.nomeNoMapa !== lesao.dataset.nomeNoMapa);
+      let y = Number(lesao.dataset.medidaY);
+      for (let tentativa = 0; tentativa < 20 && ocupados.some(item => Math.abs(Number(item.dataset.medidaX) - Number(lesao.dataset.medidaX)) < 20 && Math.abs(Number(item.dataset.medidaY) - y) < 4); tentativa++) y = y >= 86 ? 20 : y + 4;
+      lesao.dataset.medidaY = String(y);
+    }
     if (vistaAtiva === 'coronal' && dadosCopiados?.medida1 === undefined) {
       const ladoSomp = /somp-(esquerdo|direito)\.png/.exec(src)?.[1];
       const posicao = ladoSomp && window.endomapaOrgaos?.estado()[ladoSomp];
       if (posicao) { lesao.dataset.x = String(Number(lesao.dataset.x) + posicao.x * 100 / 1086); lesao.dataset.y = String(Number(lesao.dataset.y) + posicao.y * 100 / 1448); }
-      lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+      lesao.dataset.orgao = dadosCopiados?.orgao || window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
     }
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     if(vistaAtiva==='sagital'&&dadosCopiados?.uteroX===undefined) vincularUtero(lesao);
@@ -446,6 +563,7 @@
     atualizarVisual(lesao);
     camada.append(lesao);
     criarRotuloDeMedidas(lesao);
+    atualizarTodasAsLinhas();
     selecionar(lesao);
     mostrar(`${nome} adicionada. Arraste a imagem para posicioná-la.`);
   }
@@ -557,8 +675,11 @@
     atualizarLinhaDeMedida(lesao, Boolean(linhas.length));
   }
 
-  function linhasDoRotulo(lesao) {
-    const nome = (lesao.dataset.nomeNoMapa || "").trim();
+  function linhasDoRotulo(lesao, grupo) {
+    let nome = (lesao.dataset.nomeNoMapa || "").trim();
+    const itens = grupo || Array.from(lesao.closest?.('[data-camada-editor]')?.querySelectorAll('.lesao-editavel') || []);
+    const primeiro = itens.find(item => (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'));
+    if (primeiro && primeiro !== lesao) nome = '';
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
       .filter(Boolean).map(formatarMedida);
     return [nome, valores.length ? `${valores.join(" × ")} cm` : ""].filter(Boolean);
@@ -647,6 +768,7 @@
     camada.querySelector(`[data-medida-id="${selecionada.dataset.id}"]`)?.remove();
     camada.querySelector(`[data-linha-id="${selecionada.dataset.id}"]`)?.remove();
     selecionada.remove();
+    atualizarTodasAsLinhas();
     selecionada = null;
     controles.hidden = true;
     mostrar(`${nome} excluída do mapa.`);
@@ -1158,7 +1280,7 @@
     contexto.textAlign = "center";
     contexto.textBaseline = "alphabetic";
     for (const lesao of lesoes) {
-      const linhas = linhasDoRotulo(lesao);
+      const linhas = linhasDoRotulo(lesao, lesoes);
       if (!linhas.length) continue;
       const estilo = lesao.estiloRotulo;
       if (!estilo) continue;

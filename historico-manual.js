@@ -79,8 +79,8 @@
       const camposPaciente = montagemAberta.documento?.cabecalho?.campos;
       if (Array.isArray(camposPaciente)) camposPaciente.forEach(campo => { campo.valor = ''; });
       editor.restaurar(montagemAberta);
-      titulo.value = data.titulo; id = data.id; versao = data.versao; salvo = chave(capturar());
-      mensagem('Mapa aberto com os dados da paciente em branco. Os nomes dos campos foram mantidos. Alterações só serão gravadas ao clicar em Salvar na biblioteca.');
+      titulo.value = data.titulo; id = crypto.randomUUID(); versao = 0; salvo = chave(capturar());
+      mensagem('Cópia aberta com os dados da paciente em branco. O mapa original será preservado. Salvar na biblioteca criará outro mapa; editar ou exportar não grava alterações.');
       window.endomapaAbrirTela('editor-manual');
     } catch (erro) { window.alert(erro.message || 'Não foi possível abrir. A montagem atual foi preservada.'); }
     finally { botao.disabled = false; bloquear(false); }

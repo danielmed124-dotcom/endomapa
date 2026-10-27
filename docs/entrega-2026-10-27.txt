@@ -1,0 +1,8 @@
+﻿ENTREGA DE 27/10/2026 — ENDOCARTA
+Autorização: Daniel pediu publicar e salvar todas as alterações de hoje.
+Escopo: nomes e posições iniciais das lesões; uterossacros por lado; folículos 1–19; cartões integrados; SOMP em ordem correspondente ao mapa; novo mapa sem biblioteca; abrir modelos como cópias, salvando sem substituir o original.
+Arquivos de produção: app.html (versões de carregamento), editor-manual.js, historico-manual.js, styles.css.
+Entrega baseada em origin/main de59a97. Não inclui experimentos cartográficos, tubas ou outras alterações locais anteriores.
+Banco e registros reais não alterados. As novas cópias são gravadas somente por ação do usuário em Salvar na biblioteca.
+Testes locais usam os arquivos desta entrega, com banco simulado para biblioteca.
+Validação final: passaram insercao-anatomica, editor-manual-integrado, editor-manual-nomes, historico-manual, modelos-sem-paciente e pdf-manual. PDF inclui duas vistas, captura imutável e celular. Teste de PDF atualizado para selecionar a vista pelo mapa, como a interface publicada atual.

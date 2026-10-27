@@ -1,0 +1,60 @@
+<!doctype html><meta charset="utf-8"><title>Inserção anatômica</title>
+<pre id="resultado">Executando</pre><iframe style="width:390px;height:844px;border:0" title="Prévia do editor"></iframe>
+<script>
+(async()=>{
+ const saida=document.querySelector('pre'),quadro=document.querySelector('iframe');
+ const ok=(v,m)=>{if(!v)throw Error(m)};
+ try{
+  const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+  html.querySelectorAll('script,base').forEach(e=>e.remove());
+  html.body.classList.remove('autenticacao-pendente');
+  const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+  for(const src of ['prototipo.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+  const carregado=new Promise(r=>quadro.onload=r);quadro.srcdoc='<!doctype html>'+html.documentElement.outerHTML;await carregado;
+  const w=quadro.contentWindow,d=w.document,$=s=>d.querySelector(s);
+  $('[data-tela-alvo="editor-manual"]').click();
+  const inserir=(nome,lado='direito',n=1)=>{const b=$(`[data-modelo][data-nome="${nome}"]`),g=b.parentElement;const l=g.querySelector('[data-lado-insercao]'),q=g.querySelector('[data-quantidade-foliculos]');if(l)l.value=lado;if(q)q.value=n;b.click();return $('.lesao-editavel--selecionada')};
+  const limpar=()=>$('[data-limpar-mapa]').click();
+  if(new URLSearchParams(location.search).has('visual')){
+   quadro.style.width='100%';quadro.style.height='95vh';
+   saida.textContent='Prévia local — nomes e inserção anatômica. Sem publicação.';
+   return;
+  }
+  const rotulos=()=>Array.from(d.querySelectorAll('[data-camada-editor="coronal"] [data-medida-id]')).filter(r=>!r.hidden);
+  const capturarTextos=async()=>{const textos=[],orig=w.CanvasRenderingContext2D.prototype.fillText;w.CanvasRenderingContext2D.prototype.fillText=function(t,...args){textos.push(t);return orig.call(this,t,...args)};try{await w.endomapaCapturarMapaManual()}finally{w.CanvasRenderingContext2D.prototype.fillText=orig}return textos};
+  for(const lado of ['direito','esquerdo'])for(let n=1;n<=19;n++){
+   limpar();inserir('Folículo',lado,n);const itens=Array.from(d.querySelectorAll('.lesao-editavel'));
+   ok(itens.length===n,`Quantidade ${n}`);ok(rotulos().length===1,'Identificação única');
+   ok(itens.every(l=>Math.abs(Number(l.dataset.x)-(lado==='direito'?70.5:30))<4),'Folículos sobre o ovário escolhido');
+   if(n>1)ok(new Set(itens.map(l=>l.dataset.tamanho)).size>1,'Tamanhos variados');
+  }
+  ok((await capturarTextos()).filter(t=>t==='Folículo').length===1,'Exportação sem nome repetido');
+  const salvo=w.endomapaEditorManual.capturar();limpar();await w.endomapaEditorManual.restaurar(salvo);
+  ok(d.querySelectorAll('.lesao-editavel').length===19&&rotulos().length===1,'Restauração de quantidade e nome único');
+  const primeira=$('.lesao-editavel');primeira.click();$('[data-remover-lesao]').click();ok(rotulos().length===1,'Nome permanece ao remover primeira lesão');
+  $('.lesao-editavel').click();const campo=$('[data-controle-nome-lesao]');campo.value='Folículo dominante';campo.dispatchEvent(new w.Event('input'));ok(rotulos().length===2,'Renomear preserva nome do grupo restante');
+  limpar();for(const nome of ['Cisto','Endometrioma','Cisto hemorrágico','Teratoma','Corpo Lúteo'])for(const lado of ['direito','esquerdo']){const l=inserir(nome,lado);ok(Number(l.dataset.x)===(lado==='direito'?70.5:30),nome+' no ovário')}
+  limpar();const a=inserir('Ligamento uterossacro','direito'),b=inserir('Ligamento uterossacro','esquerdo');
+  ok(a.dataset.x==='59'&&a.dataset.y==='52'&&a.dataset.giro==='90','Uterossacro direito na posição de referência');
+  ok(b.dataset.x==='42.5'&&b.dataset.y==='51.5'&&b.dataset.giro==='0','Uterossacro esquerdo na posição de referência');
+  ok(rotulos().length===2&&a.dataset.nomeNoMapa==='Ligamento uterossacro direito'&&b.dataset.nomeNoMapa==='Ligamento uterossacro esquerdo','Identificações dos dois lados');
+  inserir('Ligamento uterossacro','direito');inserir('Ligamento uterossacro','esquerdo');ok(rotulos().length===2,'Uma identificação por lado');
+  const textosLigamentos=await capturarTextos();ok(['direito','esquerdo'].every(l=>textosLigamentos.filter(t=>t===`Ligamento uterossacro ${l}`).length===1),'Exportação dos dois nomes sem repetição');
+  const ligamentosSalvos=w.endomapaEditorManual.capturar();limpar();await w.endomapaEditorManual.restaurar(ligamentosSalvos);ok(rotulos().length===2,'Nomes dos lados preservados ao reabrir');
+  limpar();for(const nome of ['Adenomiose','Leiomioma 1','Leiomioma 2','Leiomioma 3','Leiomioma endocavitário','Leiomioma pediculado','Pólipo','DIU de Cobre','DIU hormonal']){const l=inserir(nome);ok(Number(l.dataset.x)>40&&Number(l.dataset.x)<55&&Number(l.dataset.y)<42,nome+' no útero')}
+  ok(Number(inserir('Intestinal').dataset.y)===68,'Intestinal sobre intestino');
+  ok(d.documentElement.scrollWidth<=390,'Sem transbordamento no celular');
+  ok(Array.from(d.querySelectorAll('[data-lado-insercao], [data-quantidade-foliculos]')).every(e=>e.getBoundingClientRect().height>=44),'Controles de toque');
+  const vista=$('input[name="vistas-editor"][value="especiais"]');vista.checked=true;
+  $('[data-mapa-especial]').value='ooforectomia-direita';vista.dispatchEvent(new w.Event('change',{bubbles:true}));
+  const antes=d.querySelectorAll('.lesao-editavel').length;inserir('Cisto','direito');ok(d.querySelectorAll('.lesao-editavel').length===antes,'Não inserir sobre ovário ausente');
+  const antesNovo=d.querySelectorAll('.lesao-editavel').length;ok(antesNovo>0,'Montagem preenchida para testar novo mapa');
+  w.confirm=()=>false;$('[data-novo-manual]').click();ok(d.querySelectorAll('.lesao-editavel').length===antesNovo,'Cancelar novo mapa preserva lesões');
+  w.confirm=()=>true;$('[data-novo-manual]').click();
+  ok(!d.querySelector('.lesao-editavel')&&!d.querySelector('[data-medida-id]')&&!d.querySelector('[data-linha-id]'),'Novo mapa sem biblioteca limpa todas as vistas, nomes e linhas');
+  ok($('[data-controles-lesao]').hidden,'Novo mapa encerra seleção');
+  inserir('Cisto');ok(d.querySelectorAll('.lesao-editavel').length===1,'Nova montagem independente');
+  saida.textContent='PASSOU: folículos, posições, nomes únicos, restauração, exportação, celular e novo mapa sem biblioteca (cancelar preserva; confirmar limpa todas as vistas).';
+ }catch(e){saida.textContent='FALHOU: '+e.stack}
+})();
+</script>

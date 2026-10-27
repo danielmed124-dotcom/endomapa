@@ -106,7 +106,7 @@
     };
     const conferirVistaAtiva = vista => {
       ['coronal', 'sagital'].forEach(opcao => {
-        verificar(buscar('[data-editar-vista="' + opcao + '"]').getAttribute('aria-pressed') === String(opcao === vista), 'Botão de editar deve identificar a vista ativa ' + vista);
+        verificar(buscar('[data-vista-manual="' + opcao + '"]').classList.contains('vista-manual--ativa') === (opcao === vista), 'Mapa deve identificar a vista ativa ' + vista);
       });
     };
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
@@ -148,14 +148,14 @@
     buscar('[data-modelo][data-nome="Endometrioma"]').click();
     const primeira = buscar('.lesao-editavel');
     const rotulo = buscar('[data-medida-id="' + primeira.dataset.id + '"]');
-    verificar(rotulo.hidden, 'Rótulo vazio deve ficar oculto');
+    verificar(!rotulo.hidden && rotulo.textContent === 'Endometrioma', 'Nome preenchido automaticamente');
     preencher(campo, 'Endometrioma esquerdo');
     verificar(rotulo.textContent === 'Endometrioma esquerdo' && !rotulo.hidden, 'Nome sem medidas');
     preencher(medida, '2,5');
     verificar(rotulo.textContent === 'Endometrioma esquerdo\n2,5 cm', 'Nome acima das medidas');
     verificar(janela.getComputedStyle(rotulo).whiteSpace === 'pre', 'Quebra de linha visível');
     buscar('[data-modelo][data-nome="Adenomiose"]').click();
-    verificar(campo.value === '', 'Nome independente para cada lesão');
+    verificar(campo.value === 'Adenomiose', 'Nome automático independente para cada lesão');
     preencher(campo, 'Adenomiose');
     primeira.click();
     verificar(campo.value === 'Endometrioma esquerdo', 'Nome restaurado ao selecionar');
@@ -181,7 +181,7 @@
     textos.length = 0;
     const capturaPng = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
     verificar(capturaPng.startsWith('data:image/png;base64,'), 'Captura PNG local');
-    verificar(textos.length === 0, 'Opção sem rótulos respeitada');
+    verificar(!textos.some(item => ['Adenomiose', 'Endometrioma esquerdo', '2,5 cm'].includes(item.texto)), 'Opção sem rótulos respeitada, preservando contatos do rodapé');
     assinaturas.forEach(item => { item.hidden = true; });
     const semAssinatura = await janela.endomapaCapturarMapaManual({ semRotulos: true, formato: 'image/png' });
     verificar(semAssinatura !== capturaPng, 'A assinatura deve fazer parte dos pixels do PNG exportado');
@@ -202,7 +202,7 @@
       escolherVistas('vistas-editor', 'ambas');
       conferirVistas('ambas');
       verificar(doc.documentElement.scrollWidth <= janela.innerWidth, 'As duas vistas devem caber em 390 pixels sem rolagem lateral');
-      buscar('[data-editar-vista="sagital"]').click();
+      buscar('[data-mapa-editor="sagital"]').focus();
       conferirVistaAtiva('sagital');
       buscar('[data-modelo][data-nome="Endometrioma"]').click();
       const lesaoSagital = buscar('[data-camada-editor="sagital"] .lesao-editavel');
@@ -216,7 +216,8 @@
         elemento.setPointerCapture = function () {};
         try {
           elemento.dispatchEvent(new janela.PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 7, pointerType: 'touch' }));
-          buscar('[data-editar-vista="coronal"]').click();
+          doc.activeElement?.blur();
+          buscar('[data-mapa-editor="coronal"]').focus();
           conferirVistaAtiva('coronal');
           const area = camadaSagital.getBoundingClientRect();
           verificar(area.width > 0 && area.height > 0, 'Camada sagital deve estar visível durante ' + descricao);
@@ -254,7 +255,7 @@
       verificar(figuraSagital.width > 0 && Math.abs(figuraSagital.width - areaSagital.width) < 1 && Math.abs(figuraSagital.height - areaSagital.height) < 1 && Math.abs(figuraSagital.top - areaSagital.top) < 1, 'Camada sagital deve coincidir com sua anatomia');
       escolherVistas('vistas-editor', 'ambas');
       conferirVistas('ambas');
-      buscar('[data-editar-vista="sagital"]').click();
+      buscar('[data-mapa-editor="sagital"]').focus();
       conferirVistaAtiva('sagital');
       textos.length = 0;
       bases.length = 0;

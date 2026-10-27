@@ -125,7 +125,7 @@
       opcao.checked = true;
       opcao.dispatchEvent(new janela.Event('change', { bubbles: true }));
     };
-    const editar = vista => buscar('[data-editar-vista="' + vista + '"]').click();
+    const editar = vista => buscar('[data-mapa-editor="' + vista + '"]').focus();
     const perfil = clinica => janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', {
       detail: { id: 'medico-do-teste', titulo: clinica ? 'Dr.' : 'Dra.', nome: clinica ? 'Daniel de Souza Carneiro' : 'Médica de Teste', assinatura: clinica ? 'Daniel' : 'Teste', clinica_id: clinica ? 'clinica-do-teste' : null },
     }));

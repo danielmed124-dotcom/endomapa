@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
 <title>Verificação do histórico manual</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -170,7 +170,7 @@
     salvar.click(); salvar.click(); await esperarSalvo();
     verificar(h.mapas.size === 1, 'Dois cliques duplicaram o mapa');
     verificar(JSON.stringify(h.mapas.values().next().value.montagem) === original, 'Não guardou todas as vistas');
-    const primeiroId = h.mapas.keys().next().value;
+    let primeiroId = h.mapas.keys().next().value;
     // Mudança durante uma gravação lenta deve continuar pendente.
     let liberar; h.atrasar = new Promise(resolve => { liberar = resolve; });
     salvar.click(); titulo.value = 'Alterado durante salvamento'; liberar(); await esperarSalvo(); h.atrasar = null;
@@ -183,7 +183,11 @@
     await aguardar(() => !salvar.disabled && titulo.value === 'Exemplo com medidas', 'Não reabriu o mapa');
     verificar(JSON.stringify(dados()) === original, 'Reabertura mudou posições, medidas ou caneta');
     verificar(await janela.endomapaCapturarMapaManual({formato:'image/png'}) === imagemOriginal, 'Imagem reaberta difere do original');
-    titulo.value = 'Mapa atualizado'; salvar.click(); await esperarSalvo(); verificar(h.mapas.size === 1 && h.mapas.get(primeiroId).titulo === 'Mapa atualizado', 'Atualização criou outro registro');
+    const idOriginal = primeiroId, registroOriginal = JSON.stringify(h.mapas.get(idOriginal));
+    titulo.value = 'Mapa atualizado'; salvar.click(); await esperarSalvo();
+    verificar(h.mapas.size === 2 && JSON.stringify(h.mapas.get(idOriginal)) === registroOriginal, 'Salvar a cópia deve preservar integralmente o original');
+    primeiroId = [...h.mapas.keys()].find(id => id !== idOriginal);
+    verificar(h.mapas.get(primeiroId).titulo === 'Mapa atualizado', 'Cópia não foi salva');
     h.mapas.get(primeiroId).versao++;
     salvar.click(); await esperarSalvo(); verificar(mensagem.textContent.includes('outra aba'), 'Conflito não foi informado');
     h.mapas.get(primeiroId).versao--;
@@ -195,21 +199,21 @@
     const antes = teste.downloads.length;
     buscar('[data-baixar-pdf-manual]').click(); buscar('[data-baixar-pdf-manual]').click();
     await aguardar(() => teste.downloads.length > antes && !buscar('[data-baixar-pdf-manual]').disabled, 'PDF não concluiu');
-    verificar(h.pdfs.length === 1 && h.mapas.size === 1 && h.mapas.get(primeiroId).versao===versaoAntesPdf && h.mapas.get(primeiroId).titulo==='Mapa atualizado', 'PDF nao deve salvar alteracoes na biblioteca');
+    verificar(h.pdfs.length === 1 && h.mapas.size === 2 && h.mapas.get(primeiroId).versao===versaoAntesPdf && h.mapas.get(primeiroId).titulo==='Mapa atualizado', 'PDF nao deve salvar alteracoes na biblioteca');
     h.falhar = true; buscar('[data-baixar-pdf-manual]').click();
     await aguardar(() => !buscar('[data-baixar-pdf-manual]').disabled, 'Falha de PDF bloqueou editor');
     verificar(teste.downloads.length === antes+2 && h.pdfs.length === 1, 'Falha no contador nao deve impedir baixar PDF'); h.falhar = false;
     janela.endomapaAbrirTela('painel-dia');
     await aguardar(() => !buscar('[data-conteudo-painel]').hidden || buscar('[data-estado-painel]').textContent.startsWith('Não foi possível'), 'Painel não iniciou');
     verificar(!buscar('[data-conteudo-painel]').hidden, 'Painel não carregou: '+buscar('[data-estado-painel]').textContent+' '+teste.erros.join(';'));
-    verificar(buscar('[data-total-mapas-hoje]').textContent === '1' && buscar('[data-contador-pdf]').textContent === '1', 'Contagem do dia incorreta');
+    verificar(buscar('[data-total-mapas-hoje]').textContent === '2' && buscar('[data-contador-pdf]').textContent === '1', 'Contagem do dia incorreta');
     mudar('[data-busca-painel]', 'inexistente'); verificar(!doc.querySelector('[data-lista-painel] button'), 'Busca não filtrou');
     // Paginação deve alcançar mapas além da primeira página.
     for (let n=0;n<32;n++) { const m = structuredClone(h.mapas.get(primeiroId)); m.id = janela.crypto.randomUUID(); m.titulo = 'Extra '+n; h.mapas.set(m.id,m); }
     janela.endomapaAbrirTela('meus-mapas');
     await aguardar(() => doc.querySelectorAll('[data-lista-mapas] [data-abrir-mapa]').length === 30, 'Primeira página incorreta');
     buscar('[data-mais-mapas]').click();
-    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] [data-abrir-mapa]').length === 33, 'Paginação não trouxe os restantes');
+    await aguardar(() => doc.querySelectorAll('[data-lista-mapas] [data-abrir-mapa]').length === 34, 'Paginação não trouxe os restantes');
     verificar(salvar.textContent==='Salvar na biblioteca','Nome do botao');
     verificar(!doc.querySelector('[data-ordenar-mapa]'),'Nao deve haver botoes subir ou descer');
     let artigos=[...doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]')];
@@ -218,7 +222,7 @@
     const elementoOriginal=doc.elementFromPoint;doc.elementFromPoint=()=>destinoArraste;
     const pos=destinoArraste.getBoundingClientRect(),e={button:0,pointerId:9,clientX:pos.left+10,clientY:pos.bottom-2,preventDefault(){}};
     pegador.onpointerdown(e);pegador.onpointermove(e);pegador.onpointerup(e);doc.elementFromPoint=elementoOriginal;
-    await aguardar(()=>!salvar.disabled&&doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]').length===33,'Arraste nao terminou');
+    await aguardar(()=>!salvar.disabled&&doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]').length===34,'Arraste nao terminou');
     verificar([...doc.querySelectorAll('[data-lista-mapas] [data-mapa-salvo]')].at(-1).dataset.mapaSalvo===idArrastado,'Arraste nao persistiu ordem');
     const apagar=doc.querySelector('[data-lista-mapas] [data-excluir-mapa]'),idApagar=apagar.dataset.excluirMapa;
     h.confirmar=false;apagar.click();verificar(h.mapas.has(idApagar),'Cancelar exclusao removeu mapa');

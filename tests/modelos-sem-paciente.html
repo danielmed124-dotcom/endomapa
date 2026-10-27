@@ -4,7 +4,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
 <title>Verificação do histórico manual</title>
 <pre id="resultado">Executando</pre>
-<iframe title="Endocarta em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
+<iframe title="Endomapa em celular, sem autenticação ou serviços externos" style="display:block;width:390px;height:844px;border:0"></iframe>
 <script>
 (async function () {
   const saida = document.querySelector('#resultado');
@@ -132,7 +132,7 @@
       janela.endomapaAbrirTela(tela);
       const lista = tela === 'meus-mapas' ? '[data-lista-mapas]' : '[data-lista-painel]';
       await aguardar(() => doc.querySelector(lista + ' [data-abrir-mapa]'), 'Lista não carregou');
-      doc.querySelector(lista + ' [data-abrir-mapa]').click(); await esperar();
+      doc.querySelector(lista + ' [data-abrir-mapa="' + id + '"]').click(); await esperar();
     };
     h.confirmar = true;
     await abrir();
@@ -163,11 +163,12 @@
     const novoCampo = buscar('[data-campos-paciente] input[maxlength="200"]');
     novoCampo.value = 'Paciente fictícia nova'; novoCampo.dispatchEvent(new janela.Event('input'));
     salvar.click(); await esperar();
-    verificar(h.mapas.get(id).montagem.documento.cabecalho.campos[0].valor === 'Paciente fictícia nova', 'Clique em Salvar não gravou a edição');
-    verificar(h.mapas.get(id).versao === 2, 'Gravou uma versão sem clique explícito');
+    const copia = [...h.mapas.values()].find(m => m.id !== id);
+    verificar(h.mapas.size === 2 && copia?.montagem.documento.cabecalho.campos[0].valor === 'Paciente fictícia nova', 'Salvar deve criar uma cópia com a edição');
+    verificar(JSON.stringify(h.mapas.get(id)) === registroOriginal, 'Salvar a cópia alterou o original');
     await abrir('painel-dia');
     verificar(editor.capturar().documento.cabecalho.campos.every(c => c.valor === ''), 'Painel do dia reutilizou paciente');
-    verificar(h.mapas.get(id).versao === 2, 'Limpeza ao abrir gravou versão');
+    verificar(JSON.stringify(h.mapas.get(id)) === registroOriginal, 'Limpeza ao abrir gravou versão');
     // Registros anteriores ao cabeçalho continuam abrindo.
     delete h.mapas.get(id).montagem.documento;
     await abrir();
