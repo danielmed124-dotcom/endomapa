@@ -6,3 +6,6 @@ Entrega baseada em origin/main de59a97. Não inclui experimentos cartográficos,
 Banco e registros reais não alterados. As novas cópias são gravadas somente por ação do usuário em Salvar na biblioteca.
 Testes locais usam os arquivos desta entrega, com banco simulado para biblioteca.
 Validação final: passaram insercao-anatomica, editor-manual-integrado, editor-manual-nomes, historico-manual, modelos-sem-paciente e pdf-manual. PDF inclui duas vistas, captura imutável e celular. Teste de PDF atualizado para selecionar a vista pelo mapa, como a interface publicada atual.
+
+Complemento autorizado — 27/10/2026: combinação de todos os sete mapas especiais com sagital pela opção Incluir sagital; coronal comum/especial sempre antes do sagital na tela e PDF. Estado salvo e reaberto sem alterar montagens antigas; seleção por teclado habilitada nos especiais. Movimento uterino conferido na prévia por HTTP, sem mudança de anatomia ou relaxamento de proteção do navegador. Experimentos cartográficos/tubas não incluídos.
+Validação do complemento: sete especiais com PDFs reais de duas páginas, ordem visual, reabertura e compatibilidade; movimento uterino por teclado/arraste e PNG nas três combinações; inserção, editor, histórico, modelos sem paciente e PDF geral passaram com arquivos finais. Nenhum banco real usado nos testes.

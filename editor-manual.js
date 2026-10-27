@@ -16,6 +16,8 @@
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
+  const painelSagital = document.querySelector('[data-vista-manual="sagital"]');
+  if (painelSagital) painelSagital.parentElement.append(painelSagital);
   // Identificação do Endocarta independente da assinatura e da clínica.
   // Mesma composição proporcional na tela e nos arquivos de todas as vistas.
   function desenharContatosEndomapa(canvas) {
@@ -373,6 +375,7 @@
     botao.addEventListener("click", function () { ativarVista(botao.dataset.editarVista); });
   });
   mapasManuais.forEach(function (mapa) {
+    mapa.tabIndex = 0;
     mapa.addEventListener("pointerdown", function () { ativarVista(mapa.dataset.mapaEditor); });
     mapa.addEventListener('focus', function () { ativarVista(mapa.dataset.mapaEditor); });
     mapa.querySelector("[data-mapa-base]")?.addEventListener("load", atualizarTodasAsLinhas);
@@ -398,6 +401,17 @@
     desenharRotulos(contexto, canvas, lesoes);
     return canvas.toDataURL("image/png");
   };
+
+  const opcaoEspecialSagital = document.createElement('label');
+  opcaoEspecialSagital.className = 'opcao-vista';
+  opcaoEspecialSagital.innerHTML = 'Incluir sagital <input type="checkbox" data-especial-sagital />';
+  document.querySelector('.opcao-vista--especiais')?.append(opcaoEspecialSagital);
+  const incluirSagital = opcaoEspecialSagital.querySelector('input');
+  incluirSagital.addEventListener('change', () => {
+    const especial = document.querySelector('input[name="vistas-editor"][value="especiais"]');
+    especial.checked = true;
+    especial.dispatchEvent(new Event('change', { bubbles: true }));
+  });
 
   aplicarVistasManuais(document.querySelector('input[name="vistas-editor"]:checked')?.value || "coronal");
 
@@ -425,16 +439,14 @@
     if (!mapasManuais.length) return;
     const opcoesHidrosalpinge = document.querySelector('[data-opcoes-hidrosalpinge]');
     if (opcoesHidrosalpinge) opcoesHidrosalpinge.hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'hidrosalpinge';
+    const vistasVisiveis = vistasDaEscolha(escolha);
     escolha = resolverVista(escolha);
     document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
-      vista.hidden = escolha === "ambas"
-        ? !["coronal", "sagital"].includes(vista.dataset.vistaManual)
-        : vista.dataset.vistaManual !== escolha;
+      vista.hidden = !vistasVisiveis.includes(vista.dataset.vistaManual);
     });
-    const destino = escolha === "ambas"
-      ? (["coronal", "sagital"].includes(vistaAtiva) ? vistaAtiva : "coronal") : escolha;
+    const destino = vistasVisiveis.includes(vistaAtiva) ? vistaAtiva : vistasVisiveis[0];
     ativarVista(destino);
-    if (botaoPdf) botaoPdf.textContent = escolha === "ambas"
+    if (botaoPdf) botaoPdf.textContent = vistasVisiveis.length === 2
       ? "Gerar PDF A4 (2 páginas)" : `Gerar PDF A4 (${nomeDaVista(escolha)})`;
     atualizarTodasAsLinhas();
   }
@@ -443,6 +455,12 @@
     if (escolha !== 'especiais') return escolha;
     const especial = document.querySelector('[data-mapa-especial]').value;
     return especial === 'hidrosalpinge' ? document.querySelector('[data-lado-hidrosalpinge]').value : especial;
+  }
+
+  function vistasDaEscolha(escolha) {
+    if (escolha === 'ambas') return ['coronal', 'sagital'];
+    const vista = resolverVista(escolha);
+    return escolha === 'especiais' && incluirSagital.checked ? [vista, 'sagital'] : [vista];
   }
 
   function nomeDaVista(vista) {
@@ -868,7 +886,7 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
+    return { versao: 1, especialSagital: incluirSagital.checked, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
@@ -883,6 +901,7 @@
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
     const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
     if (montagem.escalaCinza !== undefined && typeof montagem.escalaCinza !== 'boolean') falhar();
+    if (montagem.especialSagital !== undefined && typeof montagem.especialSagital !== 'boolean') falhar();
     if (montagem.hidrosalpinge !== undefined && !lados.includes(montagem.hidrosalpinge)) falhar();
     if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
     // Montagens anteriores à hidrosalpinge não possuem as três novas vistas.
@@ -950,6 +969,7 @@
     seletorEspecial.value = montagem.especial;
     const ladoHidrosalpinge = document.querySelector('[data-lado-hidrosalpinge]');
     if (ladoHidrosalpinge) ladoHidrosalpinge.value = montagem.hidrosalpinge || 'hidrosalpinge-direita';
+    incluirSagital.checked = montagem.especialSagital === true;
     document.querySelector(`input[name="vistas-editor"][value="${montagem.escolha}"]`).checked = true;
     aplicarVistasManuais(montagem.escolha); ativarVista(montagem.ativa);
     controles.hidden = !selecionada;
@@ -1022,8 +1042,9 @@
     const registroPdf = crypto.randomUUID();
     const escalaCinza = Boolean(opcaoEscalaCinza?.checked);
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
-    const escolha = resolverVista(document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva);
-    const vistas = escolha === "ambas" ? ["coronal", "sagital"] : [escolha];
+    const opcaoVistas = document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva;
+    const vistas = vistasDaEscolha(opcaoVistas);
+    const escolha = vistas.length === 2 && opcaoVistas === 'especiais' ? `${vistas[0]}-sagital` : resolverVista(opcaoVistas);
     estadoMapa.hidden = false;
     definirExportacaoEmAndamento(true);
     estadoMapa.textContent = "Preparando o PDF A4 com os nomes e as medidas…";

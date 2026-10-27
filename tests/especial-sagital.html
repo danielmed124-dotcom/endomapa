@@ -1,0 +1,47 @@
+<!doctype html><meta charset="utf-8"><title>Mapa especial com sagital</title>
+<pre id="resultado">Executando</pre><iframe title="Editor em celular" style="width:390px;height:844px"></iframe>
+<script>
+(async()=>{
+ const out=document.querySelector('pre'),frame=document.querySelector('iframe');
+ const ok=(v,m)=>{if(!v)throw Error(m)};
+ const esperar=async f=>{for(let n=0;n<400;n++){if(f())return;await new Promise(r=>setTimeout(r,25))}throw Error('Tempo excedido')};
+ try{
+  const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+  html.querySelectorAll('script,base').forEach(e=>e.remove());html.body.classList.remove('autenticacao-pendente');
+  const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+  for(const src of ['prototipo.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+  const carregou=new Promise(r=>frame.onload=r);frame.srcdoc='<!doctype html>'+html.documentElement.outerHTML;await carregou;
+  const w=frame.contentWindow,d=w.document,$=s=>d.querySelector(s),api=w.endomapaEditorManual;
+  $('[data-tela-alvo="editor-manual"]').click();
+  const visiveis=()=>Array.from(d.querySelectorAll('[data-vista-manual]')).filter(e=>!e.hidden).map(e=>e.dataset.vistaManual);
+  const mudar=(campo,valor)=>{campo.value=valor;campo.dispatchEvent(new w.Event('change',{bubbles:true}))};
+  const incluir=$('[data-especial-sagital]');incluir.checked=true;incluir.dispatchEvent(new w.Event('change',{bubbles:true}));
+  const geracoes=[],downloads=[],gerar=w.endomapaGerarPdfA4;
+  w.endomapaGerarPdfA4=paginas=>{const blob=gerar(paginas);geracoes.push({vistas:paginas.map(p=>p.vista),blob});return blob};
+  w.HTMLAnchorElement.prototype.click=function(){if(this.download)downloads.push(this.download)};
+  const especiais=['ooforectomia-direita','ooforectomia-esquerda','ooforectomia-bilateral','kissing-ovaries','hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
+  for(const especial of especiais){
+   out.textContent='Executando: '+especial;
+   mudar($('[data-mapa-especial]'),especial.startsWith('hidrosalpinge')?'hidrosalpinge':especial);
+   if(especial.startsWith('hidrosalpinge'))mudar($('[data-lado-hidrosalpinge]'),especial);
+   ok(JSON.stringify(visiveis())===JSON.stringify([especial,'sagital']),'Coronal especial antes do sagital: '+especial);
+   ok($(`[data-vista-manual="${especial}"]`).getBoundingClientRect().top<$('[data-vista-manual="sagital"]').getBoundingClientRect().top,'Ordem visual no celular: '+especial);
+   $(`[data-mapa-editor="${especial}"]`).focus();$('[data-modelo][data-nome="Adenomiose"]').click();
+   $('[data-mapa-editor="sagital"]').focus();$('[data-modelo][data-nome="Cisto"]').click();
+   const salvo=api.capturar();ok(salvo.especialSagital&&salvo.vistas[especial].lesoes.length,'Estado combinado');
+   incluir.checked=false;incluir.dispatchEvent(new w.Event('change',{bubbles:true}));ok(visiveis().length===1,'Desativar sagital');
+   api.restaurar(salvo);ok(incluir.checked&&visiveis().length===2,'Restaurar combinação');
+   const antes=geracoes.length;$('[data-baixar-pdf-manual]').click();
+   await esperar(()=>!api.ocupado());ok(geracoes.length===antes+1,'PDF concluído: '+especial);
+   const g=geracoes.at(-1);ok(JSON.stringify(g.vistas)===JSON.stringify([especial,'sagital']),'Ordem especial e sagital');
+   const texto=await g.blob.text();ok(/\/Count 2\b/.test(texto),'PDF real com duas páginas');
+   ok(downloads.at(-1).includes(especial+'-sagital'),'Nome do PDF identifica combinação');
+  }
+  const antigo=api.capturar();delete antigo.especialSagital;api.restaurar(antigo);ok(!incluir.checked&&visiveis().length===1,'Mapa antigo continua com uma vista');
+  const ambas=$('input[name="vistas-editor"][value="ambas"]');ambas.checked=true;ambas.dispatchEvent(new w.Event('change',{bubbles:true}));ok(JSON.stringify(visiveis())===JSON.stringify(['coronal','sagital']),'Ambas original preservado');
+  ok(d.documentElement.scrollWidth<=390,'Layout de celular');
+  w.confirm=()=>true;$('[data-novo-manual]').click();ok(!incluir.checked,'Novo mapa restaura opção');
+  out.textContent='PASSOU: sete especiais combinados ao sagital, seleção, lesões independentes, salvar/reabrir, mapas antigos, sete PDFs reais de duas páginas, novo mapa e celular.';
+ }catch(e){out.textContent='FALHOU: '+e.stack}
+})();
+</script>
