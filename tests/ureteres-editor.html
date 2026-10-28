@@ -18,6 +18,10 @@
  const inicial=ed.capturar(),pngOriginal=await w.endomapaCapturarMapaManual({formato:'image/png'});
  inserir.click();ok(api.ureteres()&&inserir.textContent==='Remover ureteres','Alterna para remover');
  const pngUreteres=await w.endomapaCapturarMapaManual({formato:'image/png'});ok(pngUreteres!==pngOriginal,'PNG inclui ureteres sem mover ovários');
+ // A inserção não deve trazer um segundo fragmento do ligamento proximal esquerdo.
+ const regiaoSuperior=async src=>{const i=new Image();await new Promise((r,j)=>{i.onload=r;i.onerror=j;i.src=src});const c=d.createElement('canvas');c.width=1086;c.height=1448;const ctx=c.getContext('2d');ctx.drawImage(i,0,0);return ctx.getImageData(395,505,18,30).data};
+ const superiorAntes=await regiaoSuperior(pngOriginal),superiorDepois=await regiaoSuperior(pngUreteres);
+ ok(superiorAntes.every((v,i)=>v===superiorDepois[i]),'Junção superior esquerda preservada sem duplicar ligamento');
  const salva=ed.capturar();ok(salva.vistas.coronal.ureteres===true,'Salva presença dos ureteres');
  inserir.click();ok(!api.ureteres()&&await w.endomapaCapturarMapaManual({formato:'image/png'})===pngOriginal,'Remover recupera a base exata');
  ed.restaurar(salva);ok(api.ureteres()&&await w.endomapaCapturarMapaManual({formato:'image/png'})===pngUreteres,'Reabrir conserva ureteres');

@@ -58,10 +58,11 @@ window.endomapaCriarOrgaos = async function(canvas) {
  await Promise.all(Object.entries({base:'assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
  Object.keys(grupos).forEach(prepararCamada);
  // Reutiliza a imagem aprovada; o recorte mantém corpo opaco e sombra adjacente.
- const ureteresProntos=carregar('assets/orgaos/ureteres-referencia-aprovada.png').then(imagem=>{
+ const ureteresProntos=carregar('assets/orgaos/ureteres-posicao-20261027.png').then(imagem=>{
   const mascara=novoCanvas(),m=mascara.getContext('2d');m.filter='blur(2px)';m.fillStyle='white';
-  m.fill(new Path2D('M410 540 C432 539 443 568 452 607 C465 663 457 706 432 750 C411 785 388 814 376 852 L365 878 L347 872 C351 834 365 803 385 771 C410 734 424 708 427 668 C431 626 415 584 410 558 Z'));
-  m.fill(new Path2D('M670 540 L698 545 C690 579 680 611 678 651 C674 696 687 730 708 763 C731 798 744 836 746 877 L728 886 C718 842 704 812 685 785 C657 749 645 713 645 669 C643 624 655 575 670 540 Z'));
+  // Janelas sobre a imagem aprovada: não desenham nem deformam anatomia.
+  m.fill(new Path2D('M425 535 C435 540 439 565 445 602 C453 657 447 696 424 741 C402 780 378 818 361 862 C347 899 341 931 330 947 L312 940 C315 910 326 874 340 838 C355 797 381 757 402 721 C423 681 424 650 419 606 C424 588 418 563 421 545 L425 535 Z'));
+  m.fill(new Path2D('M673 520 L695 526 C687 566 679 606 680 651 C679 693 691 731 714 771 C739 812 756 855 765 899 L774 947 L752 954 C746 918 737 879 723 847 C708 811 691 786 676 756 C654 714 649 675 654 634 C656 591 663 551 673 520 Z'));
   camadaUreteres=novoCanvas();const u=camadaUreteres.getContext('2d');u.drawImage(imagem,0,0,W,H);u.globalCompositeOperation='destination-in';u.drawImage(mascara,0,0);
   renderizar();
  });
