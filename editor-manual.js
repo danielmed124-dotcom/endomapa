@@ -13,6 +13,8 @@
   let imagemCopiada = null;
   let quantidadeDeColagens = 0;
   let proximoId = 1;
+  let anotacoesOcultas = false;
+  let podeOcultarAnotacoes = false;
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
@@ -384,6 +386,27 @@
   }
   atualizarPermissaoDivulgacao(window.endomapaMedico);
   window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoDivulgacao(evento.detail));
+  const botaoAnotacoes = document.querySelector('[data-alternar-anotacoes]');
+  function atualizarBotaoAnotacoes() {
+    if (botaoAnotacoes) {
+      botaoAnotacoes.hidden = !podeOcultarAnotacoes;
+      botaoAnotacoes.textContent = anotacoesOcultas ? 'Mostrar anotações das lesões' : 'Ocultar anotações das lesões';
+      botaoAnotacoes.setAttribute('aria-pressed', String(anotacoesOcultas));
+    }
+    document.querySelectorAll('[data-camada-editor] .lesao-editavel').forEach(atualizarRotuloDeMedidas);
+  }
+  function atualizarPermissaoAnotacoes(perfil) {
+    podeOcultarAnotacoes = perfil?.pode_ocultar_anotacoes === true;
+    if (!podeOcultarAnotacoes) anotacoesOcultas = false;
+    atualizarBotaoAnotacoes();
+  }
+  atualizarPermissaoAnotacoes(window.endomapaMedico);
+  window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoAnotacoes(evento.detail));
+  botaoAnotacoes?.addEventListener('click', () => {
+    if (!podeOcultarAnotacoes) return;
+    anotacoesOcultas = !anotacoesOcultas;
+    atualizarBotaoAnotacoes();
+  });
   botaoBaixar?.addEventListener("click", () => baixarMontagemManual('png'));
   botaoJpeg?.addEventListener('click', () => baixarMontagemManual('jpeg'));
   botaoPdf?.addEventListener("click", baixarPdfManual);
@@ -710,6 +733,8 @@
   }
 
   function linhasDoRotulo(lesao, grupo) {
+    // Exportações usam a escolha capturada no clique, mesmo se o botão mudar depois.
+    if (lesao.anotacoesOcultas ?? anotacoesOcultas) return [];
     let nome = (lesao.dataset.nomeNoMapa || "").trim();
     const itens = grupo || Array.from(lesao.closest?.('[data-camada-editor]')?.querySelectorAll('.lesao-editavel') || []);
     const primeiro = itens.find(item => (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'));
@@ -867,7 +892,7 @@
   function fotografarLesoes(camadaDaCaptura = camada) {
     // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
     return Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
-      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src,
+      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src, anotacoesOcultas,
         estiloRotulo: fotografarEstiloRotulo(lesao, camadaDaCaptura) };
     });
   }

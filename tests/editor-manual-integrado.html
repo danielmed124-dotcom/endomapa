@@ -335,6 +335,23 @@
     }
 
     if (!manterVisual) {
+      const alternarAnotacoes = buscar('[data-alternar-anotacoes]');
+      verificar(alternarAnotacoes.hidden, 'Outras contas não recebem o botão de anotações');
+      janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', { detail: { nome: 'Teste', assinatura: 'Teste', pode_ocultar_anotacoes: true } }));
+      verificar(!alternarAnotacoes.hidden, 'Conta autorizada recebe o botão');
+      const dadosAntes = JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), item => item.dataset));
+      alternarAnotacoes.click();
+      verificar(Array.from(doc.querySelectorAll('[data-medida-id], [data-linha-id]')).every(item => item.hidden), 'Ocultar retira textos e linhas em todas as vistas');
+      textos.length = 0;
+      const capturaSemAnotacoes = janela.endomapaCapturarMapaManual({ formato: 'image/png' });
+      alternarAnotacoes.click();
+      await capturaSemAnotacoes;
+      verificar(!textos.some(item => item.texto === 'Endometrioma esquerdo' || item.texto === '2,5 cm'), 'Exportação preserva a ocultação escolhida no instante do clique');
+      verificar(!rotulo.hidden && rotulo.textContent.includes('2,5 cm'), 'Mostrar restaura os textos');
+      verificar(dadosAntes === JSON.stringify(Array.from(doc.querySelectorAll('.lesao-editavel'), item => item.dataset)), 'Ocultar não apaga dados');
+      alternarAnotacoes.click();
+      janela.dispatchEvent(new janela.CustomEvent('endomapa:perfil-carregado', { detail: { nome: 'Teste', assinatura: 'Teste' } }));
+      verificar(alternarAnotacoes.hidden && !rotulo.hidden, 'Trocar conta restaura anotações e remove botão');
       preencher(campo, '<b>Nome</b>');
       verificar(!rotulo.querySelector('b') && rotulo.textContent.includes('<b>Nome</b>'), 'Nome tratado como texto seguro');
       preencher(campo, '');
