@@ -73,10 +73,26 @@
     atualizar();
   });
   const opcaoEscalaCinza = document.querySelector('[data-mapa-escala-cinza]');
+  const controleTransparenciaCinza = document.querySelector('[data-transparencia-cinza]');
+  const painelTransparenciaCinza = document.querySelector('[data-painel-transparencia-cinza]');
+  const valorTransparenciaCinza = document.querySelector('[data-valor-transparencia-cinza]');
+  const obterTransparenciaCinza = () => Number(controleTransparenciaCinza?.value || 0);
   function atualizarEscalaCinza() {
-    mapasManuais.forEach(mapa => mapa.classList.toggle('mapa-editor--cinza', Boolean(opcaoEscalaCinza?.checked)));
+    const ativo = Boolean(opcaoEscalaCinza?.checked);
+    const transparencia = obterTransparenciaCinza();
+    mapasManuais.forEach(mapa => {
+      mapa.classList.toggle('mapa-editor--cinza', ativo);
+      mapa.style.setProperty('--transparencia-cinza', String(transparencia / 100));
+    });
+    if (painelTransparenciaCinza) painelTransparenciaCinza.hidden = !ativo;
+    if (controleTransparenciaCinza) {
+      controleTransparenciaCinza.disabled = !ativo;
+      controleTransparenciaCinza.setAttribute('aria-valuetext', `${transparencia}% de transparência`);
+    }
+    if (valorTransparenciaCinza) valorTransparenciaCinza.textContent = `${transparencia}%`;
   }
   opcaoEscalaCinza?.addEventListener('change', atualizarEscalaCinza);
+  controleTransparenciaCinza?.addEventListener('input', atualizarEscalaCinza);
   atualizarEscalaCinza();
   const selecoesPorVista = new Map();
   let vistaAtiva = camada.dataset.camadaEditor || "coronal";
@@ -886,7 +902,7 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, especialSagital: incluirSagital.checked, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
+    return { versao: 1, especialSagital: incluirSagital.checked, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), transparenciaCinza: obterTransparenciaCinza(), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
@@ -901,6 +917,7 @@
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
     const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
     if (montagem.escalaCinza !== undefined && typeof montagem.escalaCinza !== 'boolean') falhar();
+    if (montagem.transparenciaCinza !== undefined && (!Number.isInteger(montagem.transparenciaCinza) || montagem.transparenciaCinza < 0 || montagem.transparenciaCinza > 100)) falhar();
     if (montagem.especialSagital !== undefined && typeof montagem.especialSagital !== 'boolean') falhar();
     if (montagem.hidrosalpinge !== undefined && !lados.includes(montagem.hidrosalpinge)) falhar();
     if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
@@ -941,6 +958,7 @@
     window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios,vistas.coronal.ureteres);
     window.endomapaUtero?.restaurar(vistas.sagital.utero);
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
+    if (controleTransparenciaCinza) controleTransparenciaCinza.value = String(montagem.transparenciaCinza ?? 0);
     atualizarEscalaCinza();
     definirCaneta(null);
     selecionada = null; selecoesPorVista.clear(); imagemCopiada = null;
@@ -1013,6 +1031,8 @@
     if (botaoJpeg) botaoJpeg.disabled = ocupado;
     if (botaoPdf) botaoPdf.disabled = ocupado;
     if (exportarDivulgacao) exportarDivulgacao.disabled = ocupado;
+    if (opcaoEscalaCinza) opcaoEscalaCinza.disabled = ocupado;
+    if (controleTransparenciaCinza) controleTransparenciaCinza.disabled = ocupado || !opcaoEscalaCinza?.checked;
   }
 
   function obterFonteDaBase(camadaDaCaptura = camada, divulgacao = false) {
@@ -1041,6 +1061,7 @@
     if (window.endomapaHistoricoManual?.ocupado()) return;
     const registroPdf = crypto.randomUUID();
     const escalaCinza = Boolean(opcaoEscalaCinza?.checked);
+    const transparenciaCinza = obterTransparenciaCinza();
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     const opcaoVistas = document.querySelector('input[name="vistas-editor"]:checked')?.value || vistaAtiva;
     const vistas = vistasDaEscolha(opcaoVistas);
@@ -1062,7 +1083,7 @@
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza }, false, captura.base, captura.assinatura, captura.caneta, captura.orgaos);
+        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza, transparenciaCinza }, false, captura.base, captura.assinatura, captura.caneta, captura.orgaos);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
         paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista) || canvas });
@@ -1160,6 +1181,7 @@
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = fotografarOrgaos(vistaAtiva)) {
     // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
     const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
+    const transparenciaCinza = (opcoes.transparenciaCinza ?? obterTransparenciaCinza()) / 100;
     const base = await carregarImagem(fonteBase);
     const canvas = document.createElement("canvas");
     canvas.width = base.naturalWidth;
@@ -1174,7 +1196,7 @@
       const pixels = imagem.data;
       for (let i = 0; i < pixels.length; i += 4) {
         const cinza = Math.round(0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]);
-        pixels[i] = pixels[i + 1] = pixels[i + 2] = cinza;
+        pixels[i] = pixels[i + 1] = pixels[i + 2] = Math.round(cinza + (255 - cinza) * transparenciaCinza);
       }
       contexto.putImageData(imagem, 0, 0);
     }

@@ -269,6 +269,9 @@
     verificar(!cinza.checked, 'Montagens antigas devem continuar coloridas');
     perfil(true, false);
     verificar(!opcao.checked && Array.from(doc.querySelectorAll('[data-opcao-divulgacao]')).every(item => item.hidden && janela.getComputedStyle(item).display === 'none'), 'Outro perfil deve ocultar e desmarcar a opção');
+    // Após restaurar a montagem de ambas, a vista ativa pode ser sagital.
+    // Esta seção compara o PNG coronal com a página coronal do PDF.
+    escolher('coronal');
     const normal = await janela.endomapaCapturarMapaManual({ formato: 'image/png' });
     verificar(await janela.endomapaCapturarMapaManual({ formato: 'image/png', divulgacao: true }) === normal, 'Captura não autorizada deve manter identidade');
     for (const pdf of [false, true, 'jpeg']) {

@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=insercao-20261027" />
+    <link rel="stylesheet" href="styles.css?v=cinza-transparencia-20261027" />
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -492,7 +492,12 @@
           <input type="checkbox" data-mapa-escala-cinza aria-describedby="ajuda-escala-cinza" />
           Mapa em escala de cinza
         </label>
-        <p class="texto-apoio" id="ajuda-escala-cinza">Aplica-se a todas as vistas e aos arquivos PNG, JPEG e PDF. As lesões permanecem coloridas.</p>
+        <div class="controle-transparencia" data-painel-transparencia-cinza hidden>
+ <label for="transparencia-cinza">Transparência do mapa <output for="transparencia-cinza" data-valor-transparencia-cinza>0%</output></label>
+ <input id="transparencia-cinza" data-transparencia-cinza type="range" min="0" max="100" step="1" value="0" aria-describedby="ajuda-transparencia" disabled>
+ <p id="ajuda-transparencia">0%: mapa inteiro visível. 100%: anatomia invisível sobre o fundo branco. Lesões e textos permanecem visíveis.</p>
+</div>
+<p class="texto-apoio" id="ajuda-escala-cinza">Aplica-se a todas as vistas e aos arquivos PNG, JPEG e PDF. As lesões permanecem coloridas.</p>
         <section class="vista-manual" data-vista-manual="coronal" aria-labelledby="titulo-mapa-manual">
           <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
           <figure class="mapa-visual mapa-editor" data-mapa-editor="coronal" tabindex="0" aria-label="Mapa coronal. Toque ou selecione pelo teclado para editar esta vista.">
@@ -731,7 +736,7 @@
     <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
     <script src="pdf-manual.js?v=endocarta-8cbab657ce1a"></script>
     <script src="editor-documento.js?v=paciente-em-branco-1"></script>
-    <script src="editor-manual.js?v=especial-sagital-20261027"></script>
+    <script src="editor-manual.js?v=cinza-transparencia-20261027"></script>
     <script src="historico-manual.js?v=insercao-20261027"></script>
     <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>

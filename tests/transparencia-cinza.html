@@ -1,0 +1,69 @@
+<!doctype html><meta charset="utf-8"><title>Teste da transparência</title>
+<pre id="resultado">Executando</pre><iframe title="Prévia em celular"  style="width:390px;height:844px;border:0"></iframe><div id="capturas"></div>
+<script>
+document.querySelector('iframe').onload=async function(){
+ const out=document.querySelector('#resultado'),w=this.contentWindow,d=w.document,$=s=>d.querySelector(s),ok=(v,m)=>{if(!v)throw Error(m)};
+ const tick=()=>new Promise(r=>setTimeout(r,20));
+ try{
+ w.history.replaceState=()=>{};w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{id:'teste-cinza',nome:'Teste',titulo:'',assinatura:'',clinica_id:null,indicar_lados_mapas:false}}));w.endomapaAbrirTela('editor-manual');await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;await w.endomapaUtero.pronto;
+ const api=w.endomapaEditorManual,cinza=$('[data-mapa-escala-cinza]'),controle=$('[data-transparencia-cinza]'),painel=$('[data-painel-transparencia-cinza]');
+ const ajustar=n=>{controle.value=String(n);controle.dispatchEvent(new w.Event('input',{bubbles:true}))};
+ const mudarCinza=v=>{cinza.checked=v;cinza.dispatchEvent(new w.Event('change',{bubbles:true}))};
+ const carregar=src=>new Promise((r,j)=>{const i=new Image();i.onload=()=>r(i);i.onerror=j;i.src=src});
+ const tela=async src=>{const i=await carregar(src),c=document.createElement('canvas');c.width=i.naturalWidth;c.height=i.naturalHeight;c.getContext('2d').drawImage(i,0,0);return c};
+ const pixel=(c,x,y)=>Array.from(c.getContext('2d').getImageData(x,y,1,1).data);
+ const capturar=()=>w.endomapaCapturarMapaManual({formato:'image/png',semRotulos:true});
+ const selecionar=v=>{const m=api.capturar();m.ativa=v;if(['coronal','sagital'].includes(v))m.escolha=v;else{m.escolha='especiais';m.especial=v.startsWith('hidrosalpinge-')?'hidrosalpinge':v;m.hidrosalpinge=v.startsWith('hidrosalpinge-')?v:'hidrosalpinge-direita'}api.restaurar(m)};
+ ok(!cinza.checked&&painel.hidden&&controle.value==='0','Início preserva mapa colorido');
+ const colorido=await capturar();ajustar(67);ok(await capturar()===colorido,'Controle inativo não altera mapa colorido');
+ mudarCinza(true);ajustar(0);ok(!painel.hidden&&!controle.disabled,'Controle aparece no modo cinza');
+ ok(d.documentElement.scrollWidth<=392,'Sem rolagem horizontal no celular');
+ ok(controle.getBoundingClientRect().height>=44,'Área de toque de 44px: '+controle.getBoundingClientRect().height+'; tela='+$('[data-tela="editor-manual"]').hidden+'; painel='+painel.hidden+'; css='+w.getComputedStyle(controle).minHeight);
+ const inicial=api.capturar();
+ $('[data-inserir-ureteres]').click();
+ const movida=api.capturar();movida.vistas.coronal.ovarios.esquerdo={x:80,y:-30};movida.vistas.sagital.utero={...movida.vistas.sagital.utero,angulo:12};api.restaurar(movida);
+ for(const vista of Object.keys(api.capturar().vistas)){
+  out.textContent='Conferindo '+vista;selecionar(vista);mudarCinza(true);ajustar(0);
+  const zero=await tela(await capturar());ajustar(50);const meioSrc=await capturar(),meio=await tela(meioSrc);ajustar(100);const total=await tela(await capturar());
+  let pontos=0;
+  for(let y=300;y<1100;y+=100)for(let x=200;x<900;x+=100){const a=pixel(zero,x,y),b=pixel(meio,x,y),c=pixel(total,x,y);ok(a[0]===a[1]&&a[1]===a[2],'Cinza em '+vista);ok(b[0]===Math.round((a[0]+255)/2),'50% proporcional em '+vista);ok(c[0]===255&&c[1]===255&&c[2]===255,'100% sobre branco em '+vista);if(a[0]<230)pontos++}
+  ok(pontos>3,'Há anatomia na captura de '+vista);
+  const desenho=$(`[data-mapa-editor="${vista}"] .mapa-editor__desenho`);
+  ok(w.getComputedStyle(desenho,'::after').opacity==='1','Camada da tela reflete 100% em '+vista);
+  if(vista==='coronal'){const img=new Image();img.id='coronal-50';img.src=meioSrc;img.width=350;document.querySelector('#capturas').append(img)}
+ }
+ selecionar('coronal');mudarCinza(true);ajustar(37);const salvo=api.capturar();ajustar(0);api.restaurar(salvo);ok(controle.value==='37','Reabrir mantém valor');
+ const antiga=structuredClone(salvo);delete antiga.transparenciaCinza;api.restaurar(antiga);ok(controle.value==='0','Montagem antiga começa sem transparência');
+ for(const valor of [-1,101,'50',null,NaN,1.5]){const invalida=structuredClone(salvo);invalida.transparenciaCinza=valor;let rejeitou=false;try{api.restaurar(invalida)}catch{rejeitou=true}ok(rejeitou&&controle.value==='0','Valor inválido não muda montagem')}
+ api.restaurar(salvo);ajustar(50);const referencia=await capturar();const capturaPendente=capturar();ajustar(100);ok(await capturaPendente===referencia,'PNG conserva valor do clique');
+ const jpeg=await w.endomapaCapturarMapaManual({formato:'image/jpeg'});ok(jpeg.startsWith('data:image/jpeg'),'JPEG disponível');ok(pixel(await tela(jpeg),500,700)[0]>=254,'JPEG respeita transparência total');
+ // Lesões e caneta continuam visíveis mesmo sem anatomia; contatos também.
+ const modelo=$('[data-nome="Cisto"]')||$('[data-modelo*="cisto.png"]');ok(modelo,'Modelo de lesão disponível');modelo.click();
+ const anotada=api.capturar();anotada.vistas.coronal.tracos=[{cor:'#ff0000',largura:20,pontos:[[.2,.2],[.3,.2]]}];api.restaurar(anotada);
+ const pngAnotado=await tela(await capturar());let coloridos=0;const pixels=pngAnotado.getContext('2d').getImageData(0,0,pngAnotado.width,pngAnotado.height).data;for(let i=0;i<pixels.length;i+=4)if(Math.max(pixels[i],pixels[i+1],pixels[i+2])-Math.min(pixels[i],pixels[i+1],pixels[i+2])>35)coloridos++;
+ ok(coloridos>500,'Lesão, caneta e contatos visíveis a 100%');
+ // PDF em duas páginas conserva a mesma transparência em ambas.
+ $('[name="vistas-editor"][value="ambas"]').click();ajustar(50);
+ let paginas,blob,baixou=false;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=p=>{paginas=p;blob=gerar(p);return blob};w.HTMLAnchorElement.prototype.click=function(){baixou=true};
+ $('[data-baixar-pdf-manual]').click();ok(controle.disabled&&cinza.disabled,'Controles bloqueados durante PDF');ajustar(100);
+ for(let i=0;i<1500&&!baixou;i++)await tick();
+ ok(baixou&&blob.size>1000&&paginas.length===2,'PDF real com duas páginas');
+ const sagital=paginas.find(p=>p.vista==='sagital');ok(sagital,'PDF contém sagital');
+ // O fundo a 50% ainda contém anatomia, mesmo após ajuste programático para 100% durante o PDF.
+ const dados=sagital.canvas.getContext('2d').getImageData(0,0,sagital.canvas.width,sagital.canvas.height).data;let cinzas=0;for(let i=0;i<dados.length;i+=4)if(dados[i]===dados[i+1]&&dados[i+1]===dados[i+2]&&dados[i]>127&&dados[i]<240)cinzas++;
+ ok(cinzas>10000,'PDF usa transparência capturada antes do carregamento');
+ ok(!controle.disabled&&!cinza.disabled,'Controles liberados após PDF');
+ api.restaurar(inicial);mudarCinza(true);ajustar(50);controle.scrollIntoView({block:'center'});
+ out.textContent='PASSOU: 390px, 10 vistas, 0/50/100%, anatomia móvel, lesões/caneta, montagem antiga e inválida, captura estável, PNG/JPEG e PDF de duas páginas.';
+ }catch(e){out.textContent='FALHOU: '+e.stack}
+};
+</script>
+<script>
+(async()=>{
+ const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+ html.querySelectorAll('script,base').forEach(e=>e.remove());html.body.classList.remove('autenticacao-pendente');
+ const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+ for(const src of ['prototipo.js','orgaos-deformar.js','orgaos-motor.js','orgaos-editor.js','utero-motor.js','utero-editor.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+ document.querySelector('iframe').srcdoc=html.documentElement.outerHTML;
+})().catch(e=>document.querySelector('#resultado').textContent='FALHOU: '+e.stack);
+</script>
