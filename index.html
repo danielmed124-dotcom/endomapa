@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><base href="/experimentos/tubas-posicao/">
+ <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>Endocarta — testar posição das tubas</title>
+ <link rel="stylesheet" href="teste.css?v=3">
+</head>
+<body>
+<main>
+ <header><span class="selo">TESTE EXTERNO — VERSÃO 11</span><h1>Posição das tubas</h1><p>Arraste os quatro pontos de cada tuba. As ligações com o útero e com o ovário ficam fixas.</p></header>
+ <nav class="barra" aria-label="Inserir e editar">
+  <div class="grupo-controle"><strong>Hidrosalpinge</strong><div class="barra">
+   <button type="button" data-inserir="direita" disabled>Direita</button>
+   <button type="button" data-inserir="esquerda" disabled>Esquerda</button>
+   <button type="button" data-inserir="ambos" disabled>Ambos os lados</button>
+  </div></div>
+  <div class="grupo-controle"><strong>Obstrução tubas</strong><div class="barra">
+   <button type="button" data-afilar="direita" disabled>Direita</button>
+   <button type="button" data-afilar="esquerda" disabled>Esquerda</button>
+   <button type="button" data-afilar="ambos" id="editar-tubas" disabled>Ambos os lados</button>
+  </div></div>
+  <div class="grupo-controle"><strong>Espessamento tubas</strong><div class="barra">
+   <button type="button" data-espessar="direita" disabled>Direita</button>
+   <button type="button" data-espessar="esquerda" disabled>Esquerda</button>
+   <button type="button" data-espessar="ambos" disabled>Ambos os lados</button>
+  </div></div>
+  <div class="grupo-controle"><strong>Posição das tubas</strong><div class="barra">
+   <button type="button" data-mover="direita" disabled>Direita</button>
+   <button type="button" data-mover="esquerda" disabled>Esquerda</button>
+   <button type="button" data-mover="ambos" disabled>Ambos os lados</button>
+  </div></div>
+ </nav>
+ <div class="contexto">
+  <p id="estado" role="status" aria-live="polite">Preparando o mapa…</p>
+  <button type="button" id="remover" hidden>Remover hidrosalpinge</button>
+  <button type="button" id="restaurar-posicao" hidden>Restaurar posição</button>
+ </div>
+ <section class="mapa" aria-label="Coronal comum">
+  <div class="desenho"><canvas id="mapa" width="1086" height="1448" aria-label="Mapa coronal editável"></canvas><div id="marcadores"></div></div>
+ </section>
+ <footer class="barra">
+  <button type="button" id="baixar-pdf" disabled>Baixar PDF</button>
+  <button type="button" id="restaurar" disabled>Restaurar mapa</button>
+  <p id="estado-pdf" role="status" aria-live="polite"></p>
+ </footer>
+ <p class="limite">Teste no coronal comum. Ajustes ficam nesta aba; nada é salvo em Meus mapas. Os outros formatos coronais serão adaptados após a avaliação desta prévia.</p>
+</main>
+<script src="../hidrosalpinge-extensao/afilar.js?v=7"></script>
+<script src="../hidrosalpinge-extensao/tubas.js?v=10"></script>
+<script src="../../assets/vendor/jspdf-4.2.1.umd.min.js"></script>
+<script src="../../pdf-manual.js"></script>
+<script src="espessamento.js?v=6"></script>
+<script src="movimento.js?v=11"></script>
+<script src="teste.js?v=11"></script>
+</body>
+</html>
