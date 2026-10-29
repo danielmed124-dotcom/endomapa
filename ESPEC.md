@@ -1,3 +1,5 @@
+Tubas — entrega de 29/10/2026: publicação autorizada da versão aprovada de 28/10. Painel Alterar tubas com Posição, Hidrosalpinge, Espessamento, Obstrução e Salpingectomia, lados independentes, restauração, exportação e salvamento; ovário restante móvel nas ooforectomias unilaterais. Disponível no coronal e cinco especiais compatíveis. Kissing Ovaries, histerectomias, parede abdominal e mapa cartográfico fora desta entrega. Detalhes em docs/publicacao-tubas-20261029.txt.
+
 Logos Semeare e Granvittà (22/10/2026): publicação autorizada por Daniel. Semeare somente para amandagoncalves1612@gmail.com e marcoaureliosala@gmail.com; Granvittà somente para claudetegrandi@hotmail.com. Identificação pelo e-mail autenticado, bases neutras sem Centrus, canto superior direito, proporções e fundos originais preservados. Logo acompanha os dez mapas do editor e a camada de assinatura nas exportações comuns. Testes isolados tests/semeare.html e tests/granvitta.html, sem banco real, conferidos em largura de celular, incluindo PNG e conta neutra. Demais identidades preservadas.
 
 # Especificação do MVP

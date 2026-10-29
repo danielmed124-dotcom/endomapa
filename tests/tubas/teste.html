@@ -1,0 +1,37 @@
+<!doctype html><meta charset="utf-8"><pre id="resultado">Executando…</pre><iframe src="previa.html" style="width:390px;height:1600px"></iframe><div id="capturas"></div><script>
+const frame=document.querySelector('iframe'),saida=document.querySelector('pre');
+frame.onload=async()=>{const ok=(v,m)=>{if(!v)throw Error(m)},esperar=async fn=>{for(let i=0;i<1000;i++){if(fn())return;await new Promise(r=>setTimeout(r,30))}throw Error('Tempo excedido')};try{
+ const w=frame.contentWindow,d=w.document,api=w.endomapaTubas,ed=w.endomapaEditorManual;
+ ok(api&&ed,'Editor e tubas carregados');await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;
+ d.querySelector('input[name="vistas-editor"][value="coronal"]').click();
+ const abrir=d.querySelector('[data-alterar-tubas="coronal"]'),ureter=d.querySelector('[data-inserir-ureteres]');
+ ok(abrir.nextElementSibling===ureter,'Botão ao lado de ureteres');
+ const ra=abrir.getBoundingClientRect(),ru=ureter.getBoundingClientRect();ok(Math.abs(ra.top-ru.top)<1,'Botões na mesma linha no celular');
+ const original=ed.capturar();abrir.click();await esperar(()=>!api.ocupado());
+ const painel=d.querySelector('#tubas-coronal');painel.querySelector('[data-tuba-acao="posicao"]').click();
+ ok(d.querySelectorAll('.tubas-marcador').length===8,'Oito pontos');
+ const b=d.querySelector('.tubas-marcador[data-lado="esquerda"]');b.dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+ ok(api.estado('coronal').esquerda.posicao[0].x===2,'Move pelo controle');
+ painel.querySelector('[data-tuba-acao="hidro"]').click();
+ const salva=ed.capturar();ok(salva.vistas.coronal.tubas.esquerda.inserida,'Captura estado');
+ const sem=await w.endomapaCapturarMapaManual({formato:'image/png'});ureter.click();
+ const com=await w.endomapaCapturarMapaManual({formato:'image/png'});ok(com!==sem,'Ureteres com tubas');
+ const movida=ed.capturar();movida.vistas.coronal.ovarios.esquerdo={x:80,y:-40};ed.restaurar(movida);await esperar(()=>!api.ocupado());
+ const mov=await w.endomapaCapturarMapaManual({formato:'image/png'});ok(mov!==com,'Ovário móvel com tubas');
+ const foto=new Image();foto.src=mov;foto.width=390;document.querySelector('#capturas').append(foto);
+ ed.restaurar(salva);await esperar(()=>!api.ocupado());ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===sem,'Restaura estado exato');
+ const invalida=structuredClone(salva);invalida.vistas.coronal.tubas.direita.posicao[0].x=Infinity;let falhou=false;try{ed.restaurar(invalida)}catch{falhou=true}ok(falhou&&JSON.stringify(ed.capturar())===JSON.stringify(salva),'Inválido preserva montagem');
+ const jpg=await w.endomapaCapturarMapaManual({formato:'image/jpeg'});ok(jpg.startsWith('data:image/jpeg'),'JPEG');
+ let pdf;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=p=>{pdf=gerar(p);return pdf};w.HTMLAnchorElement.prototype.click=function(){};
+ d.querySelector('[data-baixar-pdf-manual]').click();await esperar(()=>pdf);ok(pdf.size>1000,'PDF');await esperar(()=>!ed.ocupado());
+ ed.restaurar(original);await esperar(()=>!api.ocupado());ok(!api.estado('coronal'),'Montagem antiga sem tubas');
+ ok(d.querySelector('[data-alterar-tubas="kissing-ovaries"]').disabled,'Kissing preservado');
+ const kissing=structuredClone(original);kissing.vistas['kissing-ovaries'].tubas=w.endomapaTubasModelos.inicial('kissing-ovaries');let bloqueou=false;try{ed.restaurar(kissing)}catch{bloqueou=true}ok(bloqueou,'Não restaura edição pendente do Kissing');
+ ed.restaurar(salva);await esperar(()=>!api.ocupado());
+ const chamadas=[];w.endomapaSupabase={rpc:async(nome,p)=>{chamadas.push({nome,p:structuredClone(p)});return{data:[{id:p.p_id,versao:1}],error:null}}};
+ await new Promise((resolve,reject)=>{const s=d.createElement('script');s.src='historico-manual.js';s.onload=resolve;s.onerror=reject;d.body.append(s)});
+ d.querySelector('[data-salvar-manual]').click();await esperar(()=>chamadas.length);await esperar(()=>!w.endomapaHistoricoManual.ocupado());
+ ok(chamadas[0].nome==='salvar_mapa_manual'&&JSON.stringify(chamadas[0].p.p_montagem.vistas.coronal.tubas)===JSON.stringify(salva.vistas.coronal.tubas),'Salvamento simulado inclui tubas sem lesões');
+ saida.textContent='PASSOU: coronal, celular, movimento, ureteres, ovários, validação, PNG/JPEG/PDF, restauração, bloqueio Kissing e salvamento simulado de tubas sem lesões.';
+}catch(e){saida.textContent='FALHOU: '+e.stack}};
+</script>

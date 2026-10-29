@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><pre id="resultado">Executando...</pre><iframe src="previa.html" style="width:320px;height:1500px"></iframe><div id="capturas"></div><script>
+document.querySelector('iframe').onload=async function(){const r=document.querySelector('pre');try{const w=this.contentWindow,d=w.document,t=w.endomapaTubas,ed=w.endomapaEditorManual,ok=(a,m)=>{if(!a)throw Error(m)},wait=async()=>{for(let n=0;n<1500;n++){if(!ed.ocupado())return;await new Promise(r=>setTimeout(r,30))}throw Error('Tempo excedido')};await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;await wait();
+ for(const vista of ['coronal','hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral']){
+  if(vista==='coronal')d.querySelector('input[name="vistas-editor"][value="coronal"]').click();else{d.querySelector('input[name="vistas-editor"][value="especiais"]').checked=true;const s=d.querySelector('[data-mapa-especial]');s.value='hidrosalpinge';d.querySelector('[data-lado-hidrosalpinge]').value=vista;s.dispatchEvent(new w.Event('change',{bubbles:true}))}
+  await wait();d.querySelector('[data-alterar-tubas="'+vista+'"]').click();await wait();const p=d.querySelector('#tubas-'+vista),antes=ed.capturar();
+  ok(p.scrollWidth<=p.clientWidth+1,'Painel cabe em 320 px');
+  for(const lado of ['esquerda','direita','ambos']){p.querySelector('[data-tuba-lado="'+lado+'"]').click();p.querySelector('[data-tuba-acao="salpingectomia"]').click();const e=t.estado(vista);for(const l of ['esquerda','direita'])ok(Boolean(e[l].removida)===(lado==='ambos'||lado===l),'Lado correto '+vista+' '+lado);
+   const png=await w.endomapaCapturarMapaManual({formato:'image/png'});if(lado==='ambos'){const i=new Image();i.src=png;i.width=330;i.alt=vista;document.querySelector('#capturas').append(i)}
+   p.querySelector('[data-tuba-remover]').click();ok(JSON.stringify(ed.capturar())===JSON.stringify(antes),'Restaura achados nativos '+vista);
+  }
+  p.querySelector('[data-tuba-acao="salpingectomia"]').click();let pdf;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=p=>{pdf=gerar(p);return pdf};w.HTMLAnchorElement.prototype.click=function(){};d.querySelector('[data-baixar-pdf-manual]').click();for(let i=0;i<500&&!pdf;i++)await new Promise(r=>setTimeout(r,30));ok(pdf?.size>1000,'PDF só salpingectomia '+vista);await wait();w.endomapaGerarPdfA4=gerar;ed.restaurar(antes);await wait();
+ }r.textContent='PASSOU: 320 px; retirada esquerda, direita e bilateral no coronal e nas três hidrosalpinges; restauração dos achados nativos; PDF somente com salpingectomia.';
+}catch(e){r.textContent='FALHOU: '+e.stack}};
+</script>

@@ -1,17 +1,20 @@
 // Motor coronal aprovado no teste local; camada transparente sobre a base da conta.
-window.endomapaCriarOrgaos = async function(canvas) {
+window.endomapaCriarOrgaos = async function(canvas, fontes, opcoes) {
  'use strict';
+ opcoes = opcoes || {};
+ fontes = fontes || {};
  const W=1086,H=1448,ctx=canvas.getContext('2d');
  const contornos={
   esquerdo:'M 428 462 C 381 457 363 504 324 529 C 278 551 235 567 228 611 C 224 650 227 680 215 716 C 200 768 218 818 253 841 C 291 863 343 847 374 816 C 400 779 411 721 413 670 C 416 632 400 600 386 584 C 397 554 411 524 428 504 Z',
   direito:'M 662 461 C 706 458 730 510 770 538 C 816 559 853 585 866 629 C 880 672 870 697 881 733 C 895 778 886 824 851 855 C 813 885 764 865 732 834 C 704 800 691 752 687 708 C 679 663 689 620 704 595 C 694 562 678 527 662 504 Z'
  };
  const grupos={esquerdo:{x:0,y:0,cx:326,cy:710},direito:{x:0,y:0,cx:765,cy:724}};
+ const lados=opcoes.lados||Object.keys(grupos);
  const limites={esquerdo:{minX:-90,maxX:530},direito:{minX:-530,maxX:90}};
  const imagens={},camadas={},paths={};
- let ureteresAtivos=false,camadaUreteres;
+ let ureteresAtivos=false,camadaUreteres,semTubas=false;
  const novoCanvas=()=>Object.assign(document.createElement('canvas'),{width:W,height:H});
- const carregar=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('Não foi possível carregar '+src));img.src=src});
+ const carregar=src=>new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('Não foi possível carregar '+src));img.src=fontes[src.split('?')[0]]||src});
  const suavizar=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
  // O inicio da trompa fica ancorado; o deslocamento cresce ate o ovario.
  const peso=y=>suavizar((y-470)/155);
@@ -51,12 +54,12 @@ window.endomapaCriarOrgaos = async function(canvas) {
   transformar.suavizarCurva=suavizar((-g.y-100)/160);
   ctx.drawImage(camadas[lado].ligamento.desenhar(transformar),0,0);
   ctx.save();if(lado==='esquerdo')ctx.globalAlpha=.9;
-  ctx.drawImage(camadas[lado].trompa.desenhar(transformar),0,0);
+  if(!semTubas)ctx.drawImage(camadas[lado].trompa.desenhar(transformar),0,0);
   ctx.restore();
   ctx.drawImage(camadas[lado].frente,g.x,g.y);
  }
- await Promise.all(Object.entries({base:'assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
- Object.keys(grupos).forEach(prepararCamada);
+ await Promise.all(Object.entries({base:opcoes.base||'assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019',fundo:'assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019'}).map(async([k,url])=>{imagens[k]=await carregar(url)}));
+ lados.forEach(prepararCamada);
  // Reutiliza a imagem aprovada; o recorte mantém corpo opaco e sombra adjacente.
  const ureteresProntos=carregar('assets/orgaos/ureteres-posicao-20261027.png').then(imagem=>{
   const mascara=novoCanvas(),m=mascara.getContext('2d');m.filter='blur(2px)';m.fillStyle='white';
@@ -70,17 +73,21 @@ window.endomapaCriarOrgaos = async function(canvas) {
  ureteresProntos.catch(()=>{});
  function renderizar(){
   ctx.clearRect(0,0,W,H);
-  for(const lado of Object.keys(grupos))if(grupos[lado].x||grupos[lado].y)ctx.drawImage(camadas[lado].fundo,0,0);
+  for(const lado of lados)if(grupos[lado].x||grupos[lado].y)ctx.drawImage(camadas[lado].fundo,0,0);
   if(ureteresAtivos&&camadaUreteres)ctx.drawImage(camadaUreteres,0,0);
   // Limpeza do lugar antigo -> ureteres fixos -> ovários em primeiro plano.
-  for(const lado of Object.keys(grupos))if(ureteresAtivos||grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
+  for(const lado of lados)if(ureteresAtivos||grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
  }
  return {
+  fotografarParaTubas(){
+   semTubas=true;renderizar();const copia=novoCanvas();copia.getContext('2d').drawImage(canvas,0,0);semTubas=false;renderizar();return copia;
+  },
+  transformarTuba:(lado,p)=>transformarEixo(lado,p.x,p.y),
   ureteresProntos,
   definirUreteres(valor){ureteresAtivos=valor===true;renderizar()},
   estado:()=>Object.fromEntries(Object.entries(grupos).map(([lado,g])=>[lado,{x:g.x,y:g.y}])),
-  mover(lado,x,y){const g=grupos[lado],lim=limites[lado];g.x=Math.max(lim.minX,Math.min(lim.maxX,x));g.y=Math.max(-360,Math.min(200,y));renderizar()},
-  restaurar(valores){for(const lado of Object.keys(grupos)){grupos[lado].x=valores?.[lado]?.x||0;grupos[lado].y=valores?.[lado]?.y||0}renderizar()},
-  localizar(x,y,preferido){return [preferido,...Object.keys(grupos).filter(l=>l!==preferido)].filter(Boolean).find(l=>{const g=grupos[l];return ((x-g.cx-g.x)/85)**2+((y-g.cy-g.y)/125)**2<=1})||null}
+  mover(lado,x,y){if(!lados.includes(lado))return;const g=grupos[lado],lim=limites[lado];g.x=Math.max(lim.minX,Math.min(lim.maxX,x));g.y=Math.max(-360,Math.min(200,y));renderizar()},
+  restaurar(valores){for(const lado of Object.keys(grupos)){grupos[lado].x=lados.includes(lado)?valores?.[lado]?.x||0:0;grupos[lado].y=lados.includes(lado)?valores?.[lado]?.y||0:0}renderizar()},
+  localizar(x,y,preferido){return [preferido,...lados.filter(l=>l!==preferido)].filter(l=>lados.includes(l)).find(l=>{const g=grupos[l];return ((x-g.cx-g.x)/85)**2+((y-g.cy-g.y)/125)**2<=1})||null}
  };
 };

@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><pre id="resultado">Executando...</pre><iframe src="previa.html" style="width:390px;height:1500px"></iframe><script>
+document.querySelector('iframe').onload=async function(){const r=document.querySelector('pre');try{const w=this.contentWindow,d=w.document,t=w.endomapaTubas,ed=w.endomapaEditorManual,ok=(a,m)=>{if(!a)throw Error(m)},wait=async()=>{for(let n=0;n<1500;n++){if(!ed.ocupado())return;await new Promise(r=>setTimeout(r,30))}throw Error('Tempo excedido')};await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;await wait();d.querySelector('input[name="vistas-editor"][value="coronal"]').click();d.querySelector('[data-alterar-tubas="coronal"]').click();await wait();const p=d.querySelector('#tubas-coronal'),click=s=>p.querySelector(s).click(),estado=()=>t.estado('coronal')||w.endomapaTubasModelos.inicial('coronal');
+for(const tipo of ['hidro','espessamento','tubas','salpingectomia']){
+t.restaurar('coronal');click('[data-tuba-lado="ambos"]');click('[data-tuba-acao="'+tipo+'"]');
+if(tipo!=='salpingectomia')d.querySelector('.tubas-marcador[data-lado="esquerda"][data-chave="inicio"]').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));
+const ativo=s=>tipo==='hidro'?s.inserida:tipo==='salpingectomia'?s.removida:tipo==='tubas'?s.tuba.ativo:s.espessamento.ativo;
+click('[data-tuba-lado="direita"]');ok(ativo(estado().direita)&&!ativo(estado().esquerda),'Direita saindo de ambas '+tipo);
+click('[data-tuba-lado="esquerda"]');ok(ativo(estado().esquerda)&&!ativo(estado().direita),'Somente esquerda '+tipo);const ajustado=structuredClone(estado().esquerda);
+click('[data-tuba-lado="direita"]');ok(ativo(estado().direita)&&!ativo(estado().esquerda),'Transfere direita '+tipo);
+click('[data-tuba-lado="ambos"]');ok(ativo(estado().direita)&&ativo(estado().esquerda),'Ambas '+tipo);ok(p.querySelector('[data-tuba-acao="'+tipo+'"]').getAttribute('aria-pressed')==='true','Mantém seleção');
+if(tipo==='hidro')ok(estado().esquerda.inicio===ajustado.inicio,'Preserva extensão');
+const salva=ed.capturar();ed.restaurar(salva);await wait();ok(JSON.stringify(ed.capturar())===JSON.stringify(salva),'Restauração '+tipo);
+}
+t.restaurar('coronal');click('[data-tuba-lado="ambos"]');click('[data-tuba-acao="espessamento"]');click('[data-tuba-acao="hidro"]');click('[data-tuba-lado="direita"]');ok(estado().esquerda.espessamento.ativo&&estado().direita.espessamento.ativo,'Preserva outra lesão');ok(!estado().esquerda.inserida&&estado().direita.inserida,'Ambas para direita');
+r.textContent='PASSOU: troca imediata esquerda/direita/ambas em hidrosalpinge, espessamento, obstrução e salpingectomia; extensão, seleção, outras lesões e restauração preservadas.';
+}catch(e){r.textContent='FALHOU: '+e.stack}};
+</script>

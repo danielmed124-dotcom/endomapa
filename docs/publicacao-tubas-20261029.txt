@@ -1,0 +1,17 @@
+ENTREGA DAS TUBAS — 29/10/2026
+
+Daniel autorizou publicar a versão aprovada em 28/10, sem outros trabalhos pendentes, e acrescentou autorização para criar/publicar um Story no Instagram @endocarta anunciando a disponibilidade.
+
+Base: origin/main 7fe7ffb. Cópia aprovada: output/tubas-salvo-final-20261028-225920; os 25 arquivos conferidos pelo manifesto SHA-256.
+
+Inclui painel Alterar tubas: Posição, Hidrosalpinge, Espessamento, Obstrução e Salpingectomia; alternância exclusiva esquerda/direita/ambas por alteração; restauração; integração com captura, exportação e biblioteca; movimento do ovário restante nas duas ooforectomias unilaterais.
+
+Disponível no coronal, duas ooforectomias unilaterais e três hidrosalpinges. Kissing Ovaries permanece sem edição de tubas; ooforectomia bilateral não contém tubas. Histerectomias, parede abdominal e mapa cartográfico não integram esta entrega.
+
+A entrega usa HTML e identidade Endocarta da versão publicada. Referências funcionais ao experimento cartográfico foram retiradas do editor e do motor; nenhuma imagem cartográfica é publicada. Demais alterações já publicadas, inclusive transparência e controle de anotações, preservadas. Sem alteração de banco ou contas reais.
+
+Testes de tubas em tests/tubas usam HTML derivado desta entrega, sem autenticação/banco; salvamento simulado. Executados localmente em Chrome, incluindo larguras de 320 e 390 px. Testes auxiliares não representam teste real com conta autenticada.
+
+Story: assets/divulgacao/tubas-disponivel-20261029.jpg, gerado pela ferramenta integrada imagegen; anúncio somente após conferir a disponibilidade pública do aplicativo. Original e prompt preservados localmente em output/story-tubas-disponivel-20261029.
+
+VALIDAÇÃO CONCLUÍDA: dez testes PASSOU. Especial+sagital repetido isoladamente com mais tempo após primeira execução incompleta; sete PDFs confirmados. Relatório em docs/testes-tubas-20261029.json. Capturas coronal e duas ooforectomias com movimento idênticas por SHA-256 às aprovadas.

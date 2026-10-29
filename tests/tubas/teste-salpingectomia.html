@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><pre id="resultado">Executando...</pre><iframe src="previa.html" style="width:390px;height:1600px"></iframe><div id="capturas"></div><script>
+document.querySelector('iframe').contentWindow.addEventListener('error',e=>document.querySelector('pre').textContent+=' ERRO: '+e.message); document.querySelector('iframe').onload=async function(){const r=document.querySelector('pre');try{
+ const w=this.contentWindow,d=w.document,ed=w.endomapaEditorManual,t=w.endomapaTubas,ok=(a,m)=>{if(!a)throw Error(m)},wait=async()=>{for(let n=0;n<1500;n++){if(!ed.ocupado())return;await new Promise(r=>setTimeout(r,30))}throw Error('Tempo excedido')};
+ if(!w.endomapaOrgaos){for(const src of ['orgaos-motor.js','orgaos-editor.js']){const code=await (await fetch('../../'+src)).text();try{new Function(code)}catch(e){throw Error(src+': '+e.message)}}throw Error('Órgãos ausentes: '+r.textContent)} await w.endomapaOrgaos.pronto;await w.endomapaOrgaos.ureteresProntos;await wait();
+ for(const vista of ['coronal','ooforectomia-direita','ooforectomia-esquerda']){
+  if(vista==='coronal')d.querySelector('input[name="vistas-editor"][value="coronal"]').click();else{d.querySelector('input[name="vistas-editor"][value="especiais"]').checked=true;const s=d.querySelector('[data-mapa-especial]');s.value=vista;s.dispatchEvent(new w.Event('change',{bubbles:true}))}
+  const o=w.endomapaOrgaos.paraVista(vista);await o.pronto;await o.ureteresProntos;await wait();
+  const mapa=d.querySelector('[data-mapa-editor="'+vista+'"]'),a=mapa.querySelector('[data-alterar-tubas]'),u=mapa.querySelector('[data-inserir-ureteres]'),m=mapa.querySelector('[data-movimentar-ovarios]');
+  ok(m.nextElementSibling===a&&a.nextElementSibling===u,'Ordem '+vista);ok(Math.abs(m.getBoundingClientRect().top-u.getBoundingClientRect().top)<2,'Mesma linha '+vista);
+  a.click();await wait();const p=d.querySelector('#tubas-'+vista),b=p.querySelector('[data-tuba-acao="salpingectomia"]');ok(b.previousElementSibling.dataset.tubaAcao==='tubas','Salpingectomia após obstrução');
+  const antes=ed.capturar();b.click();await wait();const removida=ed.capturar(),lados=w.endomapaTubasModelos.configuracoes?.[vista]?.lados;
+  ok(Object.values(t.estado(vista)).some(x=>x.removida),'Remoção registrada');ok(!mapa.querySelector('.tubas-marcador'),'Sem marcadores na tuba retirada');
+  let png=await w.endomapaCapturarMapaManual({formato:'image/png'});const img=new Image();img.src=png;img.width=330;img.alt=vista;document.querySelector('#capturas').append(img);
+  p.querySelector('[data-tuba-remover]').click();await wait();ok(JSON.stringify(ed.capturar())===JSON.stringify(antes),'Restaurar tuba exato '+vista);
+  ed.restaurar(removida);await wait();ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===png,'Restaurar montagem '+vista);
+  m.click();mapa.querySelector('.mapa-editor__orgaos-toque').dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',bubbles:true}));await wait();ok(o.estado()[o.lados[0]].x===10,'Mover ovário '+vista);
+  u.click();await wait();png=await w.endomapaCapturarMapaManual({formato:'image/png'});const mov=new Image();mov.src=png;mov.width=330;mov.alt=vista+'-movido';document.querySelector('#capturas').append(mov);
+  for(const [nome,c] of [['orgaos',o.fotografarParaTubas()],['tubas',t.fotografar(vista)]]){const i=new Image();i.src=c.toDataURL();i.width=330;i.alt=vista+'-'+nome;document.querySelector('#capturas').append(i)} const salva=ed.capturar();ed.restaurar(antes);await wait();ed.restaurar(salva);await wait();ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===png,'Combinação restaurada '+vista);
+  const ruim=structuredClone(salva);ruim.vistas[vista].tubas.esquerda.removida='sim';let rejeitou=false;try{ed.restaurar(ruim)}catch{rejeitou=true}ok(rejeitou,'Rejeitar estado inválido');
+  ed.restaurar(antes);await wait();r.textContent='Verificado '+vista;
+ }
+ r.textContent='PASSOU: ordem e alinhamento no celular; salpingectomia reversível; movimentação dos ovários em ambas as ooforectomias; ureteres; captura PNG; restauração e validação.';
+}catch(e){r.textContent='FALHOU: '+e.stack}};
+</script>

@@ -18,6 +18,7 @@
   if (!camada || !controles) return;
 
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
+  // A ordem do documento também vale para navegação por teclado e leitura da tela.
   const painelSagital = document.querySelector('[data-vista-manual="sagital"]');
   if (painelSagital) painelSagital.parentElement.append(painelSagital);
   // Identificação do Endocarta independente da assinatura e da clínica.
@@ -201,7 +202,8 @@
   }
 
   function definirCaneta(estado) {
-    if (estado) window.endomapaOrgaos?.desativar();
+    if (estado) window.endomapaTubas?.desativar();
+    if (estado) orgaosDaVista(vistaAtiva)?.desativar();
     if (estado) window.endomapaUtero?.desativar();
     if (canetaAtiva) finalizarTraco(canetaAtiva);
     canetaAtiva = estado;
@@ -311,8 +313,8 @@
     let ponto;
     if (ovariano) {
       ponto = sagital ? [45, 26.5] : vistaAtiva === 'kissing-ovaries' ? [lado === 'direito' ? 57 : 44, 51] : [lado === 'direito' ? 70.5 : 30, lado === 'direito' ? 50 : 49];
-      if (vistaAtiva === 'coronal') {
-        const deslocamento = window.endomapaOrgaos?.estado()[lado];
+      if (orgaosDaVista(vistaAtiva)) {
+        const deslocamento = orgaosDaVista(vistaAtiva)?.estado()[lado];
         if (deslocamento) ponto = [ponto[0] + deslocamento.x * 100 / 1086, ponto[1] + deslocamento.y * 100 / 1448];
       }
     } else if (nome === 'Ligamento uterossacro') ponto = sagital ? [70, 47] : [lado === 'direito' ? 59 : 42.5, lado === 'direito' ? 52 : 51.5];
@@ -329,7 +331,7 @@
         dados.medidaY = 63.5;
       }
     }
-    if (ovariano && vistaAtiva === 'coronal') dados.orgao = lado;
+    if (ovariano && orgaosDaVista(vistaAtiva)) dados.orgao = lado;
     if (nome === 'Folículo' && total > 1) {
       // Distribuição determinística em uma elipse, com diâmetros variados.
       const raio = Math.sqrt((indice + 0.5) / total), angulo = indice * 2.399963229728653;
@@ -427,7 +429,7 @@
     if (evento.detail === "editor-manual") atualizarTodasAsLinhas();
   });
   window.endomapaCapturarMapaManual = capturarMapa;
-  window.endomapaEditorManual = { capturar: capturarMontagemEditavel, validar: validarMontagemEditavel, restaurar: restaurarMontagemEditavel, ocupado: () => exportacaoEmAndamento };
+  window.endomapaEditorManual = { capturar: capturarMontagemEditavel, validar: validarMontagemEditavel, restaurar: restaurarMontagemEditavel, ocupado: () => exportacaoEmAndamento || Boolean(window.endomapaTubas?.ocupado()) || Boolean(window.endomapaOrgaos?.ocupado?.()) };
   window.endomapaCapturarIntegracaoManual = capturarIntegracaoManual;
   window.endomapaAdicionarRotulos = async function (imagem) {
     const lesoes = fotografarLesoes();
@@ -569,7 +571,8 @@
   });
 
   function adicionarLesao(src, nome, proporcao = "1.8", semRecorte = "false", tamanhoInicial = "100", giroInicial = "0", tamanhoMinimo = "40", dadosCopiados = null) {
-    window.endomapaOrgaos?.desativar();
+    window.endomapaTubas?.desativar();
+    orgaosDaVista(vistaAtiva)?.desativar();
     window.endomapaUtero?.desativar();
     definirCaneta(null);
     const lesao = document.createElement("button");
@@ -603,11 +606,11 @@
       for (let tentativa = 0; tentativa < 20 && ocupados.some(item => Math.abs(Number(item.dataset.medidaX) - Number(lesao.dataset.medidaX)) < 20 && Math.abs(Number(item.dataset.medidaY) - y) < 4); tentativa++) y = y >= 86 ? 20 : y + 4;
       lesao.dataset.medidaY = String(y);
     }
-    if (vistaAtiva === 'coronal' && dadosCopiados?.medida1 === undefined) {
+    if (orgaosDaVista(vistaAtiva) && dadosCopiados?.medida1 === undefined) {
       const ladoSomp = /somp-(esquerdo|direito)\.png/.exec(src)?.[1];
-      const posicao = ladoSomp && window.endomapaOrgaos?.estado()[ladoSomp];
+      const posicao = ladoSomp && orgaosDaVista(vistaAtiva)?.estado()[ladoSomp];
       if (posicao) { lesao.dataset.x = String(Number(lesao.dataset.x) + posicao.x * 100 / 1086); lesao.dataset.y = String(Number(lesao.dataset.y) + posicao.y * 100 / 1448); }
-      lesao.dataset.orgao = dadosCopiados?.orgao || window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+      lesao.dataset.orgao = dadosCopiados?.orgao || orgaosDaVista(vistaAtiva)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
     }
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
     if(vistaAtiva==='sagital'&&dadosCopiados?.uteroX===undefined) vincularUtero(lesao);
@@ -663,7 +666,7 @@
       atualizarRotuloDeMedidas(lesao);
     };
     const terminar = function () {
-      if (camadaDoMovimento.dataset.camadaEditor === 'coronal') lesao.dataset.orgao = window.endomapaOrgaos?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+      if (orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)) lesao.dataset.orgao = orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
       if (camadaDoMovimento.dataset.camadaEditor === 'sagital') vincularUtero(lesao);
       lesao.removeEventListener("pointermove", mover);
       lesao.removeEventListener("pointerup", terminar);
@@ -834,8 +837,9 @@
   }
 
   function limparMapa() {
-    if (vistaAtiva === 'coronal') window.endomapaOrgaos?.restaurar();
+    orgaosDaVista(vistaAtiva)?.restaurar();
     if (vistaAtiva === 'sagital') window.endomapaUtero?.restaurar();
+    window.endomapaTubas?.restaurar(vistaAtiva);
     const caneta = canetas.get(vistaAtiva);
     if (caneta) {
       finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
@@ -857,7 +861,9 @@
     if(p){lesao.dataset.uteroX=String(p.x);lesao.dataset.uteroY=String(p.y)}
     else {delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
   }
-  function fotografarOrgaos(vista) { return window.endomapaUtero?.fotografar(vista)||window.endomapaOrgaos?.fotografar(vista); }
+  function orgaosDaVista(vista) { return window.endomapaOrgaos?.paraVista?.(vista)||(vista==='coronal'?window.endomapaOrgaos:null); }
+  function fotografarOrgaos(vista) { return window.endomapaTubas?.fotografar(vista)||window.endomapaUtero?.fotografar(vista)||orgaosDaVista(vista)?.fotografar(vista); }
+  window.addEventListener('endomapa:alterar-tubas',()=>{definirCaneta(null);controles.hidden=true;});
   window.addEventListener('endomapa:movimentar-utero',()=>{
     ativarVista('sagital');definirCaneta(null);controles.hidden=true;
     document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(vincularUtero);
@@ -871,16 +877,17 @@
       atualizarVisual(l);atualizarRotuloDeMedidas(l);
     });
   });
-  window.addEventListener('endomapa:movimentar-ovarios', () => {
-    ativarVista('coronal'); definirCaneta(null); controles.hidden = true;
-    document.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel').forEach(l => {
-      if (!l.dataset.orgao) l.dataset.orgao = window.endomapaOrgaos.localizar(Number(l.dataset.x), Number(l.dataset.y)) || '';
+  window.addEventListener('endomapa:movimentar-ovarios', evento => {
+    const vista=evento.detail?.vista||'coronal';
+    ativarVista(vista); definirCaneta(null); controles.hidden = true;
+    document.querySelectorAll(`[data-camada-editor="${vista}"] .lesao-editavel`).forEach(l => {
+      if (!l.dataset.orgao) l.dataset.orgao = orgaosDaVista(vista).localizar(Number(l.dataset.x), Number(l.dataset.y)) || '';
     });
     mostrar('Arraste um ovário. Toque novamente em Movimentar ovários para voltar a ajustar lesões.');
   });
   window.addEventListener('endomapa:ovario-movido', e => {
-    const {lado,antes,depois} = e.detail;
-    document.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel').forEach(l => {
+    const {lado,antes,depois,vista='coronal'} = e.detail;
+    document.querySelectorAll(`[data-camada-editor="${vista}"] .lesao-editavel`).forEach(l => {
       if (l.dataset.orgao !== lado) return;
       l.dataset.x = String(limitar(Number(l.dataset.x)+(depois.x-antes.x)*100/1086,0,100));
       l.dataset.y = String(limitar(Number(l.dataset.y)+(depois.y-antes.y)*100/1448,0,100));
@@ -917,9 +924,10 @@
       const vista = mapa.dataset.mapaEditor;
       vistas[vista] = {
         lados: window.endomapaLados?.ativo(vista),
-        ovarios: vista === 'coronal' ? window.endomapaOrgaos?.estado() : undefined,
-        ureteres: vista === 'coronal' ? window.endomapaOrgaos?.ureteres() : undefined,
+        ovarios: orgaosDaVista(vista)?.estado(),
+        ureteres: orgaosDaVista(vista)?.ureteres(),
         utero: vista === 'sagital' ? window.endomapaUtero?.estado() : undefined,
+        tubas: window.endomapaTubas?.estado(vista),
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
           return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
@@ -953,9 +961,10 @@
     for (const id of ids) {
       const vista = vistas[id];
       if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
-      if (id === 'coronal') window.endomapaOrgaos?.validar(vista?.ovarios);
-      if (id === 'coronal' && vista?.ureteres !== undefined && typeof vista.ureteres !== 'boolean') falhar();
+      orgaosDaVista(id)?.validar(vista?.ovarios);
+      if (orgaosDaVista(id) && vista?.ureteres !== undefined && typeof vista.ureteres !== 'boolean') falhar();
       if (id === 'sagital') window.endomapaUtero?.validar(vista?.utero);
+      window.endomapaTubas?.validar(id,vista?.tubas);
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
@@ -980,8 +989,10 @@
     if (exportacaoEmAndamento) throw new Error('Aguarde a exportação terminar.');
     const { modelos, ids, vistas } = validarMontagemEditavel(montagem);
     window.endomapaLados?.restaurar(Object.fromEntries(ids.map(id => [id, vistas[id].lados])));
-    window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios,vistas.coronal.ureteres);
+    if(window.endomapaOrgaos?.restaurarTodas)window.endomapaOrgaos.restaurarTodas(vistas);
+    else window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios,vistas.coronal.ureteres);
     window.endomapaUtero?.restaurar(vistas.sagital.utero);
+    window.endomapaTubas?.restaurarTodas(vistas).catch(erro=>mostrar(erro.message));
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     if (controleTransparenciaCinza) controleTransparenciaCinza.value = String(montagem.transparenciaCinza ?? 0);
     atualizarEscalaCinza();
@@ -1024,7 +1035,7 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !window.endomapaOrgaos?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva)) {
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva)) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
@@ -1082,6 +1093,7 @@
   }
 
   async function baixarPdfManual() {
+    if (window.endomapaTubas?.ocupado()) { mostrar('Aguarde o preparo das tubas.'); return; }
     if (exportacaoEmAndamento) return;
     if (window.endomapaHistoricoManual?.ocupado()) return;
     const registroPdf = crypto.randomUUID();
@@ -1204,6 +1216,7 @@
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = fotografarOrgaos(vistaAtiva)) {
+    if (window.endomapaTubas?.ocupado()) throw Error('Aguarde o preparo das tubas.');
     // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
     const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
     const transparenciaCinza = (opcoes.transparenciaCinza ?? obterTransparenciaCinza()) / 100;

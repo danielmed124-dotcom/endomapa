@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><pre id="resultado">Executando…</pre><iframe src="previa.html" style="width:390px;height:1500px"></iframe><div id="capturas"></div><script>
+const f=document.querySelector('iframe'),r=document.querySelector('pre');f.onload=async()=>{try{
+ const w=f.contentWindow,d=w.document,api=w.endomapaTubas,ed=w.endomapaEditorManual,ok=(v,m)=>{if(!v)throw Error(m)},esperar=async fn=>{for(let i=0;i<1000;i++){if(fn())return;await new Promise(r=>setTimeout(r,30))}throw Error('Tempo excedido')};
+ const qs=new URLSearchParams(location.search),somente=qs.get('vista');
+ const vistas=somente?[somente]:['ooforectomia-direita','ooforectomia-esquerda','hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
+ const inicial=ed.capturar();let quantidade=0;
+ for(const vista of vistas){
+  d.querySelector('input[name="vistas-editor"][value="especiais"]').checked=true;const especial=d.querySelector('[data-mapa-especial]');especial.value=vista.startsWith('hidrosalpinge-')?'hidrosalpinge':vista;
+  if(vista.startsWith('hidrosalpinge-'))d.querySelector('[data-lado-hidrosalpinge]').value=vista;
+  especial.dispatchEvent(new w.Event('change',{bubbles:true}));
+  d.querySelector(`[data-alterar-tubas="${vista}"]`).click();await esperar(()=>!api.ocupado());
+  const p=d.querySelector('#tubas-'+vista);ok(!p.hidden,'Painel '+vista);p.querySelector('[data-tuba-acao="posicao"]').click();
+  const marcadores=d.querySelectorAll(`[data-mapa-editor="${vista}"] .tubas-marcador`);ok(marcadores.length===(vista.startsWith('ooforectomia')?4:8),'Pontos por lado '+vista);
+  marcadores[0].dispatchEvent(new w.KeyboardEvent('keydown',{key:'ArrowRight',shiftKey:true,bubbles:true}));
+  const salva=ed.capturar();ok(salva.vistas[vista].tubas,'Estado '+vista);ok(!salva.vistas.coronal.tubas,'Coronal independente');
+  const png=await w.endomapaCapturarMapaManual({formato:'image/png'}),img=new Image();img.src=png;img.width=330;img.alt=vista;document.querySelector('#capturas').append(img);
+  let pdf;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=pag=>{pdf=gerar(pag);return pdf};w.HTMLAnchorElement.prototype.click=function(){};d.querySelector('[data-baixar-pdf-manual]').click();await esperar(()=>pdf);await esperar(()=>!ed.ocupado());ok(pdf.size>1000,'PDF '+vista);w.endomapaGerarPdfA4=gerar;
+  ed.restaurar(inicial);await esperar(()=>!api.ocupado());ed.restaurar(salva);await esperar(()=>!api.ocupado());ok(await w.endomapaCapturarMapaManual({formato:'image/png'})===png,'Restaura '+vista);
+  quantidade++;r.textContent='Verificados '+quantidade+' mapas.';
+ }
+ ok(d.querySelector('[data-alterar-tubas="ooforectomia-bilateral"]').disabled,'Sem tubas no bilateral');
+ ok(d.querySelector('[data-alterar-tubas="kissing-ovaries"]').disabled,'Kissing preservado enquanto o fundo próprio está pendente');
+ ok(!d.querySelector('[data-alterar-tubas="sagital"]'),'Sagital preservado');
+ r.textContent='PASSOU: '+quantidade+' especiais; anatomia independente, lados ausentes, movimento, estado, PNG, PDF e restauração.';
+}catch(e){r.textContent='FALHOU: '+e.stack}};
+</script>

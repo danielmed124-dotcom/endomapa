@@ -1,0 +1,52 @@
+﻿[
+    {
+        "Teste":  "editor-manual-integrado-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: editor integrado, vistas coronal/sagital/ambas sincronizadas, lesões e seleção independentes, limpeza e download da vista ativa, geração de imagens removida, visitante e clínica nas duas vistas, nomes, medidas, captura PNG local, mapa vazio, navegação sem perder lesões e celular de 390 pixels. Nenhuma API."
+    },
+    {
+        "Teste":  "especial-sagital-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: sete especiais combinados ao sagital, seleção, lesões independentes, salvar/reabrir, mapas antigos, sete PDFs reais de duas páginas, novo mapa e celular."
+    },
+    {
+        "Teste":  "historico-manual-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: toda a biblioteca aceita; aderências salvas, reabertas e exportadas em PDF; imagem idêntica, caneta e dez vistas; histórico antigo compatível; lado da hidrosalpinge restaurado; duplicidade; erro de rede; conflito; alterações pendentes; contagem; busca e paginação; fontes externas rejeitadas; celular."
+    },
+    {
+        "Teste":  "modelos-sem-paciente-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: campos da paciente limpos em Meus mapas e Painel do dia; nomes dos campos e desenho preservados; edição e PNG/JPEG/PDF não salvam; apenas Salvar grava; modelos antigos compatíveis; teste com largura de celular."
+    },
+    {
+        "Teste":  "pdf-manual-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: PDF real A4, duas páginas coronal/sagital em ordem, exportação de cada vista, resolução original sem JPEG, nomes e medidas sem misturar vistas, captura imutável mesmo com edição e troca de perfil, duas identidades, prevenção de toque duplo, mapas vazios, recuperação após falha e botão utilizável em 390 pixels. Nenhuma API."
+    },
+    {
+        "Teste":  "tubas-teste-alternar-lados-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: troca imediata esquerda/direita/ambas em hidrosalpinge, espessamento, obstrução e salpingectomia; extensão, seleção, outras lesões e restauração preservadas."
+    },
+    {
+        "Teste":  "tubas-teste-especiais-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: 5 especiais; anatomia independente, lados ausentes, movimento, estado, PNG, PDF e restauração."
+    },
+    {
+        "Teste":  "tubas-teste-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: coronal, celular, movimento, ureteres, ovários, validação, PNG/JPEG/PDF, restauração, bloqueio Kissing e salvamento simulado de tubas sem lesões."
+    },
+    {
+        "Teste":  "tubas-teste-salpingectomia-lados-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: 320 px; retirada esquerda, direita e bilateral no coronal e nas três hidrosalpinges; restauração dos achados nativos; PDF somente com salpingectomia."
+    },
+    {
+        "Teste":  "tubas-teste-salpingectomia-resultado.html",
+        "Passou":  true,
+        "Resultado":  "PASSOU: ordem e alinhamento no celular; salpingectomia reversível; movimentação dos ovários em ambas as ooforectomias; ureteres; captura PNG; restauração e validação."
+    }
+]

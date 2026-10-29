@@ -1,0 +1,745 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head><base href="../../">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Monte mapas anatômicos manualmente no Endocarta."
+    />
+    <title>Área de trabalho | Endocarta</title>
+    <link rel="stylesheet" href="styles.css?v=cinza-transparencia-20261027" />
+    <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
+  </head>
+  <body class="">
+    <header class="topo">
+      <div class="topo__conteudo">
+        <a class="logo" href="index.html" aria-label="Página inicial do Endocarta">Endo<span>carta</span></a>
+        <div class="topo__acoes">
+          <span class="area-atual">Área protegida</span>
+          <button class="botao-sair" type="button" data-sair>Sair</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="conteudo">
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="novo-mapa"
+        aria-labelledby="titulo-novo-mapa"
+      >
+        <header class="cabecalho-tela">
+          <h1 class="titulo-tela" id="titulo-novo-mapa">Novo mapa</h1>
+          <div class="acoes acoes--novo-mapa">
+            <button class="botao" type="button" data-tela-alvo="editor-manual">Montar mapa de endometriose manualmente</button>
+            <button class="botao" type="button" data-tela-alvo="fusao-hycosy">Fusão de imagens 3D/Hycosy</button>
+          </div>
+        </header>
+
+        <div class="resumo-contexto" aria-label="Médico responsável pelo mapa">
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado></strong>
+          </div>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="duvidas"
+        aria-labelledby="titulo-duvidas"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Confirmação médica</div>
+          <h1 class="titulo-tela" id="titulo-duvidas">Confirme uma dúvida</h1>
+          <p class="texto-apoio">
+            O exemplo repetiu o lado direito. O mapa não pode avançar com uma lateralidade duvidosa.
+          </p>
+        </header>
+
+        <article class="duvida">
+          <div class="duvida__topo">
+            <span class="duvida__rotulo">Pergunta</span>
+            <span class="etiqueta-estado">Respondida</span>
+          </div>
+
+          <p class="duvida__pergunta">
+            A lesão de 0,6 × 0,2 cm está no ligamento uterossacro esquerdo?
+          </p>
+
+          <div class="campo">
+            <label class="campo__rotulo" for="resposta">Resposta</label>
+            <input
+              id="resposta"
+              name="resposta"
+              type="text"
+              value="Sim, corrigir a segunda lesão para o lado esquerdo."
+            />
+          </div>
+        </article>
+
+        <div class="resumo-contexto" aria-label="Datas da dúvida demonstrativa">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Criada em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:41</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Respondida em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:42</strong>
+          </div>
+        </div>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-tela-alvo="revisao"
+          >
+            Confirmar resposta e revisar mapas
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">
+            Voltar ao início
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="revisao"
+        aria-labelledby="titulo-revisao"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Revisão médica</div>
+          <h1 class="titulo-tela" id="titulo-revisao">Confira os mapas</h1>
+          <p class="texto-apoio">
+            Revise as duas vistas e os achados estruturados antes de confirmar o resultado.
+          </p>
+        </header>
+
+        <div class="resumo-contexto" aria-label="Estado do mapa demonstrativo">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Status</span>
+            <strong class="resumo-contexto__valor estado">Aguardando confirmação</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
+          </div>
+        </div>
+
+        <section class="secao-dados" aria-labelledby="titulo-mapas-base">
+          <h2 class="secao-dados__titulo" id="titulo-mapas-base">Mapas-base</h2>
+          <p class="texto-apoio">
+            A montagem futura começará por estas imagens sem lesões. A assinatura acompanha o médico selecionado.
+          </p>
+
+          <div class="mapas-grid">
+            <figure class="mapa-visual" data-vista="coronal">
+              <img
+                src="assets/mapa-base-coronal-aberto.png?v=reto-20261019"
+                data-mapa-base
+                data-src-clinica="assets/mapa-base-coronal-aberto.png?v=reto-20261019"
+                data-src-visitante="assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019"
+                alt="Mapa-base anatômico coronal sem lesões"
+              />
+              <div class="camada-lesoes" data-camada-lesoes="coronal" aria-label="Lesões representadas na vista coronal"></div>
+              <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
+                <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+              </span>
+              <figcaption>Mapa-base · vista coronal</figcaption>
+            </figure>
+
+            <figure class="mapa-visual" data-vista="sagital">
+              <img
+                src="assets/mapa-base-sagital-novo-suave.png"
+                data-mapa-base
+                data-src-clinica="assets/mapa-base-sagital-novo-suave.png"
+                data-src-visitante="assets/mapa-base-sagital-novo-visitante-suave.png"
+                alt="Mapa-base anatômico sagital sem lesões"
+              />
+              <div class="camada-lesoes" data-camada-lesoes="sagital" aria-label="Lesões representadas na vista sagital"></div>
+              <span class="assinatura-mapa assinatura-caligrafica" data-assinatura-mapa>
+                <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+              </span>
+              <figcaption>Mapa-base · vista sagital</figcaption>
+            </figure>
+          </div>
+
+        </section>
+
+        <section class="secao-dados" aria-labelledby="titulo-lesoes">
+          <h2 class="secao-dados__titulo" id="titulo-lesoes">Lesões interpretadas</h2>
+          <p class="texto-apoio">
+            As lesões abaixo vieram do ditado confirmado. Confira os dados e a posição antes de confirmar o mapa.
+          </p>
+          <div class="lista-achados" data-lista-lesoes-mapa></div>
+        </section>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-tela-alvo="conclusao"
+          >
+            Confirmar mapa
+          </button>
+          <button
+            class="botao botao--secundario"
+            type="button"
+            data-mensagem="A correção por voz será conectada em uma etapa futura."
+          >
+            Corrigir por voz
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="duvidas">
+            Voltar à dúvida
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao tela"
+        data-tela="conclusao"
+        aria-labelledby="titulo-conclusao"
+        hidden
+      >
+        <div class="sucesso" aria-hidden="true">✓</div>
+        <div class="selo">Mapa confirmado</div>
+        <h1 class="titulo-tela" id="titulo-conclusao">PDF pronto para impressão</h1>
+        <p class="texto-apoio">
+          Esta conclusão é demonstrativa. Nenhum arquivo real foi criado ou salvo hoje.
+        </p>
+
+        <div class="resumo-contexto" aria-label="Dados finais do mapa demonstrativo">
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Status</span>
+            <strong class="resumo-contexto__valor estado">PDF gerado</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">Confirmado em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:44</strong>
+          </div>
+          <div class="resumo-contexto__linha">
+            <span class="resumo-contexto__rotulo">PDF gerado em</span>
+            <strong class="resumo-contexto__valor">23/07/2026, 09:44</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-clinica>
+            <span class="resumo-contexto__rotulo">Clínica</span>
+            <strong class="resumo-contexto__valor">Centrus MG</strong>
+          </div>
+          <div class="resumo-contexto__linha" data-identificacao-medico>
+            <span class="resumo-contexto__rotulo">Médico responsável</span>
+            <strong class="resumo-contexto__valor" data-medico-selecionado>Dr. Daniel Martins</strong>
+          </div>
+        </div>
+
+        <div class="assinatura-demo assinatura-caligrafica" data-assinatura-final>
+          <span class="assinatura__inicial">D</span><span class="assinatura__restante">aniel</span>
+        </div>
+
+        <div class="acoes">
+          <button
+            class="botao"
+            type="button"
+            data-mensagem="O PDF real será conectado em uma etapa futura. Hoje esta tela é somente uma simulação."
+          >
+            Visualizar PDF
+          </button>
+          <button class="botao botao--secundario" type="button" data-tela-alvo="novo-mapa">
+            Iniciar outro mapa
+          </button>
+          <button class="link-voltar" type="button" data-tela-alvo="revisao">
+            Voltar à revisão
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="meus-mapas"
+        aria-labelledby="titulo-meus-mapas"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Histórico protegido</div>
+          <h1 class="titulo-tela" id="titulo-meus-mapas">Meus mapas</h1>
+          <p class="texto-apoio">
+            Sua biblioteca de mapas escolhidos. Abra, organize a ordem ou exclua os que não quiser manter.
+          </p>
+        </header>
+
+        <p
+          class="mensagem-formulario"
+          role="status"
+          aria-live="polite"
+          data-estado-lista-mapas
+        >
+          Carregando seus mapas...
+        </p>
+
+        <button
+          class="botao botao--secundario botao--tentar-lista"
+          type="button"
+          data-tentar-carregar-mapas
+          hidden
+        >
+          Tentar novamente
+        </button>
+
+        <div class="lista-mapas-salvos" data-lista-mapas></div>
+        <button class="botao botao--secundario" type="button" data-mais-mapas hidden>Carregar mais mapas</button>
+
+        <div class="acoes">
+          <button class="botao" type="button" data-tela-alvo="novo-mapa">
+            Criar novo mapa
+          </button>
+        </div>
+      </section>
+
+      <section
+        class="cartao cartao--alinhado tela"
+        data-tela="painel-dia"
+        aria-labelledby="titulo-painel-dia"
+        hidden
+      >
+        <header class="cabecalho-tela">
+          <div class="selo">Visão de hoje</div>
+          <h1 class="titulo-tela" id="titulo-painel-dia">Painel do dia</h1>
+          <p class="texto-apoio">
+            Montagens salvas ou atualizadas hoje e PDFs gerados na sua conta. O dia segue o horário do seu aparelho.
+          </p>
+        </header>
+
+        <p
+          class="mensagem-formulario"
+          role="status"
+          aria-live="polite"
+          data-estado-painel
+        >
+          Carregando o painel do dia...
+        </p>
+
+        <button
+          class="botao botao--secundario"
+          type="button"
+          data-tentar-carregar-painel
+          hidden
+        >
+          Tentar novamente
+        </button>
+
+        <div data-conteudo-painel hidden>
+          <section class="painel-total" aria-label="Total de mapas salvos hoje">
+            <span class="painel-total__rotulo">Mapas salvos hoje</span>
+            <strong class="painel-total__numero" data-total-mapas-hoje>0</strong>
+            <span class="painel-total__data" data-data-painel></span>
+          </section>
+
+          <section class="painel-total" aria-label="PDFs preparados hoje">
+            <span class="painel-total__rotulo">PDFs gerados hoje</span>
+            <strong class="painel-total__numero" data-contador-pdf>0</strong>
+            <p class="texto-apoio">Cada geração concluída conta uma vez, inclusive novas cópias. Não confirma impressão ou salvamento no aparelho.</p>
+          </section>
+          <label class="campo painel-busca">
+            <span class="campo__rotulo">Buscar mapas pelo nome</span>
+            <input
+              type="search"
+              inputmode="search"
+              placeholder="Ex.: exemplo coronal"
+              data-busca-painel
+            />
+          </label>
+
+          <p class="mensagem-formulario" data-estado-lista-painel hidden></p>
+          <div class="lista-mapas-salvos" data-lista-painel></div>
+        </div>
+      </section>
+      <section class="editor-manual tela" data-tela="editor-manual" aria-labelledby="titulo-editor-manual" hidden>
+      <header class="editor-manual__cabecalho">
+        <div class="selo">Editor manual do Endocarta</div>
+        <h1 class="titulo-tela" id="titulo-editor-manual">Monte o mapa manualmente</h1>
+        <p class="texto-apoio">Escolha uma lesão-padrão, adicione ao mapa e ajuste com o dedo.</p>
+        <fieldset class="opcoes-vistas">
+          <legend>Vistas do mapa</legend>
+          <label class="opcao-vista">Coronal <input type="radio" name="vistas-editor" value="coronal" /></label>
+          <label class="opcao-vista">Sagital <input type="radio" name="vistas-editor" value="sagital" /></label>
+          <label class="opcao-vista">Ambas <input type="radio" name="vistas-editor" value="ambas" checked /></label>
+          <div class="opcao-vista opcao-vista--especiais">
+            <label class="opcao-vista__titulo">Mapas especiais <input type="radio" name="vistas-editor" value="especiais" aria-controls="mapa-especial" /></label>
+            <label class="rotulo-mapa-especial" for="mapa-especial">Selecione o mapa</label>
+            <select id="mapa-especial" data-mapa-especial>
+              <option value="ooforectomia-direita">Ooforectomia à direita</option>
+              <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
+              <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
+              <option value="kissing-ovaries">Kissing Ovaries</option>
+              <option value="hidrosalpinge">Hidrosalpinge</option>
+            </select>
+            <div data-opcoes-hidrosalpinge hidden>
+              <label class="rotulo-mapa-especial" for="lado-hidrosalpinge">Lado da hidrosalpinge</label>
+              <select id="lado-hidrosalpinge" data-lado-hidrosalpinge>
+                <option value="hidrosalpinge-direita">Direita</option>
+                <option value="hidrosalpinge-esquerda">Esquerda</option>
+                <option value="hidrosalpinge-bilateral">Bilateral</option>
+              </select>
+            </div>
+          </div>
+        </fieldset>
+        <p class="texto-apoio">Em ambas, selecione a vista que deseja editar. Monte e baixe cada vista separadamente.</p>
+        <p class="mensagem-formulario" data-vista-em-edicao role="status">Adicionando lesões à vista coronal.</p>
+        <button class="botao botao--secundario" type="button" data-alternar-anotacoes hidden aria-pressed="false">Ocultar anotações das lesões</button>
+      </header>
+
+      <section class="biblioteca-lesoes" aria-labelledby="titulo-biblioteca">
+        <h2 class="secao-dados__titulo" id="titulo-biblioteca">Lesões disponíveis</h2>
+        <div class="biblioteca-lesoes__lista">
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometriose-isolada-referencia-transparente.png" data-nome="Ligamento uterossacro" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/endometriose-isolada-referencia-transparente.png" alt="" />
+            <span>Ligamento uterossacro</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/retrocervical-manual-transparente.png" data-nome="Retrocervical" data-proporcao="0.9624413145539906" data-sem-recorte="true" data-tamanho-inicial="45" data-giro-inicial="31" data-tamanho-minimo="5">
+            <img src="assets/lesoes/retrocervical-manual-transparente.png" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Retrocervical</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal.png" data-nome="Intestinal" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="160" data-tamanho-minimo="5">
+            <img src="assets/lesoes/intestinal.png" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Intestinal</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/adenomiose-1-referencia.png" data-nome="Adenomiose" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50" data-tamanho-minimo="5">
+            <img src="assets/lesoes/adenomiose-1-referencia.png" alt="" />
+            <span>Adenomiose</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/somp-direito.png?v=1" data-nome="SOMP direito" data-proporcao="0.72680412371134" data-sem-recorte="true" data-tamanho-inicial="100" data-tamanho-minimo="5" data-x-inicial="70.48802946593" data-y-inicial="49.9309392265193" data-vista-inicial="coronal">
+            <img src="assets/lesoes/somp-direito.png?v=1" alt="" style="object-fit: contain; border-radius: 0" />
+            <span style="white-space: nowrap">SOMP<br />direito</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/somp-esquerdo.png?v=1" data-nome="SOMP esquerdo" data-proporcao="0.7447916666666666" data-sem-recorte="true" data-tamanho-inicial="95" data-tamanho-minimo="5" data-x-inicial="29.97237569" data-y-inicial="48.89502762" data-vista-inicial="coronal">
+            <img src="assets/lesoes/somp-esquerdo.png?v=1" alt="" style="object-fit: contain; border-radius: 0" />
+            <span style="white-space: nowrap">SOMP<br />esquerdo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/foliculo.png?v=azul-70" data-nome="Folículo" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="25" data-tamanho-minimo="5">
+            <img src="assets/lesoes/foliculo.png?v=azul-70" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Folículo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/cisto-referencia.png" data-nome="Cisto" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/cisto-referencia.png" alt="" />
+            <span>Cisto</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometrioma-referencia.png" data-nome="Endometrioma" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/endometrioma-referencia.png" alt="" />
+            <span>Endometrioma</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/corpo-luteo.png" data-nome="Corpo Lúteo" data-proporcao="1.5" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/corpo-luteo.png" alt="" style="object-fit: contain; border-radius: 0;" />
+            <span>Corpo Lúteo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/cisto-hemorragico-referencia.png" data-nome="Cisto hemorrágico" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/cisto-hemorragico-referencia.png" alt="" />
+            <span>Cisto hemorrágico</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/teratoma-referencia.png" data-nome="Teratoma" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
+            <img src="assets/lesoes/teratoma-referencia.png" alt="" />
+            <span>Teratoma</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-1-referencia.png" data-nome="Leiomioma 1" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/mioma-1-referencia.png" alt="" />
+            <span>Leiomioma 1</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-2-referencia.png" data-nome="Leiomioma 2" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/mioma-2-referencia.png" alt="" />
+            <span>Leiomioma 2</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-3-referencia.png" data-nome="Leiomioma 3" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/mioma-3-referencia.png" alt="" />
+            <span>Leiomioma 3</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-integrado-estudo-v1.png" data-nome="Leiomioma endocavitário" data-proporcao="1.5" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/mioma-integrado-estudo-v1.png" alt="" />
+            <span>Leiomioma endocavitário</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-pediculado-referencia.png" data-nome="Leiomioma pediculado" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+            <img src="assets/lesoes/mioma-pediculado-referencia.png" alt="" />
+            <span>Leiomioma pediculado</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/polipo-referencia.png" data-nome="Pólipo" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50" data-tamanho-minimo="5">
+            <img src="assets/lesoes/polipo-referencia.png" alt="" />
+            <span>Pólipo</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/diu-cobre-referencia.png" data-nome="DIU de Cobre" data-proporcao="0.800285306704708" data-sem-recorte="true" data-tamanho-inicial="120">
+            <img src="assets/lesoes/diu-cobre-referencia.png" alt="" />
+            <span>DIU de Cobre</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/diu-hormonal-referencia.png" data-nome="DIU hormonal" data-proporcao="1.77683315621679" data-sem-recorte="true" data-tamanho-inicial="205">
+            <img src="assets/lesoes/diu-hormonal-referencia.png" alt="" />
+            <span>DIU hormonal</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-1-marrom-escuro.png?v=b54e5f4d" data-nome="Aderências 1" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="75">
+            <img src="assets/lesoes/aderencia-1-marrom-escuro.png?v=b54e5f4d" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Aderências 1</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-2-marrom-escuro.png?v=605beae8" data-nome="Aderência 2" data-proporcao="0.9624413145539906" data-sem-recorte="true" data-tamanho-inicial="80">
+            <img src="assets/lesoes/aderencia-2-marrom-escuro.png?v=605beae8" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Aderência 2</span>
+          </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/aderencia-3-marrom-escuro.png?v=bba75ab6" data-nome="Aderência 3" data-proporcao="0.9624413145539906" data-sem-recorte="true" data-tamanho-inicial="70">
+            <img src="assets/lesoes/aderencia-3-marrom-escuro.png?v=bba75ab6" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Aderência 3</span>
+          </button>
+        </div>
+        <p class="mensagem-formulario" data-mensagem-editor>Toque em um modelo para acrescentá-lo ao mapa.</p>
+      </section>
+
+      <section class="editor-manual__area" aria-label="Mapas para edição manual">
+        <label class="opcao-escala-cinza">
+          <input type="checkbox" data-mapa-escala-cinza aria-describedby="ajuda-escala-cinza" />
+          Mapa em escala de cinza
+        </label>
+        <div class="controle-transparencia" data-painel-transparencia-cinza hidden>
+ <label for="transparencia-cinza">Transparência do mapa <output for="transparencia-cinza" data-valor-transparencia-cinza>0%</output></label>
+ <input id="transparencia-cinza" data-transparencia-cinza type="range" min="0" max="100" step="1" value="0" aria-describedby="ajuda-transparencia" disabled>
+ <p id="ajuda-transparencia">0%: mapa inteiro visível. 100%: anatomia invisível sobre o fundo branco. Lesões e textos permanecem visíveis.</p>
+</div>
+<p class="texto-apoio" id="ajuda-escala-cinza">Aplica-se a todas as vistas e aos arquivos PNG, JPEG e PDF. As lesões permanecem coloridas.</p>
+        <section class="vista-manual" data-vista-manual="coronal" aria-labelledby="titulo-mapa-manual">
+          <h2 class="secao-dados__titulo" id="titulo-mapa-manual">Vista coronal</h2>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="coronal" tabindex="0" aria-label="Mapa coronal. Toque ou selecione pelo teclado para editar esta vista.">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapa-base-coronal-aberto.png?v=reto-20261019" data-src-visitante="assets/mapa-base-coronal-aberto-visitante.png?v=reto-20261019" alt="Mapa anatômico coronal sem lesões" draggable="false" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="coronal" aria-label="Lesões adicionadas ao mapa coronal"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="sagital" aria-labelledby="titulo-mapa-manual-sagital">
+          <h2 class="secao-dados__titulo" id="titulo-mapa-manual-sagital">Vista sagital</h2>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="sagital" tabindex="0" aria-label="Mapa sagital. Toque ou selecione pelo teclado para editar esta vista.">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapa-base-sagital-novo-visitante-suave.png" data-mapa-base data-src-clinica="assets/mapa-base-sagital-novo-suave.png" data-src-visitante="assets/mapa-base-sagital-novo-visitante-suave.png" alt="Mapa anatômico sagital sem lesões" draggable="false" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="sagital" aria-label="Lesões adicionadas ao mapa sagital"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="utero-retrofletido" aria-labelledby="titulo-utero-retrofletido" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-utero-retrofletido">Útero Retrofletido</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="utero-retrofletido" aria-pressed="false">Editar Útero Retrofletido</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="utero-retrofletido">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/utero-retrofletido-neutro.png" data-mapa-base data-src-clinica="assets/mapas-especiais/utero-retrofletido-centrus.png" data-src-visitante="assets/mapas-especiais/utero-retrofletido-neutro.png" alt="Mapa anatômico: Útero Retrofletido" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="utero-retrofletido" aria-label="Lesões adicionadas ao mapa Útero Retrofletido"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-direita" aria-labelledby="titulo-ooforectomia-direita" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-direita">Ooforectomia à direita</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-direita" aria-pressed="false">Editar Ooforectomia à direita</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-direita">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/ooforectomias-v2/ooforectomia-direita-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/ooforectomias-v2/ooforectomia-direita-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/ooforectomias-v2/ooforectomia-direita-neutro.png?v=reto-20261019" alt="Mapa anatômico: Ooforectomia à direita" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-direita" aria-label="Lesões adicionadas ao mapa Ooforectomia à direita"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-esquerda" aria-labelledby="titulo-ooforectomia-esquerda" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-esquerda">Ooforectomia à esquerda</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-esquerda" aria-pressed="false">Editar Ooforectomia à esquerda</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-esquerda">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/ooforectomias-v2/ooforectomia-esquerda-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/ooforectomias-v2/ooforectomia-esquerda-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/ooforectomias-v2/ooforectomia-esquerda-neutro.png?v=reto-20261019" alt="Mapa anatômico: Ooforectomia à esquerda" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-esquerda" aria-label="Lesões adicionadas ao mapa Ooforectomia à esquerda"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="ooforectomia-bilateral" aria-labelledby="titulo-ooforectomia-bilateral" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-ooforectomia-bilateral">Ooforectomia bilateral</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="ooforectomia-bilateral" aria-pressed="false">Editar Ooforectomia bilateral</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="ooforectomia-bilateral">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/bilateral-cor-v3/ooforectomia-bilateral-neutro.png?v=reto-20261019" alt="Mapa anatômico: Ooforectomia bilateral" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="ooforectomia-bilateral" aria-label="Lesões adicionadas ao mapa Ooforectomia bilateral"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="kissing-ovaries" aria-labelledby="titulo-kissing-ovaries" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-kissing-ovaries">Kissing Ovaries</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="kissing-ovaries" aria-pressed="false">Editar Kissing Ovaries</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="kissing-ovaries">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/kissing-ovaries-cor-v2/kissing-ovaries-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/kissing-ovaries-cor-v2/kissing-ovaries-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/kissing-ovaries-cor-v2/kissing-ovaries-neutro.png?v=reto-20261019" alt="Mapa anatômico: Kissing Ovaries" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="kissing-ovaries" aria-label="Lesões adicionadas ao mapa Kissing Ovaries"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-direita" aria-labelledby="titulo-hidrosalpinge-direita" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-direita">Hidrosalpinge direita</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-direita" aria-pressed="false">Editar Hidrosalpinge direita</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-direita">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-direita-neutro.png?v=reto-20261019" alt="Mapa anatômico: Hidrosalpinge direita" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-direita" aria-label="Lesões adicionadas ao mapa Hidrosalpinge direita"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-esquerda" aria-labelledby="titulo-hidrosalpinge-esquerda" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-esquerda">Hidrosalpinge esquerda</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-esquerda" aria-pressed="false">Editar Hidrosalpinge esquerda</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-esquerda">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-esquerda-neutro.png?v=reto-20261019" alt="Mapa anatômico: Hidrosalpinge esquerda" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-esquerda" aria-label="Lesões adicionadas ao mapa Hidrosalpinge esquerda"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="hidrosalpinge-bilateral" aria-labelledby="titulo-hidrosalpinge-bilateral" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-hidrosalpinge-bilateral">Hidrosalpinge bilateral</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="hidrosalpinge-bilateral" aria-pressed="false">Editar Hidrosalpinge bilateral</button>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="hidrosalpinge-bilateral">
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-neutro.png?v=reto-20261019" data-mapa-base data-src-clinica="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-centrus.png?v=reto-20261019" data-src-visitante="assets/mapas-especiais/hidrosalpinge/hidrosalpinge-bilateral-neutro.png?v=reto-20261019" alt="Mapa anatômico: Hidrosalpinge bilateral" draggable="false" loading="lazy" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="hidrosalpinge-bilateral" aria-label="Lesões adicionadas ao mapa Hidrosalpinge bilateral"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+      </section>
+
+      <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
+        <div class="controles-lesao__topo">
+          <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
+          <strong data-nome-lesao>Lesão selecionada</strong>
+          <button class="controles-lesao__alternar" type="button" data-alternar-controles aria-expanded="true" aria-controls="conteudo-controles-lesao">Recolher</button>
+        </div>
+        <div class="controles-lesao__conteudo" id="conteudo-controles-lesao">
+        <div class="controles-lesao__atalhos" aria-label="Ajustes rápidos">
+          <button type="button" data-girar="-10" aria-label="Girar para a esquerda">↶<span>Esquerda</span></button>
+          <button type="button" data-girar="10" aria-label="Girar para a direita">↷<span>Direita</span></button>
+          <button type="button" data-redimensionar="-10" aria-label="Diminuir lesão">−<span>Diminuir</span></button>
+          <button type="button" data-redimensionar="10" aria-label="Aumentar lesão">+<span>Aumentar</span></button>
+        </div>
+        <label class="calibracao-mapa__controle">
+          <span>Girar <strong data-valor-giro>0°</strong></span>
+          <input type="range" min="-180" max="180" step="1" value="0" data-controle-giro />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Tamanho <strong data-valor-tamanho>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-tamanho />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Eixo X · horizontal <strong data-valor-eixo-x>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-eixo-x />
+        </label>
+        <label class="calibracao-mapa__controle">
+          <span>Eixo Y · vertical <strong data-valor-eixo-y>100%</strong></span>
+          <input type="range" min="40" max="250" step="5" value="100" data-controle-eixo-y />
+        </label>
+        <fieldset class="medidas-editor">
+          <legend>Medidas em centímetros</legend>
+          <label class="medidas-editor__nome">
+            <span>Nome da lesão no mapa · opcional</span>
+            <input type="text" maxlength="60" placeholder="Ex.: Endometrioma esquerdo" data-controle-nome-lesao />
+          </label>
+          <label>
+            <span>1ª medida</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 1,0" data-medida="1" />
+          </label>
+          <label>
+            <span>2ª medida</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 0,3" data-medida="2" />
+          </label>
+          <label>
+            <span>3ª medida · opcional</span>
+            <input type="text" inputmode="decimal" placeholder="Ex.: 0,5" data-medida="3" />
+          </label>
+        </fieldset>
+        <button class="botao botao--perigo" type="button" data-remover-lesao>Excluir esta lesão</button>
+        </div>
+      </section>
+
+      <div class="acoes editor-manual__acoes">
+        <label class="campo">
+          <span class="campo__rotulo">Nome da montagem</span>
+          <input type="text" maxlength="100" data-titulo-montagem placeholder="Ex.: exemplo coronal" />
+        </label>
+        <button class="botao" type="button" data-salvar-manual>Salvar na biblioteca</button>
+        <button class="botao botao--secundario" type="button" data-novo-manual>Iniciar novo mapa</button>
+        <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
+        <p class="texto-apoio">Somente Salvar na biblioteca guarda esta montagem em Meus mapas. Baixar PDF, PNG ou JPEG não salva o mapa na biblioteca.</p>
+        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
+        <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
+        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
+        <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
+        <label class="exportacao-divulgacao" data-opcao-divulgacao hidden>
+          <input type="checkbox" data-exportar-divulgacao aria-describedby="ajuda-exportar-divulgacao" />
+          <span>Exportar para divulgação</span>
+        </label>
+        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para baixar PNG, JPEG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
+        <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
+        <button class="botao botao--secundario" type="button" data-baixar-jpeg-manual>Baixar montagem manual (JPEG)</button>
+        <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
+      </div>
+      </section>
+      <section class="tela fusao-integrada" data-tela="fusao-hycosy" aria-label="Fusão de imagens 3D/Hycosy" hidden>
+        <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
+        <p data-fusao-estado role="status">Abra a fusão para carregar as ferramentas.</p>
+        <button class="botao" type="button" data-fusao-repetir hidden>Tentar carregar novamente</button>
+        <div data-fusao-host></div>
+      </section>
+    </main>
+
+    <nav class="navegacao" aria-label="Navegação principal">
+      <div class="navegacao__conteudo navegacao__conteudo--app">
+        <button class="navegacao__item" type="button" data-tela-alvo="novo-mapa">
+          Novo mapa
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="editor-manual">
+          Editor manual
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="meus-mapas">
+          Meus mapas
+        </button>
+        <button class="navegacao__item" type="button" data-tela-alvo="painel-dia">
+          Painel do dia
+        </button>
+      </div>
+    </nav>
+
+    <p class="aviso" role="status" aria-live="polite" data-aviso hidden></p>
+
+    <script>window.endomapaMedico={nome:"Teste local",assinatura:"Teste local"};</script><script src="prototipo.js?v=endocarta-b56fab889c40"></script>
+    <script src="orgaos-deformar.js?v=1"></script>
+    <script src="orgaos-motor.js?v=tubas-20261029"></script>
+    <script src="orgaos-editor.js?v=tubas-20261029"></script>
+    <script src="utero-motor.js?v=2"></script>
+    <script src="utero-editor.js?v=2"></script>
+    <script src="mapa-visual.js?v=20260803-adenomiose3"></script>
+    <script src="assets/vendor/jspdf-4.2.1.umd.min.js"></script>
+    <script src="pdf-manual.js?v=endocarta-8cbab657ce1a"></script>
+    <script src="editor-documento.js?v=paciente-em-branco-1"></script>
+    <script src="tubas/modelos.js?v=tubas-20261029"></script>
+    <script src="tubas/hidrosalpinge.js?v=tubas-20261029"></script>
+    <script src="tubas/obstrucao.js?v=tubas-20261029"></script>
+    <script src="tubas/espessamento.js?v=tubas-20261029"></script>
+    <script src="tubas/movimento.js?v=tubas-20261029"></script>
+    <script src="tubas/motor.js?v=tubas-20261029"></script>
+    <script src="tubas/editor.js?v=tubas-20261029"></script>
+    <script src="editor-manual.js?v=tubas-20261029"></script>
+    <script src="fusao-integracao.js?v=jpeg-1"></script>
+  <script>document.querySelector('[data-tela-alvo="editor-manual"]').click();</script></body>
+</html>

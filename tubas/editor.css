@@ -1,0 +1,22 @@
+.mapa-editor__barra:has(.mapa-editor__orgaos-linha){flex-wrap:wrap}
+.mapa-editor__barra .mapa-editor__orgaos-acoes{flex:1 1 100%;display:block}
+.mapa-editor__orgaos-linha{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.mapa-editor__orgaos-linha.com-tubas{grid-template-columns:repeat(3,minmax(0,1fr))}
+.mapa-editor__orgaos-acoes [data-restaurar-ovarios]{margin-top:6px}
+.mapa-editor__orgaos-linha .botao{width:100%;margin:0}
+.tubas-painel{padding:8px;background:var(--fundo);color:var(--texto);border:1px solid var(--borda);border-radius:10px;margin-bottom:8px}
+.tubas-painel .tubas-alteracoes{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.tubas-painel .tubas-lados{display:flex;gap:6px;margin-top:6px}
+.tubas-painel .tubas-lados button{flex:1;min-width:0}
+.tubas-painel .botao{min-height:44px;padding:6px 8px;font-size:.8rem;white-space:normal;min-width:0}
+.tubas-painel .botao--secundario{background:var(--superficie-alta);color:var(--texto);border-color:var(--borda);box-shadow:none}
+.tubas-painel .tubas-alteracoes .botao{font-size:.72rem;padding:6px 2px;overflow-wrap:anywhere;hyphens:auto}
+.tubas-painel button[aria-pressed=true]{background:var(--dourado);color:#0b0f0d}
+.tubas-painel p{font-size:.8rem;color:var(--texto);margin:8px 0;line-height:1.4}
+.tubas-restaurar{display:flex;gap:6px;flex-wrap:wrap}.tubas-restaurar button{flex:1}
+.tubas-marcadores{position:absolute;inset:0;pointer-events:none;z-index:7}
+.tubas-marcador{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;padding:0;border:0;background:transparent;pointer-events:auto;touch-action:none;user-select:none;display:grid;place-items:center}
+.tubas-marcador span{position:relative;display:grid;place-items:center;width:29px;height:29px;border-radius:50%;border:2px solid white;box-shadow:0 1px 5px #0008;background:#176b57;color:white;font:700 14px Arial}
+.tubas-marcador.fim span{background:#a84d27}.tubas-marcador.tuba span{background:#6651a5;border-radius:7px}.tubas-marcador.posicao span{background:#2368a2}
+.tubas-marcador::before{content:'';position:absolute;left:22px;top:21px;width:var(--guia-comprimento,0px);transform-origin:left center;transform:rotate(var(--guia-angulo,0rad));border-top:1px solid #176b57;pointer-events:none}
+.tubas-painel [hidden]{display:none!important}
