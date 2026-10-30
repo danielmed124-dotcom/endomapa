@@ -1,0 +1,17 @@
+IDENTIDADE ANA PAULA — 29/10/2026
+
+Solicitação: incluir a logo fornecida e alterar a assinatura somente para apcar@uol.com.br; publicar e entregar prévia e dois PDFs (colorido e escala de cinza).
+
+Logo original PNG 3544 × 3544, com transparência, preservada byte a byte em assets/clinicas/ana-paula.png. SHA256 D80B1EA341F8398FA99BBD7B450CB2B421442ED653C7039C3DACBB1C02821143. Não houve geração/edição da imagem. Posição e tamanho seguem o padrão existente das logos personalizadas: x79,9%, y1,8%, largura17,5%, proporções originais.
+
+Vínculo pelo e-mail autenticado, com igualdade exata após normalizar espaços externos e maiúsculas. Nenhum outro usuário recebe esta logo. Recursos atuais de Semeare, Granvittà, Centrus e contas neutras preservados.
+
+Banco: atualizado somente o campo assinatura da conta confirmada, de ANA para Dra. Ana Paula Carvalhal Moura. Operação condicionada ao e-mail, identificadores e valor anterior, com cancelamento se não alterasse exatamente um cadastro. Nome, título, clínica e estado ativo preservados. Nenhuma chave secreta inserida no site.
+
+Testes locais: Ana Paula passou em dez vistas, composição da logo transparente, PNG/JPEG/PDF, celular390px, troca de perfil, contas neutras, Centrus, Semeare, Granvittà e normalização de e-mail. Testes existentes Semeare e Granvittà também concluíram com Conferido. Teste de interface usa banco simulado; a atualização da assinatura foi confirmada separadamente no cadastro real.
+
+Prévia estática: tests/ana-paula-previa.html.
+PDFs: assets/previas/ana-paula/ana-paula-colorido.pdf e ana-paula-cinza.pdf.
+Exemplos sem dados de pacientes e sem lesões, produzidos pelo gerador A4 do aplicativo. Escala de cinza afeta apenas a anatomia; identidade e assinatura mantêm as cores existentes.
+
+Entrega isolada sobre 730d36b em .ferramentas-publicacao/publicacao-ana-paula-20261029. Outros trabalhos pendentes fora da publicação.

@@ -1,0 +1,72 @@
+<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conferência da identidade de Ana Paula</title>
+<pre id="resultado">Executando</pre><img id="previa" alt="Prévia do mapa de Ana Paula" style="max-width:390px;width:100%"><iframe title="Teste em celular" style="width:390px;height:844px"></iframe>
+<script>
+(async()=>{
+ const saida=document.querySelector('#resultado'),frame=document.querySelector('iframe');
+ const ok=(v,m)=>{if(!v)throw Error(m)};
+ const esperar=async f=>{for(let n=0;n<400;n++){if(f())return;await new Promise(r=>setTimeout(r,25))}throw Error('Tempo excedido')};
+ const assinatura='Dra. Ana Paula Carvalhal Moura';
+ const html=await(await fetch('../app.html')).text();
+ async function abrir(email,clinica=null){
+  const doc=new DOMParser().parseFromString(html,'text/html');doc.querySelectorAll('script,base').forEach(e=>e.remove());
+  const base=doc.createElement('base');base.href=new URL('../',location.href).href;doc.head.prepend(base);
+  const ambiente=doc.createElement('script');
+  ambiente.textContent=`history.replaceState=function(){};window.ENDOMAPA_SUPABASE={};window.supabase={createClient:()=>({auth:{getUser:async()=>({data:{user:{id:'teste',email:${JSON.stringify(email)}}}})},from:()=>({select:()=>({eq:()=>({single:async()=>({data:{id:'teste',nome:'Ana Paula Carvalhal Moura',titulo:'Dra.',assinatura:${JSON.stringify(email.trim().toLowerCase()==='apcar@uol.com.br'?assinatura:'Assinatura preservada')},ativo:'sim',clinica_id:${JSON.stringify(clinica)}}})})})})})};`;
+  doc.head.append(ambiente);
+  for(const src of ['prototipo.js','app-auth.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=doc.createElement('script');s.src=src;doc.body.append(s)}
+  const pronto=new Promise(r=>frame.onload=r);frame.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;await pronto;
+  const w=frame.contentWindow;await esperar(()=>w.endomapaMedico);await Promise.all([w.endomapaLogoAnaPaulaPronta,w.endomapaLogoGranvittaPronta,w.endomapaLogoSemearePronta]);
+  w.endomapaAbrirTela('editor-manual');return w;
+ }
+ try{
+  saida.textContent='Executando: abrir perfil';
+  let w=await abrir('apcar@uol.com.br'),d=w.document;
+  saida.textContent='Executando: perfil carregado';
+  ok(w.endomapaMedico.logo_ana_paula&&!w.endomapaMedico.logo_semeare&&!w.endomapaMedico.logo_granvitta,'Vínculo exclusivo');
+  ok(w.endomapaMedico.assinatura===assinatura,'Assinatura completa');
+  const original=new Image();original.src='../assets/clinicas/ana-paula.png';await original.decode();
+  saida.textContent='Executando: logo carregada';
+  const referencia=document.createElement('canvas');referencia.width=1086;referencia.height=1448;const ctx=referencia.getContext('2d');
+  ctx.drawImage(original,1086*.799,1448*.018,1086*.175,1086*.175*original.naturalHeight/original.naturalWidth);
+  const reg=c=>c.getContext('2d').getImageData(867,26,191,191).data;
+  const esperada=reg(referencia);
+  const camadas=[...d.querySelectorAll('[data-assinatura-manual]')];ok(camadas.length===10,'Dez vistas');
+  for(const c of camadas){ok(c.getAttribute('aria-label').includes(assinatura),'Assinatura em cada vista');ok(reg(c).every((v,i)=>v===esperada[i]),'Logo original em cada vista')}
+  ok([...d.querySelectorAll('[data-mapa-base]')].every(i=>i.src===new URL(i.dataset.srcVisitante,d.baseURI).href),'Bases neutras');
+  const png=await w.endomapaCapturarMapaManual({formato:'image/png'});document.querySelector('#previa').src=png;
+  const exportada=new Image();exportada.src=png;await exportada.decode();const c=document.createElement('canvas');c.width=1086;c.height=1448;c.getContext('2d').drawImage(exportada,0,0);
+  // Compõe a logo transparente sobre a mesma base, como na exportação real.
+  const baseOriginal=new Image();baseOriginal.src=d.querySelector('[data-mapa-editor="coronal"] [data-mapa-base]').src;await baseOriginal.decode();
+  const composta=document.createElement('canvas');composta.width=1086;composta.height=1448;
+  composta.getContext('2d').drawImage(baseOriginal,0,0);composta.getContext('2d').drawImage(referencia,0,0);
+  const a=c.getContext('2d').getImageData(869,28,187,185).data,b=composta.getContext('2d').getImageData(869,28,187,185).data;
+  ok(a.every((v,i)=>v===b[i]),'Logo original na exportação PNG');
+  ok((await w.endomapaCapturarMapaManual({formato:'image/jpeg'})).startsWith('data:image/jpeg'),'JPEG');
+  window.pdfsAnaPaula={};
+  const guardar=async(blob,nome)=>{window.pdfsAnaPaula[nome]=await new Promise(resolve=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.readAsDataURL(blob)})};
+  // PDFs sem dados de pacientes nem lesões, para conferir apenas a identidade visual.
+  const colorido=w.endomapaGerarPdfA4([{vista:'coronal',canvas:c}]);await guardar(colorido,'colorido');
+  const cinza=await w.endomapaCapturarMapaManual({formato:'image/png',escalaCinza:true});
+  const imgCinza=new Image();imgCinza.src=cinza;await imgCinza.decode();
+  const canvasCinza=document.createElement('canvas');canvasCinza.width=1086;canvasCinza.height=1448;canvasCinza.getContext('2d').drawImage(imgCinza,0,0);
+  ok(cinza!==png,'Escala de cinza difere da colorida');
+  const pixel=canvasCinza.getContext('2d').getImageData(543,600,1,1).data;ok(pixel[0]===pixel[1]&&pixel[1]===pixel[2],'Anatomia em cinza');
+  ok(canvasCinza.getContext('2d').getImageData(869,28,187,185).data.every((v,i)=>v===b[i]),'Logo original preservada em escala de cinza');
+  await guardar(w.endomapaGerarPdfA4([{vista:'coronal',canvas:canvasCinza}]),'cinza');
+  d.querySelector('[data-modelo][data-nome="Cisto"]').click();
+  let pdf;const gerar=w.endomapaGerarPdfA4;w.endomapaGerarPdfA4=p=>{pdf=gerar(p);return pdf};w.HTMLAnchorElement.prototype.click=function(){};
+  d.querySelector('[data-baixar-pdf-manual]').click();await esperar(()=>pdf);await esperar(()=>!w.endomapaEditorManual.ocupado());ok(pdf.size>1000,'PDF real');
+  ok(d.documentElement.scrollWidth<=392,'Celular sem excesso horizontal');
+  const atual=structuredClone(w.endomapaMedico);w.dispatchEvent(new w.CustomEvent('endomapa:perfil-carregado',{detail:{...atual,id:'outra',assinatura:'Outra assinatura',logo_ana_paula:false}}));
+  ok([...d.querySelectorAll('[data-assinatura-manual]')].every(c=>reg(c).every(v=>v===0)),'Trocar perfil remove logo das dez vistas');
+  for(const [email,marca,clinica] of [['neutra@example.com',null,null],['outra@example.com',null,'clinica'],['claudetegrandi@hotmail.com','logo_granvitta',null],['amandagoncalves1612@gmail.com','logo_semeare',null],['marcoaureliosala@gmail.com','logo_semeare',null],['outra-apcar@uol.com.br',null,null]]){
+   w=await abrir(email,clinica);d=w.document;ok(w.endomapaMedico.logo_ana_paula===false,'Não aplicar a '+email);ok(w.endomapaMedico.assinatura==='Assinatura preservada','Assinatura de outra conta preservada');if(marca)ok(w.endomapaMedico[marca]===true,'Logo anterior preservada');
+   if(!marca)ok([...d.querySelectorAll('[data-assinatura-manual]')].every(c=>reg(c).every(v=>v===0)),'Sem logo de Ana Paula em outra conta');
+   if(clinica)ok([...d.querySelectorAll('[data-mapa-base]')].every(i=>i.src===new URL(i.dataset.srcClinica,d.baseURI).href),'Centrus preservada');
+  }
+  w=await abrir(' APCAR@UOL.COM.BR ');ok(w.endomapaMedico.logo_ana_paula===true,'Normalização exata do e-mail');
+  saida.textContent='PASSOU: conta exclusiva, assinatura completa, dez vistas, logo original na tela/PNG, JPEG/PDF, celular, troca de perfil, conta neutra, Centrus, Semeare, Granvittà e normalização do e-mail. Banco simulado.';
+ }catch(e){saida.textContent='FALHOU: '+e.stack}
+})();
+</script></html>

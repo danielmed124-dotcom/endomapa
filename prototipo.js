@@ -48,8 +48,16 @@ window.endomapaLogoGranvittaPronta = new Promise((resolve, reject) => {
 window.endomapaLogoGranvittaPronta.catch(() => {});
 logoGranvitta.src = 'assets/clinicas/granvitta.jpg';
 
+const logoAnaPaula = new Image();
+window.endomapaLogoAnaPaulaPronta = new Promise((resolve, reject) => {
+  logoAnaPaula.onload = () => { atualizarLadosDosMapas(); resolve(); };
+  logoAnaPaula.onerror = () => reject(new Error('Não foi possível carregar a logo de Ana Paula.'));
+});
+window.endomapaLogoAnaPaulaPronta.catch(() => {});
+logoAnaPaula.src = 'assets/clinicas/ana-paula.png';
+
 function logoDoPerfil(perfil) {
-  return perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
+  return perfil?.logo_ana_paula ? logoAnaPaula : perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
 }
 
 function atualizarLadosDosMapas() {
@@ -146,7 +154,7 @@ function aplicarPerfilMedico(perfil) {
       }
       if (logoPersonalizada) {
         logo.src = logoPersonalizada.src;
-        logo.alt = perfil.logo_granvitta ? 'Granvittà' : 'Semeare — diagnóstico de precisão';
+        logo.alt = perfil.logo_ana_paula ? 'Ana Paula Carvalhal — radiologista da mulher' : perfil.logo_granvitta ? 'Granvittà' : 'Semeare — diagnóstico de precisão';
       }
       logo.hidden = !logoPersonalizada;
     }
