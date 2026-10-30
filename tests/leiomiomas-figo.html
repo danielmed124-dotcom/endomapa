@@ -1,0 +1,50 @@
+<!doctype html><meta charset="utf-8"><title>Leiomiomas e FIGO</title>
+<pre id="resultado">Executando</pre><iframe title="Editor em celular" style="width:390px;height:844px;border:0"></iframe>
+<script>
+document.querySelector('iframe').onload=async function(){
+ const out=document.querySelector('#resultado'),w=this.contentWindow,d=w.document,$=s=>d.querySelector(s),ok=(v,m)=>{if(!v)throw Error(m)};
+ try{
+ w.history.replaceState=()=>{};w.endomapaAbrirTela('editor-manual');
+ const api=w.endomapaEditorManual,figo=$('[data-controle-figo]'),campo=$('[data-campo-figo]');
+ const inserir=nome=>{$(`[data-modelo][data-nome="${nome}"]`).click();return $('[data-camada-editor="coronal"] .lesao-editavel:last-of-type')};
+ const lesoes=()=>Array.from(d.querySelectorAll('[data-camada-editor="coronal"] .lesao-editavel'));
+ const texto=l=>$(`[data-medida-id="${l.dataset.id}"]`).textContent;
+ const classificar=n=>{figo.value=String(n);figo.dispatchEvent(new w.Event('change',{bubbles:true}))};
+ const a=inserir('Leiomioma 1'),b=inserir('Leiomioma 2');
+ ok(texto(a)==='Leiomioma'&&texto(b)==='Leiomioma','Nome em ambos os leiomiomas');
+ ok(!campo.hidden,'FIGO disponível');
+ for(let n=0;n<=8;n++){classificar(n);ok(texto(b)===`Leiomioma (FIGO ${n})`,'Classificação '+n);ok(texto(a)==='Leiomioma','Independência')}
+ classificar(5);a.click();classificar(0);b.click();ok(figo.value==='5','Troca de seleção preserva FIGO');
+ const medida=$('[data-medida="1"]');medida.value='2';medida.dispatchEvent(new w.Event('input',{bubbles:true}));
+ ok(texto(b).includes('FIGO 5')&&texto(b).includes('cm'),'Medidas com FIGO');
+ ok(campo.getBoundingClientRect().top>=medida.getBoundingClientRect().bottom,'Campo abaixo das medidas');
+ ok(d.documentElement.scrollWidth<=392,'Largura de celular');
+ const salvo=api.capturar();api.validar(salvo);api.restaurar(salvo);
+ ok(lesoes()[0].dataset.figo==='0'&&lesoes()[1].dataset.figo==='5','Salvar e restaurar 0 e 5');
+ const antigo=structuredClone(salvo);antigo.vistas.coronal.lesoes.forEach(l=>delete l.dados.figo);api.restaurar(antigo);
+ ok(lesoes().every(l=>texto(l).startsWith('Leiomioma')&&!texto(l).includes('FIGO')),'Montagem antiga abre sem FIGO');
+ api.restaurar(salvo);lesoes()[1].click();classificar('');ok(!texto(lesoes()[1]).includes('FIGO'),'Remover classificação');
+ const invalido=structuredClone(salvo);invalido.vistas.coronal.lesoes[0].dados.figo='9';let rejeitou=false;try{api.validar(invalido)}catch{rejeitou=true}ok(rejeitou,'Rejeita FIGO fora de 0 a 8');
+ const outro=Array.from(d.querySelectorAll('[data-modelo]')).find(e=>e.dataset.nome==='Endometrioma');
+ ok(outro,'Modelo de controle');outro.click();outro.click();ok(campo.hidden,'FIGO oculto em outras lesões');
+ const demais=lesoes().slice(-2);ok(texto(demais[0])==='Endometrioma'&&texto(demais[1])==='','Outras lesões mantêm nome só na primeira');
+ api.restaurar(salvo);
+ const textos=[],original=w.CanvasRenderingContext2D.prototype.fillText;
+ w.CanvasRenderingContext2D.prototype.fillText=function(t,...args){textos.push(t);return original.call(this,t,...args)};
+ await w.endomapaCapturarMapaManual({formato:'image/png'});
+ ok(textos.includes('Leiomioma (FIGO 0)')&&textos.includes('Leiomioma (FIGO 5)'),'Exportação inclui ambos os nomes e FIGO');
+ const quatro=inserir('Leiomioma 4');ok(texto(quatro)==='Leiomioma 4','Modelo 4 renomeado');
+ const cinco=inserir('Leiomioma 5');ok(texto(cinco)==='Leiomioma','Modelo 5 sem número no mapa');classificar(8);ok(texto(cinco)==='Leiomioma (FIGO 8)','FIGO do modelo 5');
+ out.textContent='PASSOU: nomes repetidos, FIGO 0–8, seleção independente, remoção, medidas, celular, salvar/reabrir, mapas antigos, validação e exportação.';
+ }catch(e){out.textContent='FALHOU: '+e.stack}
+};
+</script>
+<script>
+(async()=>{
+ const html=new DOMParser().parseFromString(await(await fetch('../app.html')).text(),'text/html');
+ html.querySelectorAll('script,base').forEach(e=>e.remove());html.body.classList.remove('autenticacao-pendente');
+ const base=html.createElement('base');base.href=new URL('../',location.href);html.head.prepend(base);
+ for(const src of ['prototipo.js','assets/vendor/jspdf-4.2.1.umd.min.js','pdf-manual.js','editor-documento.js','editor-manual.js']){const s=html.createElement('script');s.src=src;html.body.append(s)}
+ document.querySelector('iframe').srcdoc=html.documentElement.outerHTML;
+})().catch(e=>document.querySelector('#resultado').textContent='FALHOU: '+e.stack);
+</script>

@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=cinza-transparencia-20261027" />
+    <link rel="stylesheet" href="styles.css?v=leiomiomas-figo-20261030" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
   </head>
   <body class="autenticacao-pendente">
@@ -453,13 +453,13 @@
             <img src="assets/lesoes/mioma-3-referencia.png" alt="" />
             <span>Leiomioma 3</span>
           </button>
-          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-integrado-estudo-v1.png" data-nome="Leiomioma endocavitário" data-proporcao="1.5" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-integrado-estudo-v1.png" data-nome="Leiomioma 4" data-proporcao="1.5" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
             <img src="assets/lesoes/mioma-integrado-estudo-v1.png" alt="" />
-            <span>Leiomioma endocavitário</span>
+            <span>Leiomioma 4</span>
           </button>
-          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-pediculado-referencia.png" data-nome="Leiomioma pediculado" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/mioma-pediculado-referencia.png" data-nome="Leiomioma 5" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65" data-tamanho-minimo="5">
             <img src="assets/lesoes/mioma-pediculado-referencia.png" alt="" />
-            <span>Leiomioma pediculado</span>
+            <span>Leiomioma 5</span>
           </button>
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/polipo-referencia.png" data-nome="Pólipo" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50" data-tamanho-minimo="5">
             <img src="assets/lesoes/polipo-referencia.png" alt="" />
@@ -668,6 +668,21 @@
             <input type="text" inputmode="decimal" placeholder="Ex.: 0,5" data-medida="3" />
           </label>
         </fieldset>
+        <label class="campo" data-campo-figo hidden>
+          <span class="campo__rotulo">Classificação FIGO</span>
+          <select data-controle-figo>
+            <option value="">Sem classificação</option>
+            <option value="0">FIGO 0</option>
+            <option value="1">FIGO 1</option>
+            <option value="2">FIGO 2</option>
+            <option value="3">FIGO 3</option>
+            <option value="4">FIGO 4</option>
+            <option value="5">FIGO 5</option>
+            <option value="6">FIGO 6</option>
+            <option value="7">FIGO 7</option>
+            <option value="8">FIGO 8</option>
+          </select>
+        </label>
         <button class="botao botao--perigo" type="button" data-remover-lesao>Excluir esta lesão</button>
         </div>
       </section>
@@ -745,7 +760,7 @@
     <script src="tubas/movimento.js?v=tubas-20261029"></script>
     <script src="tubas/motor.js?v=tubas-20261029"></script>
     <script src="tubas/editor.js?v=tubas-20261029"></script>
-    <script src="editor-manual.js?v=tubas-20261029"></script>
+    <script src="editor-manual.js?v=leiomiomas-figo-20261030"></script>
     <script src="historico-manual.js?v=tubas-20261029"></script>
     <script src="fusao-integracao.js?v=jpeg-1"></script>
   </body>

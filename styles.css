@@ -1945,6 +1945,18 @@ h1 span {
   font-size: 1rem;
 }
 
+[data-campo-figo] select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--borda);
+  border-radius: 8px;
+  background: var(--fundo);
+  color: var(--texto);
+  font: inherit;
+}
+
 .medida-lesao-editavel {
   position: absolute;
   z-index: 7;

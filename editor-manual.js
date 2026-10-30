@@ -9,6 +9,13 @@
   const eixoX = document.querySelector("[data-controle-eixo-x]");
   const eixoY = document.querySelector("[data-controle-eixo-y]");
   const nomeNoMapa = document.querySelector("[data-controle-nome-lesao]");
+  const controleFigo = document.querySelector('[data-controle-figo]');
+  const campoFigo = document.querySelector('[data-campo-figo]');
+  controleFigo?.addEventListener('change', () => {
+    if (!selecionada || !ehLeiomioma(selecionada)) return;
+    selecionada.dataset.figo = controleFigo.value;
+    atualizarTodasAsLinhas();
+  });
   let selecionada = null;
   let imagemCopiada = null;
   let quantidadeDeColagens = 0;
@@ -309,7 +316,7 @@
   function posicaoDeInsercao(nome, lado, indice, total) {
     const sagital = vistaAtiva === 'sagital';
     const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(nome);
-    const cavidade = /^(Pólipo|DIU|Leiomioma endocavitário)/.test(nome);
+    const cavidade = /^(Pólipo|DIU|Leiomioma 4\b|Leiomioma endocavitário)/.test(nome);
     let ponto;
     if (ovariano) {
       ponto = sagital ? [45, 26.5] : vistaAtiva === 'kissing-ovaries' ? [lado === 'direito' ? 57 : 44, 51] : [lado === 'direito' ? 70.5 : 30, lado === 'direito' ? 50 : 49];
@@ -598,10 +605,10 @@
     lesao.dataset.medidaX = String(56 + deslocamento);
     lesao.dataset.medidaY = String(52 + deslocamento);
     if (dadosCopiados) Object.assign(lesao.dataset, dadosCopiados);
-    lesao.dataset.nomeNoMapa=normalizarNomeLesao(lesao.dataset.nomeNoMapa);
+    lesao.dataset.nomeNoMapa=normalizarNomeLesao(lesao.dataset.nomeNoMapa).replace(/^Leiomioma 5$/i, 'Leiomioma');
     if (dadosCopiados?.medida1 === undefined) {
       const existentes = Array.from(camada.querySelectorAll('.lesao-editavel'));
-      const ocupados = existentes.filter(item => item.dataset.nomeNoMapa && item.dataset.nomeNoMapa !== lesao.dataset.nomeNoMapa);
+      const ocupados = existentes.filter(item => item.dataset.nomeNoMapa && (ehLeiomioma(lesao) || item.dataset.nomeNoMapa !== lesao.dataset.nomeNoMapa));
       let y = Number(lesao.dataset.medidaY);
       for (let tentativa = 0; tentativa < 20 && ocupados.some(item => Math.abs(Number(item.dataset.medidaX) - Number(lesao.dataset.medidaX)) < 20 && Math.abs(Number(item.dataset.medidaY) - y) < 4); tentativa++) y = y >= 86 ? 20 : y + 4;
       lesao.dataset.medidaY = String(y);
@@ -643,6 +650,8 @@
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
     nomeNoMapa.value = lesao.dataset.nomeNoMapa || "";
+    if (campoFigo) campoFigo.hidden = !ehLeiomioma(lesao);
+    if (controleFigo) controleFigo.value = lesao.dataset.figo || '';
     document.querySelectorAll("[data-medida]").forEach(function (campo) {
       campo.value = lesao.dataset[`medida${campo.dataset.medida}`] || "";
     });
@@ -735,13 +744,24 @@
     atualizarLinhaDeMedida(lesao, Boolean(linhas.length));
   }
 
+  function ehLeiomioma(lesao) {
+    return /^Leiomioma\b/i.test(normalizarNomeLesao(lesao.dataset.nome));
+  }
+
   function linhasDoRotulo(lesao, grupo) {
     // Exportações usam a escolha capturada no clique, mesmo se o botão mudar depois.
     if (lesao.anotacoesOcultas ?? anotacoesOcultas) return [];
     let nome = (lesao.dataset.nomeNoMapa || "").trim();
     const itens = grupo || Array.from(lesao.closest?.('[data-camada-editor]')?.querySelectorAll('.lesao-editavel') || []);
     const primeiro = itens.find(item => (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'));
-    if (primeiro && primeiro !== lesao) nome = '';
+    if (ehLeiomioma(lesao)) {
+      if (/^[0-8]$/.test(lesao.dataset.figo || '')) {
+        nome = (nome || 'Leiomioma').replace(/\s*\(FIGO [0-8]\)/gi, '');
+        nome = /Leiomioma\b/i.test(nome)
+          ? nome.replace(/Leiomioma\b/i, `Leiomioma (FIGO ${lesao.dataset.figo})`)
+          : `Leiomioma (FIGO ${lesao.dataset.figo}) ${nome}`;
+      }
+    } else if (primeiro && primeiro !== lesao) nome = '';
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
       .filter(Boolean).map(formatarMedida);
     return [nome, valores.length ? `${valores.join(" × ")} cm` : ""].filter(Boolean);
@@ -854,7 +874,7 @@
 
   function mostrar(texto) { mensagem.textContent = texto; }
   function normalizarNomeLesao(nome) {
-    return String(nome||'').replace(/\bmiomas?\b/gi,m=>m.toLowerCase().endsWith('s')?'Leiomiomas':'Leiomioma').replace(/^Adenomiose 1$/i,'Adenomiose');
+    return String(nome||'').replace(/\bmiomas?\b/gi,m=>m.toLowerCase().endsWith('s')?'Leiomiomas':'Leiomioma').replace(/^Adenomiose 1$/i,'Adenomiose').replace(/Leiomioma endocavitário/gi,'Leiomioma 4').replace(/Leiomioma pediculado/gi,'Leiomioma 5');
   }
   function vincularUtero(lesao) {
     const p=window.endomapaUtero?.vincular(Number(lesao.dataset.x),Number(lesao.dataset.y));
@@ -968,6 +988,7 @@
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
+        if (l.dados.figo !== undefined && (typeof l.dados.figo !== 'string' || !/^([0-8])?$/.test(l.dados.figo))) falhar();
         if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
         if (l.dados.uteroX !== undefined || l.dados.uteroY !== undefined) {
           if(id!=='sagital'||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
@@ -1010,6 +1031,7 @@
         if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
         if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
+        if (l.dados.figo !== undefined) dados.figo = l.dados.figo;
         adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
       const c = canetas.get(id); c.tracos = JSON.parse(JSON.stringify(vistas[id].tracos)); redesenharCaneta(c); c.atualizar();
