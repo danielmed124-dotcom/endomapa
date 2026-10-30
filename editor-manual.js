@@ -755,8 +755,8 @@
     const itens = grupo || Array.from(lesao.closest?.('[data-camada-editor]')?.querySelectorAll('.lesao-editavel') || []);
     const primeiro = itens.find(item => (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'));
     if (ehLeiomioma(lesao)) {
-      if (/^[0-8]$/.test(lesao.dataset.figo || '')) {
-        nome = (nome || 'Leiomioma').replace(/\s*\(FIGO [0-8]\)/gi, '');
+      if (/^(?:[0-8]|2-5)$/.test(lesao.dataset.figo || '')) {
+        nome = (nome || 'Leiomioma').replace(/\s*\(FIGO (?:[0-8]|2-5)\)/gi, '');
         nome = /Leiomioma\b/i.test(nome)
           ? nome.replace(/Leiomioma\b/i, `Leiomioma (FIGO ${lesao.dataset.figo})`)
           : `Leiomioma (FIGO ${lesao.dataset.figo}) ${nome}`;
@@ -988,7 +988,7 @@
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
-        if (l.dados.figo !== undefined && (typeof l.dados.figo !== 'string' || !/^([0-8])?$/.test(l.dados.figo))) falhar();
+        if (l.dados.figo !== undefined && (typeof l.dados.figo !== 'string' || !/^(?:[0-8]|2-5)?$/.test(l.dados.figo))) falhar();
         if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
         if (l.dados.uteroX !== undefined || l.dados.uteroY !== undefined) {
           if(id!=='sagital'||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();

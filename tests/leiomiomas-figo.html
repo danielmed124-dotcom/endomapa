@@ -35,7 +35,13 @@ document.querySelector('iframe').onload=async function(){
  ok(textos.includes('Leiomioma (FIGO 0)')&&textos.includes('Leiomioma (FIGO 5)'),'Exportação inclui ambos os nomes e FIGO');
  const quatro=inserir('Leiomioma 4');ok(texto(quatro)==='Leiomioma 4','Modelo 4 renomeado');
  const cinco=inserir('Leiomioma 5');ok(texto(cinco)==='Leiomioma','Modelo 5 sem número no mapa');classificar(8);ok(texto(cinco)==='Leiomioma (FIGO 8)','FIGO do modelo 5');
- out.textContent='PASSOU: nomes repetidos, FIGO 0–8, seleção independente, remoção, medidas, celular, salvar/reabrir, mapas antigos, validação e exportação.';
+ ok(figo.options[figo.options.length-2].value==='8'&&figo.options[figo.options.length-1].value==='2-5','FIGO 2-5 depois do 8');
+ classificar('2-5');ok(texto(cinco)==='Leiomioma (FIGO 2-5)','Rótulo híbrido');
+ const hibrido=api.capturar();api.validar(hibrido);api.restaurar(hibrido);
+ const reaberta=lesoes().at(-1);reaberta.click();ok(figo.value==='2-5'&&texto(reaberta)==='Leiomioma (FIGO 2-5)','Reabre classificação híbrida');
+ textos.length=0;await w.endomapaCapturarMapaManual({formato:'image/png'});ok(textos.includes('Leiomioma (FIGO 2-5)'),'Exporta classificação híbrida');
+ classificar('');ok(texto(reaberta)==='Leiomioma','Remove classificação híbrida');
+ out.textContent='PASSOU: FIGO 0–8 e 2-5 após o 8, nomes repetidos, seleção independente, remoção, medidas, celular, salvar/reabrir, mapas antigos, validação e exportação.';
  }catch(e){out.textContent='FALHOU: '+e.stack}
 };
 </script>
