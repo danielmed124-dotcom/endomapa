@@ -307,7 +307,7 @@
       const posicaoInicial = posicaoDeInsercao(botao.dataset.nome, ladoAtual, indice, total) || (botao.dataset.vistaInicial === vistaAtiva
         ? { x: botao.dataset.xInicial, y: botao.dataset.yInicial }
         : null);
-      adicionarLesao(botao.dataset.modelo, botao.dataset.nome, botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, botao.dataset.tamanhoMinimo, posicaoInicial);
+      adicionarLesao(vistaAtiva === 'sagital' && botao.dataset.modeloSagital || botao.dataset.modelo, botao.dataset.nome, vistaAtiva === 'sagital' && botao.dataset.proporcaoSagital || botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, vistaAtiva === 'sagital' && botao.dataset.modeloSagital ? '5' : botao.dataset.tamanhoMinimo, posicaoInicial);
       }
       if (total > 1) mostrar(`${total} folículos inseridos no ovário ${ladoAtual}. Você pode ajustar cada um separadamente.`);
     });
@@ -348,8 +348,10 @@
     }
     if (sagital && (cavidade || /^(Adenomiose|Leiomioma)/.test(nome))) {
       if (nome.startsWith('DIU')) {
-        dados.giro = -38 + (window.endomapaUtero?.estado().angulo || 0);
-        dados.tamanho = nome === 'DIU hormonal' ? 110 : 65;
+        dados.x = 53;
+        dados.y = 36.5;
+        dados.giro = window.endomapaUtero?.orientar(dados.x*1087/100,dados.y*1447/100,-58,0,window.endomapaUtero.estado().angulo) ?? -58;
+        dados.tamanho = 65;
       }
       const p = window.endomapaUtero?.posicao(dados.x * 1087 / 100, dados.y * 1447 / 100);
       if (p) { dados.x = p.x * 100 / 1087; dados.y = p.y * 100 / 1447; }
@@ -646,6 +648,7 @@
     controles.hidden = false;
     giro.value = lesao.dataset.giro;
     tamanho.min = lesao.dataset.tamanhoMinimo || "40";
+    tamanho.step = /diu-(cobre|hormonal)-sagital-/.test(lesao.querySelector('img')?.getAttribute('src') || '') ? '1' : '5';
     tamanho.value = lesao.dataset.tamanho;
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
@@ -889,11 +892,15 @@
     document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(vincularUtero);
     mostrar('Arraste o corpo do útero. Toque novamente em Movimentar útero para voltar a ajustar lesões.');
   });
-  window.addEventListener('endomapa:utero-movido',()=>{
+  window.addEventListener('endomapa:utero-movido',evento=>{
+    const variacao = Number(evento.detail?.depois) - Number(evento.detail?.antes);
     document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(l=>{
       if(l.dataset.uteroX===undefined)return;
       const p=window.endomapaUtero.posicao(Number(l.dataset.uteroX),Number(l.dataset.uteroY));
       if(!p)return;l.dataset.x=String(limitar(p.x*100/1087,0,100));l.dataset.y=String(limitar(p.y*100/1447,0,100));
+      if(Number.isFinite(variacao)&&/^DIU\b/.test(l.dataset.nome||'')){
+        l.dataset.giro=String(window.endomapaUtero.orientar(Number(l.dataset.uteroX),Number(l.dataset.uteroY),Number(l.dataset.giro),evento.detail.antes,evento.detail.depois));
+      }
       atualizarVisual(l);atualizarRotuloDeMedidas(l);
     });
   });
@@ -963,6 +970,10 @@
     // somente contra imagens conhecidas; ao reabrir usa a URL atual da biblioteca.
     documento?.validar(montagem?.documento);
     const modelos = new Map(Array.from(document.querySelectorAll('[data-modelo]'), botao => [new URL(botao.dataset.modelo, document.baseURI).pathname.replace(/^\//, ''), botao.dataset]));
+    document.querySelectorAll('[data-modelo-sagital]').forEach(botao => {
+      const d = botao.dataset;
+      modelos.set(new URL(d.modeloSagital, document.baseURI).pathname.replace(/^\//, ''), {...d, modelo:d.modeloSagital, proporcao:d.proporcaoSagital});
+    });
     const ids = mapasManuais.map(m => m.dataset.mapaEditor);
     const especiais = Array.from(document.querySelector('[data-mapa-especial]').options, o => o.value);
     especiais.push('utero-retrofletido'); // Compatibilidade com montagens anteriores.

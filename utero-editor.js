@@ -22,7 +22,18 @@
  window.endomapaUtero={estado,validar,desativar:()=>modo(false),alterado:v=>v==='sagital'&&Boolean(estado().angulo),
   restaurar(v){validar(v);modo(false);pendente={...(v||{angulo:0})};motor?.restaurar(pendente);atualizar()},
   vincular(x,y){if(!motor||!motor.localizar(x*1087/100,y*1447/100))return null;return motor.origem(x*1087/100,y*1447/100)},
-  posicao:(x,y)=>motor?.transformar(x,y),
+  posicao:(x,y,a)=>motor?.transformar(x,y,a),
+  orientar(x,y,giro,antes,depois){
+   if(!motor)return giro;
+   const derivada=a=>{
+    const e=.1,px=motor.transformar(x+e,y,a),mx=motor.transformar(x-e,y,a),py=motor.transformar(x,y+e,a),my=motor.transformar(x,y-e,a);
+    return{xx:(px.x-mx.x)/(2*e),yx:(px.y-mx.y)/(2*e),xy:(py.x-my.x)/(2*e),yy:(py.y-my.y)/(2*e)};
+   };
+   const a=derivada(antes),b=derivada(depois),rad=giro*Math.PI/180,vx=-Math.sin(rad),vy=Math.cos(rad),det=a.xx*a.yy-a.xy*a.yx;
+   if(Math.abs(det)<1e-6)return giro;
+   const ux=(a.yy*vx-a.xy*vy)/det,uy=(-a.yx*vx+a.xx*vy)/det;
+   return Math.atan2(-(b.xx*ux+b.xy*uy),b.yx*ux+b.yy*uy)*180/Math.PI;
+  },
   fotografar(v){if(v!=='sagital')return null;if(!motor)throw Error('Aguarde o carregamento do útero.');const c=Object.assign(document.createElement('canvas'),{width:1087,height:1447});c.getContext('2d').drawImage(tela,0,0);return c;}
  };
  botao.onclick=()=>{if(!ocupado())modo(!ativo)};
