@@ -2,4 +2,10 @@
 .adesao-contadores[hidden] { display: none; }
 .adesao-contadores .painel-total { margin: 0; min-width: 0; }
 [data-painel-adesao] { margin: 20px 0; }
+[data-ranking-adesao] { margin-top: 20px; }
+.adesao-ranking { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.adesao-ranking th, .adesao-ranking td { text-align: left; padding: 10px 4px; border-bottom: 1px solid rgba(200,170,90,.25); overflow-wrap: anywhere; }
+.adesao-ranking th:first-child { width: 28px; }
+.adesao-ranking th:last-child { width: 70px; }
+.adesao-ranking td:last-child, .adesao-ranking th:last-child { text-align: right; }
 @media (min-width: 800px) { .adesao-contadores { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

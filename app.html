@@ -10,7 +10,7 @@
     <title>Área de trabalho | Endocarta</title>
     <link rel="stylesheet" href="styles.css?v=leiomiomas-figo-20261030" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
-    <link rel="stylesheet" href="painel-adesao.css?v=20261031-1">
+    <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -337,10 +337,16 @@
             <div class="painel-total"><span class="painel-total__rotulo">Hoje</span><strong class="painel-total__numero" data-adesao="hoje">—</strong></div>
             <div class="painel-total"><span class="painel-total__rotulo">Nesta semana</span><strong class="painel-total__numero" data-adesao="semana">—</strong></div>
             <div class="painel-total"><span class="painel-total__rotulo">Neste mês</span><strong class="painel-total__numero" data-adesao="mes">—</strong></div>
-            <div class="painel-total"><span class="painel-total__rotulo">Total do novo contador</span><strong class="painel-total__numero" data-adesao="total">—</strong></div>
+            <div class="painel-total"><span class="painel-total__rotulo">Total registrado</span><strong class="painel-total__numero" data-adesao="total">—</strong></div>
           </div>
           <p class="texto-apoio" data-estado-adesao role="status" aria-live="polite"></p>
           <button class="botao botao--secundario" type="button" data-atualizar-adesao>Atualizar totais</button>
+          <section data-ranking-adesao hidden aria-labelledby="titulo-ranking-adesao">
+            <h3 id="titulo-ranking-adesao">Ranking de usuários — todo o período</h3>
+            <p class="texto-apoio">Arquivos registrados por usuário, incluindo o histórico disponível e novas cópias.</p>
+            <table class="adesao-ranking"><thead><tr><th scope="col">Nº</th><th scope="col">Usuário</th><th scope="col">Arquivos</th></tr></thead><tbody data-ranking-linhas></tbody></table>
+            <p data-ranking-vazio hidden>Nenhuma exportação registrada.</p>
+          </section>
         </section>
         <div data-conteudo-painel hidden>
           <section class="painel-total" aria-label="Total de mapas salvos hoje">
@@ -757,7 +763,7 @@
     ></script>
     <script src="supabase-config.js?v=endocarta-c272b9047729"></script>
     <script src="contador-exportacoes.js?v=20261031-1"></script>
-    <script src="painel-adesao.js?v=20261031-1"></script>
+    <script src="painel-adesao.js?v=20261031-2"></script>
     <script src="app-auth.js?v=ana-paula-20261029"></script>
     <script src="prototipo.js?v=ana-paula-20261029"></script>
     <script src="orgaos-deformar.js?v=1"></script>
