@@ -1076,22 +1076,32 @@
     estadoMapa.textContent = "Preparando a montagem com os nomes e as medidas…";
     try {
       const imagem = await capturarMapa({ formato: `image/${formato}`, qualidade: 0.95, fundoBranco: formato === 'jpeg', divulgacao });
-      const link = document.createElement("a");
-      link.href = imagem;
-      link.download = `endocarta-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.${formato === 'jpeg' ? 'jpg' : 'png'}`;
-      document.body.append(link);
-      link.click();
-      link.remove();
+      const registro = await baixarArquivoRegistrado({ endereco: imagem, nome: `endocarta-${divulgacao ? "divulgacao" : "manual"}-${vistaDaCaptura}.${formato === 'jpeg' ? 'jpg' : 'png'}`, formato, ferramenta: 'mapa' });
       estadoMapa.hidden = false;
       estadoMapa.textContent = divulgacao
         ? `Vista ${nomeDaVista(vistaDaCaptura)} preparada para divulgação, sem logo, marca-d’água e assinatura. Confira o arquivo nos downloads.`
         : `Vista ${nomeDaVista(vistaDaCaptura)} preparada. Confira o arquivo na pasta de downloads do seu aparelho.`;
+      informarConfirmacaoPendente(registro);
     } catch (erro) {
       estadoMapa.hidden = false;
-      estadoMapa.textContent = "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
+      estadoMapa.textContent = erro.exportacao ? erro.message : "Não foi possível preparar a montagem. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
     } finally {
       definirExportacaoEmAndamento(false);
     }
+  }
+
+  async function baixarArquivoRegistrado(opcoes) {
+    if (!window.endocartaExportacoes) {
+      const erro = new Error('Não foi possível carregar o controle de exportação. O arquivo não foi liberado. Sua montagem continua aberta; confira a conexão e tente novamente.');
+      erro.exportacao = true;
+      throw erro;
+    }
+    estadoMapa.textContent = 'Confirmando o registro para liberar o arquivo…';
+    return window.endocartaExportacoes.baixar(opcoes);
+  }
+
+  function informarConfirmacaoPendente(registro) {
+    if (!registro.acionamentoConfirmado) estadoMapa.textContent += ' O arquivo foi liberado com registro, mas a confirmação de acionamento está pendente. Confira os downloads antes de tentar novamente.';
   }
 
   function definirExportacaoEmAndamento(ocupado) {
@@ -1129,7 +1139,6 @@
     if (window.endomapaTubas?.ocupado()) { mostrar('Aguarde o preparo das tubas.'); return; }
     if (exportacaoEmAndamento) return;
     if (window.endomapaHistoricoManual?.ocupado()) return;
-    const registroPdf = crypto.randomUUID();
     const escalaCinza = Boolean(opcaoEscalaCinza?.checked);
     const transparenciaCinza = obterTransparenciaCinza();
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
@@ -1160,15 +1169,10 @@
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
       const endereco = URL.createObjectURL(arquivo);
-      const link = document.createElement("a");
+      let registro;
       try {
-        link.href = endereco;
-        link.download = `endocarta-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`;
-        document.body.append(link);
-        link.click();
-        window.endomapaHistoricoManual?.registrarPdf(registroPdf).catch(() => {});
+        registro = await baixarArquivoRegistrado({ endereco, nome: `endocarta-${divulgacao ? "divulgacao" : "manual"}-${escolha}-a4.pdf`, formato: 'pdf', ferramenta: 'mapa' });
       } finally {
-        link.remove();
         // O aparelho precisa de tempo para abrir ou salvar o arquivo antes da liberação.
         window.setTimeout(function () { URL.revokeObjectURL(endereco); }, 60000);
       }
@@ -1176,9 +1180,10 @@
       estadoMapa.textContent = divulgacao
         ? `PDF A4 para divulgação preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}, sem logo, marca-d’água e assinatura.`
         : `PDF A4 preparado com ${paginas.length === 2 ? "duas páginas" : "uma página"}. Salve o arquivo para imprimir em papel A4.`;
+      informarConfirmacaoPendente(registro);
     } catch (erro) {
       estadoMapa.hidden = false;
-      estadoMapa.textContent = erro.historico ? erro.message : "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
+      estadoMapa.textContent = erro.historico || erro.exportacao ? erro.message : "Não foi possível preparar o PDF. Confira se as imagens carregaram e tente novamente. Seu mapa continua no editor.";
     } finally {
       definirExportacaoEmAndamento(false);
     }

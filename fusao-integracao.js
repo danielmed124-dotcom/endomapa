@@ -24,7 +24,7 @@
       raiz.append(estilo,...Array.from(pagina.body.children));
       await estiloPronto;
       await script("fusao-hycosy/pdf.js?v=1");
-      await script("fusao-hycosy/fusao.js?v=jpeg-1");
+      await script("fusao-hycosy/fusao.js?v=contador-20261031-1");
       pronta=true;estado.hidden=true;
     }catch{
       host.shadowRoot?.replaceChildren();

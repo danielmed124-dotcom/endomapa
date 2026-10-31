@@ -44,10 +44,7 @@
       throw erroHistorico(texto);
     } finally { bloquear(false); }
   }
-  window.endomapaHistoricoManual = { ocupado: () => ocupado, registrarPdf: async pdfId => {
-    const {error}=await cliente.rpc('registrar_pdf_manual',{p_id:pdfId});
-    if(error) mensagem('PDF baixado. Não foi possível atualizar o contador do dia. O mapa não foi salvo na biblioteca.',true);
-  } };
+  window.endomapaHistoricoManual = { ocupado: () => ocupado };
   salvar.addEventListener('click', async () => {
     if (ocupado || editor.ocupado()) return;
     const registro = preparar();
@@ -167,12 +164,15 @@
         if (error) throw error;
         mapas.push(...data); if (data.length < 200) break;
       }
-      const { count, error } = await cliente.from('pdfs_manuais').select('id', { count: 'exact', head: true }).gte('criado_em', inicio.toISOString()).lt('criado_em', fim.toISOString());
+      const [antigos, novos] = await Promise.all([
+        cliente.from('pdfs_manuais').select('id', { count: 'exact', head: true }).gte('criado_em', inicio.toISOString()).lt('criado_em', fim.toISOString()),
+        cliente.from('exportacoes_arquivos').select('id', { count: 'exact', head: true }).eq('formato', 'pdf').gte('preparado_em', inicio.toISOString()).lt('preparado_em', fim.toISOString()),
+      ]);
       if (rodada !== rodadaDia) return;
-      if (error) throw error;
+      if (antigos.error || novos.error) throw antigos.error || novos.error;
       dia = mapas;
       buscar('[data-total-mapas-hoje]').textContent = dia.length;
-      buscar('[data-contador-pdf]').textContent = count;
+      buscar('[data-contador-pdf]').textContent = (antigos.count || 0) + (novos.count || 0);
       buscar('[data-data-painel]').textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(agora);
       buscar('[data-busca-painel]').value = ''; filtrarDia(); estado.hidden = true; painel.hidden = false;
     } catch (_) {

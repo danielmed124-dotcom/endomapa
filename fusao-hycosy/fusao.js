@@ -295,6 +295,15 @@
     if(c.type==="color")c.addEventListener("change",mudar);
   });
   $("comparar").addEventListener("change",()=>agendar());
+  async function baixarArquivoRegistrado(endereco,nome,formato){
+    if(!window.endocartaExportacoes){
+      const erro=new Error('Não foi possível carregar o controle de exportação. O arquivo não foi liberado. Sua montagem continua aberta; confira a conexão e tente novamente.');
+      erro.exportacao=true;throw erro;
+    }
+    estado('Confirmando o registro para liberar o arquivo…');
+    const registro=await window.endocartaExportacoes.baixar({endereco,nome,formato,ferramenta:'fusao'});
+    return registro.acionamentoConfirmado ? '' : ' O arquivo foi liberado com registro, mas a confirmação de acionamento está pendente. Confira os downloads antes de tentar novamente.';
+  }
   function baixarImagem(formato){
     if($("baixar").disabled)return;
     exportando=true;habilitar();
@@ -305,12 +314,15 @@
         captura=document.createElement('canvas');captura.width=resultado.width;captura.height=resultado.height;
         const ctx=captura.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,captura.width,captura.height);ctx.drawImage(resultado,0,0);
       }
-      captura.toBlob(blob=>{
+      captura.toBlob(async blob=>{
         try{
           if(!blob)throw new Error();
-          const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`endocarta-fusao-hycosy.${formato==='jpeg'?'jpg':'png'}`;a.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
-          estado(`Composição ${formato.toUpperCase()} preparada nas dimensões da imagem 3D. Os arquivos originais foram preservados.`);
-        }catch{estado(`Não foi possível preparar o ${formato.toUpperCase()}. As imagens continuam na tela.`,true);}
+          const url=URL.createObjectURL(blob);
+          let complemento;
+          try{complemento=await baixarArquivoRegistrado(url,`endocarta-fusao-hycosy.${formato==='jpeg'?'jpg':'png'}`,formato);}
+          finally{setTimeout(()=>URL.revokeObjectURL(url),60000);}
+          estado(`Composição ${formato.toUpperCase()} preparada nas dimensões da imagem 3D. Os arquivos originais foram preservados.`+complemento);
+        }catch(erro){estado(erro.exportacao ? erro.message : `Não foi possível preparar o ${formato.toUpperCase()}. As imagens continuam na tela.`,true);}
         finally{exportando=false;desenharResultado();habilitar();}
       },`image/${formato}`,0.95);
       desenharResultado();
@@ -330,10 +342,12 @@
       desenharResultado();estado("Preparando PDF A4…");
       await new Promise(r=>setTimeout(r,0));
       const blob=window.hycosyGerarPdf(captura);
-      const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="endocarta-fusao-hycosy.pdf";a.click();
-      setTimeout(()=>URL.revokeObjectURL(url),60000);
-      estado("PDF A4 preparado com a composição completa, sem cortes e com as proporções preservadas.");
-    }catch{estado("Não foi possível gerar o PDF. As imagens e os ajustes continuam disponíveis.",true);}
+      const url=URL.createObjectURL(blob);
+      let complemento;
+      try{complemento=await baixarArquivoRegistrado(url,'endocarta-fusao-hycosy.pdf','pdf');}
+      finally{setTimeout(()=>URL.revokeObjectURL(url),60000);}
+      estado("PDF A4 preparado com a composição completa, sem cortes e com as proporções preservadas."+complemento);
+    }catch(erro){estado(erro.exportacao ? erro.message : "Não foi possível gerar o PDF. As imagens e os ajustes continuam disponíveis.",true);}
     finally{exportando=false;desenharResultado();habilitar();}
   });
   $("limpar").addEventListener("click",()=>{

@@ -10,6 +10,7 @@
     <title>Área de trabalho | Endocarta</title>
     <link rel="stylesheet" href="styles.css?v=leiomiomas-figo-20261030" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
+    <link rel="stylesheet" href="painel-adesao.css?v=20261031-1">
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -307,7 +308,7 @@
           <div class="selo">Visão de hoje</div>
           <h1 class="titulo-tela" id="titulo-painel-dia">Painel do dia</h1>
           <p class="texto-apoio">
-            Montagens salvas ou atualizadas hoje e PDFs gerados na sua conta. O dia segue o horário do seu aparelho.
+            Montagens salvas ou atualizadas hoje e PDFs preparados na sua conta, incluindo a fusão. O dia segue o horário do seu aparelho.
           </p>
         </header>
 
@@ -329,6 +330,18 @@
           Tentar novamente
         </button>
 
+        <section data-painel-adesao hidden aria-labelledby="titulo-adesao">
+          <h2 id="titulo-adesao">Mapas gerados — todos os usuários</h2>
+          <p class="texto-apoio">Cada arquivo PDF, PNG ou JPEG preparado para liberação conta uma vez, inclusive novas cópias e fusão 3D/Hycosy. Não representa pacientes ou exames únicos nem confirma salvamento no aparelho. Horário de Brasília; a semana começa na segunda-feira.</p>
+          <div class="adesao-contadores" data-numeros-adesao hidden>
+            <div class="painel-total"><span class="painel-total__rotulo">Hoje</span><strong class="painel-total__numero" data-adesao="hoje">—</strong></div>
+            <div class="painel-total"><span class="painel-total__rotulo">Nesta semana</span><strong class="painel-total__numero" data-adesao="semana">—</strong></div>
+            <div class="painel-total"><span class="painel-total__rotulo">Neste mês</span><strong class="painel-total__numero" data-adesao="mes">—</strong></div>
+            <div class="painel-total"><span class="painel-total__rotulo">Total do novo contador</span><strong class="painel-total__numero" data-adesao="total">—</strong></div>
+          </div>
+          <p class="texto-apoio" data-estado-adesao role="status" aria-live="polite"></p>
+          <button class="botao botao--secundario" type="button" data-atualizar-adesao>Atualizar totais</button>
+        </section>
         <div data-conteudo-painel hidden>
           <section class="painel-total" aria-label="Total de mapas salvos hoje">
             <span class="painel-total__rotulo">Mapas salvos hoje</span>
@@ -337,7 +350,7 @@
           </section>
 
           <section class="painel-total" aria-label="PDFs preparados hoje">
-            <span class="painel-total__rotulo">PDFs gerados hoje</span>
+            <span class="painel-total__rotulo">PDFs preparados hoje</span>
             <strong class="painel-total__numero" data-contador-pdf>0</strong>
             <p class="texto-apoio">Cada geração concluída conta uma vez, inclusive novas cópias. Não confirma impressão ou salvamento no aparelho.</p>
           </section>
@@ -743,6 +756,8 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js?v=endocarta-c272b9047729"></script>
+    <script src="contador-exportacoes.js?v=20261031-1"></script>
+    <script src="painel-adesao.js?v=20261031-1"></script>
     <script src="app-auth.js?v=ana-paula-20261029"></script>
     <script src="prototipo.js?v=ana-paula-20261029"></script>
     <script src="orgaos-deformar.js?v=1"></script>
@@ -761,8 +776,8 @@
     <script src="tubas/movimento.js?v=tubas-20261029"></script>
     <script src="tubas/motor.js?v=tubas-20261029"></script>
     <script src="tubas/editor.js?v=tubas-20261029"></script>
-    <script src="editor-manual.js?v=diu-sagital-20261030"></script>
-    <script src="historico-manual.js?v=tubas-20261029"></script>
-    <script src="fusao-integracao.js?v=jpeg-1"></script>
+    <script src="editor-manual.js?v=contador-20261031-1"></script>
+    <script src="historico-manual.js?v=contador-20261031-1"></script>
+    <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>
 </html>
