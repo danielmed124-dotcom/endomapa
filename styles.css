@@ -1856,7 +1856,15 @@ h1 span {
 
 .controles-lesao__conteudo {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 12px;
+}
+
+.controles-lesao__conteudo > *,
+.controles-lesao .calibracao-mapa__controle input[type="range"] {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .controles-lesao__alternar {
@@ -1901,6 +1909,7 @@ h1 span {
 
 .medidas-editor {
   display: grid;
+  min-inline-size: 0;
   margin: 0;
   padding: 10px 12px 12px;
   border: 1px solid rgba(184, 192, 185, 0.18);
@@ -2005,17 +2014,23 @@ h1 span {
 }
 
 .controles-lesao__topo {
-  display: flex;
+  scroll-margin-block: 84px 100px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 4px 8px;
 }
 
+.controles-lesao__topo .secao-dados__titulo { margin: 0; }
+.controles-lesao__topo .controles-lesao__alternar { grid-column: 2; grid-row: 1 / 3; }
+
 .controles-lesao__topo strong {
+  grid-column: 1;
   min-width: 0;
   color: var(--dourado-claro);
   font-size: 0.78rem;
-  text-align: right;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

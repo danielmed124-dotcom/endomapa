@@ -1,0 +1,31 @@
+.parede-controles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:center;margin:12px 0}
+.modelos-adenomiose-parede{grid-column:1 / -1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.parede-controles .botao{min-width:0;min-height:44px;padding:8px 10px;white-space:normal}
+.parede-controles [aria-pressed="true"]{background:#70531e;color:#fff;border-color:#70531e;box-shadow:inset 0 0 0 2px #fff8}
+.parede-controles [data-parede-restaurar]{grid-column:1 / -1;justify-self:end;padding:10px 16px;font-size:.875rem;line-height:1.3}
+.caneta-manual__acoes .botao{background:#176575;color:#fff;border-color:#176575}
+.caneta-manual__acoes .botao:hover:not(:disabled){background:#104b58;border-color:#104b58}
+.caneta-manual__acoes .botao[aria-pressed="true"]{background:#0b3d48;border-color:#0b3d48;box-shadow:inset 0 0 0 2px #fff9}
+.caneta-manual__acoes .botao:focus-visible{outline:3px solid #176575;outline-offset:3px}
+.caneta-manual__acoes .botao:disabled{background:#dce9ec;color:#536b70;border-color:#b7cdd2;opacity:1}
+@media(max-width:600px){.parede-controles{gap:8px 4px}.parede-controles .botao{padding:8px 4px;font-size:.78rem;line-height:1.25}.parede-controles [data-parede-restaurar]{padding:10px 16px;font-size:.875rem}}
+[data-parede-tela]{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.mapa-editor--cinza [data-parede-tela]{filter:grayscale(1)}
+.parede-alca{position:absolute;z-index:6;background:transparent;border:0;padding:0;cursor:move;touch-action:none;color:transparent}
+.parede-alca:focus-visible{outline:2px solid #8b6927;outline-offset:3px}
+.parede-alca--janela{width:36%;aspect-ratio:1;border-radius:50%}
+.parede-alca--ponto{width:28px;height:28px;border-radius:50%;transform:translate(-50%,-50%)}
+.parede-alca--cicatriz{width:36%;height:6%;transform:translate(-50%,-50%)}
+.parede-alca--axial{width:9%;height:auto;aspect-ratio:1.6;min-width:44px;min-height:44px;transform:translate(-50%,-50%);z-index:7;border-radius:50%}
+.parede-axial-controles{margin:8px 0 12px}
+.parede-axial-controles .botao{min-height:44px;white-space:normal}
+.parede-axial-controles p{font-size:.85rem;margin:8px 0}
+.parede-axial-edicao{display:grid;gap:10px;min-width:0}
+.parede-axial-edicao[hidden]{display:none}
+.controles-lesao--axial .controles-lesao__conteudo > .medidas-editor:not(.parede-axial-distancias){display:none}
+.parede-axial-distancias{grid-template-columns:repeat(2,minmax(0,1fr))}
+.parede-axial-rotulo{max-width:26%;box-sizing:border-box;white-space:pre;pointer-events:auto;z-index:8}
+.parede-axial-rotulo:focus-visible{outline:2px solid #8b6927}
+[data-parede-anotacoes]{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2}
+[data-mapa-editor="parede-abdominal"] .mapa-editor__camada{pointer-events:none}
+[data-mapa-editor="parede-abdominal"] .lesao-editavel,[data-mapa-editor="parede-abdominal"] .rotulo-medida{pointer-events:auto}

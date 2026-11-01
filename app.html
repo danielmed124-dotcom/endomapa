@@ -8,9 +8,10 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=leiomiomas-figo-20261030" />
+    <link rel="stylesheet" href="styles.css?v=parede-20261101" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
+    <link rel="stylesheet" href="parede-abdominal.css?v=20261101">
   </head>
   <body class="autenticacao-pendente">
     <header class="topo">
@@ -387,7 +388,7 @@
           <div class="opcao-vista opcao-vista--especiais">
             <label class="opcao-vista__titulo">Mapas especiais <input type="radio" name="vistas-editor" value="especiais" aria-controls="mapa-especial" /></label>
             <label class="rotulo-mapa-especial" for="mapa-especial">Selecione o mapa</label>
-            <select id="mapa-especial" data-mapa-especial>
+            <select id="mapa-especial" data-mapa-especial><option value="parede-abdominal">Parede abdominal</option>
               <option value="ooforectomia-direita">Ooforectomia à direita</option>
               <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
               <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
@@ -424,10 +425,16 @@
             <img src="assets/lesoes/intestinal.png" alt="" style="object-fit: contain; border-radius: 0" />
             <span>Intestinal</span>
           </button>
+<div class="modelos-adenomiose-parede" role="group" aria-label="Adenomiose e endometrioma de parede">
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/adenomiose-1-referencia.png" data-nome="Adenomiose" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50" data-tamanho-minimo="5">
             <img src="assets/lesoes/adenomiose-1-referencia.png" alt="" />
             <span>Adenomiose</span>
           </button>
+          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometrioma-parede-v3.png" data-nome="Endometrioma de parede" data-proporcao="1.2" data-sem-recorte="true" data-tamanho-inicial="100" data-tamanho-minimo="5" data-x-inicial="40" data-y-inicial="70" data-vista-inicial="parede-abdominal">
+            <img src="assets/lesoes/endometrioma-parede-v3.png" alt="" style="object-fit:contain;border-radius:0" />
+            <span>Endometrioma de parede</span>
+          </button>
+</div>
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/somp-direito.png?v=1" data-nome="SOMP direito" data-proporcao="0.72680412371134" data-sem-recorte="true" data-tamanho-inicial="100" data-tamanho-minimo="5" data-x-inicial="70.48802946593" data-y-inicial="49.9309392265193" data-vista-inicial="coronal">
             <img src="assets/lesoes/somp-direito.png?v=1" alt="" style="object-fit: contain; border-radius: 0" />
             <span style="white-space: nowrap">SOMP<br />direito</span>
@@ -444,6 +451,7 @@
             <img src="assets/lesoes/cisto-referencia.png" alt="" />
             <span>Cisto</span>
           </button>
+
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/endometrioma-referencia.png" data-nome="Endometrioma" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="65">
             <img src="assets/lesoes/endometrioma-referencia.png" alt="" />
             <span>Endometrioma</span>
@@ -639,6 +647,25 @@
         </section>
       </section>
 
+        <section class="vista-manual" data-vista-manual="parede-abdominal" hidden>
+          <h2 class="secao-dados__titulo">Parede abdominal</h2>
+          <button class="botao botao--secundario" type="button" data-editar-vista="parede-abdominal" aria-pressed="false">Editar parede abdominal</button>
+          <div class="parede-controles">
+            <button type="button" class="botao botao--secundario" data-parede-ligamentos aria-pressed="false">Ligamentos redondos</button>
+            <button type="button" class="botao botao--secundario" data-parede-lupa aria-pressed="true">Lupa corte axial</button>
+            <button type="button" class="botao botao--secundario" data-parede-cicatriz aria-pressed="false">Cicatriz de cesárea</button>
+            <button type="button" class="botao botao--secundario" data-parede-restaurar>Restaurar posição</button>
+          </div>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="parede-abdominal">
+            <div class="mapa-editor__desenho">
+              <img src="assets/parede-abdominal/parede-anterior-v1.png" data-mapa-base data-src-clinica="assets/parede-abdominal/parede-anterior-v1.png" data-src-visitante="assets/parede-abdominal/parede-anterior-v1.png" alt="Parede abdominal em vista anterior" draggable="false">
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="parede-abdominal" aria-label="Lesões adicionadas à parede abdominal"></div>
+            </div>
+            <figcaption>Arraste a lupa, o ponto dourado e a cicatriz para ajustar suas posições. Dentro da lupa, arraste a lesão para movê-la sobre o corte axial. Também é possível usar as setas do teclado.</figcaption>
+          </figure>
+          <p data-parede-nota hidden>A linha curva indica a projeção da cicatriz da pele sobre o mapa muscular; não é um corte nos músculos. Posição ilustrativa, sem escala em centímetros.</p>
+        </section>
       <section class="controles-lesao" data-controles-lesao hidden aria-labelledby="titulo-ajuste-lesao">
         <div class="controles-lesao__topo">
           <h2 class="secao-dados__titulo" id="titulo-ajuste-lesao">Ajustar lesão</h2>
@@ -782,8 +809,9 @@
     <script src="tubas/movimento.js?v=tubas-20261029"></script>
     <script src="tubas/motor.js?v=tubas-20261029"></script>
     <script src="tubas/editor.js?v=tubas-20261029"></script>
-    <script src="editor-manual.js?v=medidas-mm-20261101"></script>
-    <script src="historico-manual.js?v=contador-20261031-1"></script>
+    <script src="parede-abdominal.js?v=20261101"></script>
+    <script src="editor-manual.js?v=parede-20261101"></script>
+    <script src="historico-manual.js?v=parede-20261101"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>
 </html>
