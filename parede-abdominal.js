@@ -11,6 +11,7 @@
   const armazenar=valor=>converter(valor,unidade==='mm'?0.1:1);
   const formatar=valor=>Number(exibir(valor).replace(',','.')).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:2});
   const tela=document.createElement('canvas');tela.width=1086;tela.height=1448;tela.dataset.paredeTela='';mapa.append(tela);
+  const telaLesoes=document.createElement('canvas');telaLesoes.width=1086;telaLesoes.height=1448;telaLesoes.dataset.paredeLesoes='';mapa.append(telaLesoes);
   const q=s=>document.querySelector(`[data-parede-${s}]`),ligamentos=q('ligamentos'),lupa=q('lupa'),cicatriz=q('cicatriz');
   const imagens=['parede-anterior-v1.png','parede-canais-inguinais-v2.png','corte-axial-subcutaneo-v3.png','endometrioma-parede-axial-v2.png'].map(nome=>{const img=new Image();img.src=`assets/parede-abdominal/${nome}`;return img;});
   const axialInicial=()=>({visivel:false,x:35,y:48});
@@ -155,11 +156,19 @@
       c.save();c.strokeStyle='#b4944b';c.lineWidth=2*escala;c.setLineDash([5*escala,4*escala]);c.beginPath();c.moveTo(px,py);c.lineTo(x,y);c.stroke();c.setLineDash([]);
       c.shadowColor='#0002';c.shadowBlur=25*escala;c.shadowOffsetY=7*escala;c.fillStyle='#fff';c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();c.shadowColor='transparent';
       c.save();c.clip();const iw=2*r,ih=iw*imagens[2].naturalHeight/imagens[2].naturalWidth;c.drawImage(imagens[2],x-r,y-ih/2,iw,ih);
-      for(const a of todosAxiais().filter(a=>a.visivel)){const g=geometriaAxial(a),base=iw*.25*g.tamanho/100,aw=base*g.eixoX/100,ah=base*imagens[3].naturalHeight/imagens[3].naturalWidth*g.eixoY/100;c.save();c.translate(x-r+iw*a.x/100,y-r+iw*a.y/100);c.rotate(g.giro*Math.PI/180);c.drawImage(imagens[3],-aw/2,-ah/2,aw,ah);c.restore();}
       c.restore();
       c.strokeStyle='#c9a24d';c.lineWidth=3*escala;c.stroke();c.fillStyle='#675432';c.font=`${Math.min(13,Math.max(9,innerWidth*.016))*escala}px "Segoe UI", sans-serif`;c.textAlign='center';if(!linhasDistancias().length)c.fillText('Corte axial',x,y+r*.63);
       c.fillStyle='#c9a24d88';c.strokeStyle='#8b6927';c.lineWidth=2*escala;c.beginPath();c.arc(px,py,13*escala,0,Math.PI*2);c.fill();c.stroke();c.restore();
     }
+  }
+  function pintarLesoes(canvas){
+    const c=canvas.getContext('2d'),w=canvas.width,h=canvas.height,escala=w/(mapa.clientWidth||600);
+    c.clearRect(0,0,w,h);
+    if(!estado.lupa)return;
+    const r=w*.18,x=estado.janela.x*w/100+r,y=estado.janela.y*h/100+r,iw=2*r;
+    c.save();c.beginPath();c.arc(x,y,Math.max(0,r-1.5*escala),0,Math.PI*2);c.clip();
+    for(const a of todosAxiais().filter(a=>a.visivel)){const g=geometriaAxial(a),base=iw*.25*g.tamanho/100,aw=base*g.eixoX/100,ah=base*imagens[3].naturalHeight/imagens[3].naturalWidth*g.eixoY/100;c.save();c.translate(x-r+iw*a.x/100,y-r+iw*a.y/100);c.rotate(g.giro*Math.PI/180);c.drawImage(imagens[3],-aw/2,-ah/2,aw,ah);c.restore();}
+    c.restore();
   }
   function desenhar(){
     camposDistancias.forEach(campo=>{if(document.activeElement!==campo)campo.value=exibir(axial()[campo.dataset.axialDistancia]||'');});
@@ -180,7 +189,7 @@
     for(const [botao,chave] of [[ligamentos,'ligamentos'],[lupa,'lupa'],[cicatriz,'cicatriz']])botao.setAttribute('aria-pressed',String(estado[chave]));q('nota').hidden=!estado.cicatriz;
     for(const id of ['janela','ponto']){alcas[id].hidden=!estado.lupa;alcas[id].style.left=estado[id].x+'%';alcas[id].style.top=estado[id].y+'%';}
     alcas.cicatrizPos.hidden=!estado.cicatriz;alcas.cicatrizPos.style.left=(50+estado.cicatrizPos.x/10)+'%';alcas.cicatrizPos.style.top=((980+estado.cicatrizPos.y)/1333.333*100)+'%';
-    if(carregado)pintar(tela);
+    if(carregado){pintar(tela);pintarLesoes(telaLesoes);}
     pintarAnotacoes(telaRotulo,false);
   }
   function validarBase(e){if(e===undefined)return;const falhar=()=>{throw Error('Posições da parede abdominal incompatíveis. O mapa aberto foi preservado.');};if(!e||typeof e!=='object')falhar();for(const k of ['ligamentos','lupa','cicatriz'])if(typeof e[k]!=='boolean')falhar();for(const [k,[xmin,xmax,ymin,ymax]]of Object.entries(limites)){const p=e[k];if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<xmin||p.x>xmax||p.y<ymin||p.y>ymax)falhar();}if(e.axial!==undefined){const a=e.axial;if(!a||typeof a.visivel!=='boolean'||!Number.isFinite(a.x)||!Number.isFinite(a.y)||Math.hypot(a.x-50,a.y-50)>32.000001)falhar();for(const [chave,min,max]of [['giro',-180,180],['tamanho',5,250],['eixoX',40,250],['eixoY',40,250]])if(a[chave]!==undefined&&(!Number.isFinite(a[chave])||a[chave]<min||a[chave]>max))falhar();if(a.nome!==undefined&&(typeof a.nome!=='string'||a.nome.length>60))falhar();for(const k of ['medida1','medida2','medida3','distanciaPeritonio','distanciaPele'])if(a[k]!==undefined&&(typeof a[k]!=='string'||a[k].length>12||!/^\d*(,\d{0,3})?$/.test(a[k])))falhar();if(a.rotulo!==undefined){const p=a.rotulo;if(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<13||p.x>87||p.y<2||p.y>85)falhar();}}}
@@ -196,7 +205,7 @@
   }
   const pronto=Promise.all(imagens.map(img=>img.decode())).then(()=>{carregado=true;desenhar();});
   pronto.catch(()=>{q('nota').hidden=false;q('nota').textContent='Não foi possível carregar as imagens da parede abdominal. Recarregue a página.';});
-  window.endomapaParede={pronto,validar,geometriaEmEdicao,aplicarGeometria,mostrarDistancias,editarNoPainel,inserirPar,ativarPar,removerPar,ocultarAnotacoes(ocultar){anotacoesOcultas=Boolean(ocultar);desenhar();},estado:()=>JSON.stringify(estado)===JSON.stringify(inicial())?undefined:copiar(estado),restaurar(e){validar(e);estado=e?copiar(e):inicial();desenhar();},fotografar(id){if(id!==vista)return null;if(!carregado)throw Error('Aguarde as imagens da parede abdominal.');const foto=document.createElement('canvas');foto.width=1086;foto.height=1448;pintar(foto);const anotacoes=document.createElement('canvas');anotacoes.width=1086;anotacoes.height=1448;pintarAnotacoes(anotacoes);foto.anotacoesParede=anotacoes;return foto;}};
+  window.endomapaParede={pronto,validar,geometriaEmEdicao,aplicarGeometria,mostrarDistancias,editarNoPainel,inserirPar,ativarPar,removerPar,ocultarAnotacoes(ocultar){anotacoesOcultas=Boolean(ocultar);desenhar();},estado:()=>JSON.stringify(estado)===JSON.stringify(inicial())?undefined:copiar(estado),restaurar(e){validar(e);estado=e?copiar(e):inicial();desenhar();},fotografar(id){if(id!==vista)return null;if(!carregado)throw Error('Aguarde as imagens da parede abdominal.');const foto=document.createElement('canvas');foto.width=1086;foto.height=1448;pintar(foto);const anotacoes=document.createElement('canvas');anotacoes.width=1086;anotacoes.height=1448;pintarAnotacoes(anotacoes);foto.anotacoesParede=anotacoes;const lesoes=document.createElement('canvas');lesoes.width=1086;lesoes.height=1448;pintarLesoes(lesoes);foto.lesoesParede=lesoes;return foto;}};
   function atualizarUnidade(perfil){
     unidade=perfil?.unidade_medidas==='mm'?'mm':'cm';
     edicaoAxial.querySelector('legend').textContent=unidade==='mm'?'Medidas em milímetros':'Medidas em centímetros';

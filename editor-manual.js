@@ -1348,6 +1348,7 @@
       }
       contexto.putImageData(imagem, 0, 0);
     }
+    if (orgaos?.lesoesParede && !opcoes.semLesoes) contexto.drawImage(orgaos.lesoesParede, 0, 0, canvas.width, canvas.height);
     if (orgaos?.anotacoesParede) contexto.drawImage(orgaos.anotacoesParede, 0, 0, canvas.width, canvas.height);
     if (assinatura) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
     if (!incluirMascaras) desenharContatosEndomapa(canvas);
