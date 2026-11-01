@@ -21,6 +21,7 @@
   let quantidadeDeColagens = 0;
   let proximoId = 1;
   let anotacoesOcultas = false;
+  let unidadeMedidas = 'cm';
   let podeOcultarAnotacoes = false;
   if (!camada || !controles) return;
 
@@ -396,6 +397,19 @@
     if (!podeExportarDivulgacao && exportarDivulgacao) exportarDivulgacao.checked = false;
   }
   atualizarPermissaoDivulgacao(window.endomapaMedico);
+  function atualizarUnidadeMedidas(perfil) {
+    unidadeMedidas = perfil?.unidade_medidas === 'mm' ? 'mm' : 'cm';
+    const legenda = document.querySelector('.medidas-editor legend');
+    if (legenda) legenda.textContent = unidadeMedidas === 'mm' ? 'Medidas em milímetros' : 'Medidas em centímetros';
+    document.querySelectorAll('[data-medida]').forEach(campo => {
+      const exemplos = unidadeMedidas === 'mm' ? ['10', '3', '5'] : ['1,0', '0,3', '0,5'];
+      campo.placeholder = `Ex.: ${exemplos[Number(campo.dataset.medida) - 1]}`;
+    });
+    if (selecionada) selecionar(selecionada);
+    document.querySelectorAll('[data-camada-editor] .lesao-editavel').forEach(atualizarRotuloDeMedidas);
+  }
+  atualizarUnidadeMedidas(window.endomapaMedico);
+  window.addEventListener('endomapa:perfil-carregado', evento => atualizarUnidadeMedidas(evento.detail));
   window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoDivulgacao(evento.detail));
   const botaoAnotacoes = document.querySelector('[data-alternar-anotacoes]');
   function atualizarBotaoAnotacoes() {
@@ -656,7 +670,7 @@
     if (campoFigo) campoFigo.hidden = !ehLeiomioma(lesao);
     if (controleFigo) controleFigo.value = lesao.dataset.figo || '';
     document.querySelectorAll("[data-medida]").forEach(function (campo) {
-      campo.value = lesao.dataset[`medida${campo.dataset.medida}`] || "";
+      campo.value = converterMedida(lesao.dataset[`medida${campo.dataset.medida}`] || '', unidadeMedidas === 'mm' ? 10 : 1);
     });
     document.querySelector("[data-nome-lesao]").textContent = lesao.dataset.nome;
     atualizarValoresControles();
@@ -716,7 +730,8 @@
     if (!selecionada) return;
     const campo = evento.currentTarget;
     campo.value = limparMedida(campo.value);
-    selecionada.dataset[`medida${campo.dataset.medida}`] = campo.value;
+    // A montagem continua armazenando centímetros, inclusive para mapas antigos.
+    selecionada.dataset[`medida${campo.dataset.medida}`] = converterMedida(campo.value, unidadeMedidas === 'mm' ? 0.1 : 1);
     atualizarRotuloDeMedidas(selecionada);
   }
 
@@ -765,9 +780,10 @@
           : `Leiomioma (FIGO ${lesao.dataset.figo}) ${nome}`;
       }
     } else if (primeiro && primeiro !== lesao) nome = '';
+    const unidade = lesao.unidadeMedidas || unidadeMedidas;
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
-      .filter(Boolean).map(formatarMedida);
-    return [nome, valores.length ? `${valores.join(" × ")} cm` : ""].filter(Boolean);
+      .filter(Boolean).map(valor => formatarMedida(converterMedida(valor, unidade === 'mm' ? 10 : 1)));
+    return [nome, valores.length ? `${valores.join(" × ")} ${unidade}` : ""].filter(Boolean);
   }
 
   function iniciarMovimentoDaMedida(evento) {
@@ -823,6 +839,12 @@
   function limparMedida(valor) {
     const partes = String(valor).replace(".", ",").replace(/[^0-9,]/g, "").split(",");
     return partes.length > 1 ? `${partes.shift()},${partes.join("").slice(0, 2)}` : partes[0];
+  }
+
+  function converterMedida(valor, fator) {
+    if (!valor || fator === 1) return valor;
+    const numero = Number(String(valor).replace(',', '.'));
+    return Number.isFinite(numero) ? String(Number((numero * fator).toFixed(8))).replace('.', ',') : valor;
   }
 
   function formatarMedida(valor) {
@@ -926,7 +948,7 @@
   function fotografarLesoes(camadaDaCaptura = camada) {
     // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
     return Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
-      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src, anotacoesOcultas,
+      return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src, anotacoesOcultas, unidadeMedidas,
         estiloRotulo: fotografarEstiloRotulo(lesao, camadaDaCaptura) };
     });
   }
