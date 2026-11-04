@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
-  <style>.modelos-adenomiose-parede{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style></head>
+  <style>.modelos-adenomiose-parede{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style><style>.par-intestinal{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style></head>
   <body class="autenticacao-pendente">
     <header class="topo">
       <div class="topo__conteudo">
@@ -423,10 +423,13 @@
           </button>
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal-sagital.png" data-nome="Intestinal sagital" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="130" data-tamanho-minimo="5"><img src="assets/lesoes/intestinal-sagital.png" alt="" style="object-fit:contain;border-radius:0"/><span>Intestinal sagital</span></button>
 <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal-coronal.png" data-nome="Intestinal coronal" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="160" data-tamanho-minimo="5"><img src="assets/lesoes/intestinal-coronal.png" alt="" style="object-fit:contain;border-radius:0"/><span>Intestinal coronal</span></button>
-          <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal.png" data-nome="Intestinal" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="160" data-tamanho-minimo="5">
+          <div class="par-intestinal" role="group" aria-label="Lesões intestinais"><button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal.png" data-nome="Intestinal" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="160" data-tamanho-minimo="5">
             <img src="assets/lesoes/intestinal.png" alt="" style="object-fit: contain; border-radius: 0" />
             <span>Intestinal</span>
-          </button>
+          </button><button class="modelo-lesao" type="button" data-modelo="assets/lesoes/intestinal-compacta.png" data-nome="Intestinal" data-proporcao="1.6683831101956745" data-sem-recorte="true" data-tamanho-inicial="160" data-tamanho-minimo="5">
+            <img src="assets/lesoes/intestinal-compacta.png" alt="" style="object-fit: contain; border-radius: 0" />
+            <span>Intestinal</span>
+          </button></div>
 <div class="modelos-adenomiose-parede" role="group" aria-label="Adenomiose, Retrocervical e endometrioma de parede">
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/adenomiose-1-referencia.png" data-nome="Adenomiose" data-proporcao="1" data-sem-recorte="true" data-tamanho-inicial="50" data-tamanho-minimo="5">
             <img src="assets/lesoes/adenomiose-1-referencia.png" alt="" />
