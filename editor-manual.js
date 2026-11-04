@@ -75,10 +75,10 @@
     contatos.dataset.contatosEndomapa = '';
     contatos.setAttribute('role', 'img');
     contatos.setAttribute('aria-label', 'Instagram: @endocarta. Site: endocarta.com.br');
-    mapa.querySelector('.mapa-editor__desenho').append(contatos);
+    (mapa.querySelector('[data-folha-abdome]') || mapa.querySelector('.mapa-editor__desenho')).append(contatos);
     const atualizar = () => {
-      contatos.width = base.naturalWidth || 1086;
-      contatos.height = base.naturalHeight || 1448;
+      contatos.width = mapa.querySelector("[data-folha-abdome]") ? 1086 : base.naturalWidth || 1086;
+      contatos.height = mapa.querySelector("[data-folha-abdome]") ? 1448 : base.naturalHeight || 1448;
       desenharContatosEndomapa(contatos);
     };
     base.addEventListener('load', atualizar);
@@ -1258,10 +1258,10 @@
       }
       const paginas = [];
       for (const captura of capturas) {
-        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza, transparenciaCinza }, false, captura.base, captura.assinatura, captura.caneta, captura.orgaos);
+        const { canvas } = await renderizarMontagem(captura.lesoes, { escalaCinza, transparenciaCinza, folhaAbdome: window.endocartaFolhaAbdome.aceita(captura.vista) }, false, captura.base, captura.assinatura, captura.caneta, captura.orgaos);
         desenharRotulos(canvas.getContext("2d"), canvas, captura.lesoes);
         if (captura.caneta) canvas.getContext("2d").drawImage(captura.caneta, 0, 0, canvas.width, canvas.height);
-        paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista) || canvas });
+        paginas.push({ vista: captura.vista, canvas: documento?.compor(canvas, captura.documento, captura.vista, c => finalizarFolha(c, captura.vista, captura.assinatura)) || finalizarFolha(canvas, captura.vista, captura.assinatura) });
       }
       const arquivo = window.endomapaGerarPdfA4(paginas);
       const endereco = URL.createObjectURL(arquivo);
@@ -1285,16 +1285,27 @@
     }
   }
 
+  function finalizarFolha(canvas, vista, assinatura) {
+    if (!window.endocartaFolhaAbdome.aceita(vista)) return canvas;
+    const folha = window.endocartaFolhaAbdome.compor(canvas);
+    if (assinatura) folha.getContext('2d').drawImage(assinatura, 0, 0, folha.width, folha.height);
+    desenharContatosEndomapa(folha);
+    return folha;
+  }
+
   async function capturarMapa(opcoes = {}) {
     opcoes = { ...opcoes, divulgacao: podeExportarDivulgacao && Boolean(opcoes.divulgacao) };
     const lesoes = fotografarLesoes();
     const dadosDocumento = documento?.capturar(true);
     const vistaDocumento = vistaAtiva;
+    const assinaturaCapturada = opcoes.divulgacao ? null : fotografarAssinatura();
+    opcoes.folhaAbdome = window.endocartaFolhaAbdome.aceita(vistaDocumento);
     let { canvas, caneta } = await renderizarMontagem(lesoes, opcoes, false,
-      obterFonteDaBase(camada, opcoes.divulgacao), opcoes.divulgacao ? null : fotografarAssinatura());
+      obterFonteDaBase(camada, opcoes.divulgacao), assinaturaCapturada);
     if (!opcoes.semRotulos) desenharRotulos(canvas.getContext("2d"), canvas, lesoes);
     if (caneta) canvas.getContext("2d").drawImage(caneta, 0, 0, canvas.width, canvas.height);
-    if (!opcoes.semRotulos && documento) canvas = documento.compor(canvas, dadosDocumento, vistaDocumento);
+    if (!opcoes.semRotulos && documento) canvas = documento.compor(canvas, dadosDocumento, vistaDocumento, c => finalizarFolha(c, vistaDocumento, assinaturaCapturada));
+    else canvas = finalizarFolha(canvas, vistaDocumento, assinaturaCapturada);
     if (opcoes.fundoBranco) {
       const contexto = canvas.getContext('2d');
       contexto.save(); contexto.globalCompositeOperation = 'destination-over';
@@ -1374,8 +1385,8 @@
     }
     if (orgaos?.lesoesParede && !opcoes.semLesoes) contexto.drawImage(orgaos.lesoesParede, 0, 0, canvas.width, canvas.height);
     if (orgaos?.anotacoesParede) contexto.drawImage(orgaos.anotacoesParede, 0, 0, canvas.width, canvas.height);
-    if (assinatura) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
-    if (!incluirMascaras) desenharContatosEndomapa(canvas);
+    if (assinatura && !opcoes.folhaAbdome) contexto.drawImage(assinatura, 0, 0, canvas.width, canvas.height);
+    if (!incluirMascaras && !opcoes.folhaAbdome) desenharContatosEndomapa(canvas);
     const mascaras = [];
     // Uma única tela reutilizada mantém a rasterização nas coordenadas absolutas
     // originais. O resultado guarda somente os recortes alfa, nunca a anatomia.

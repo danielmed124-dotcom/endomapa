@@ -56,6 +56,15 @@ window.endomapaLogoAnaPaulaPronta = new Promise((resolve, reject) => {
 window.endomapaLogoAnaPaulaPronta.catch(() => {});
 logoAnaPaula.src = 'assets/clinicas/ana-paula.png';
 
+// Reutiliza a logo original do mapa aprovado, sem redesenhar a identidade.
+const baseLogoCentrus = new Image();
+window.endocartaLogoCentrusPronta = new Promise((resolve, reject) => {
+  baseLogoCentrus.onload = () => { atualizarLadosDosMapas(); resolve(); };
+  baseLogoCentrus.onerror = () => reject(new Error('Não foi possível carregar a logo da clínica.'));
+});
+window.endocartaLogoCentrusPronta.catch(() => {});
+baseLogoCentrus.src = 'assets/mapa-base-coronal-aberto.png';
+
 function logoDoPerfil(perfil) {
   return perfil?.logo_ana_paula ? logoAnaPaula : perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
 }
@@ -191,7 +200,11 @@ function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const contexto = canvas.getContext("2d");
   contexto.clearRect(0, 0, canvas.width, canvas.height);
   const logoPersonalizada = logoDoPerfil(perfilDosLados);
-  canvas.hidden = !nome && !indicarLados && !logoPersonalizada;
+  const centrusAbdome = canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor === 'ceco-apendice-ileo-diafragma' && Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
+  canvas.hidden = !nome && !indicarLados && !logoPersonalizada && !centrusAbdome;
+  if (centrusAbdome && baseLogoCentrus.naturalWidth) {
+    contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, 850, 0, 220, 160);
+  }
   if (logoPersonalizada?.naturalWidth) {
     const larguraLogo = canvas.width * 0.175;
     contexto.drawImage(logoPersonalizada, canvas.width * 0.799, canvas.height * 0.018,

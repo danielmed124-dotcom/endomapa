@@ -184,13 +184,14 @@
       },
       limpar(id) { vistas[id].textos = []; vistas[id].selecionar(null); desenhar(id); },
       temTexto: id => vistas[id].textos.some(t => t.texto.trim()),
-      compor(canvas, dados, id) {
-        if (!dados) return canvas;
+      compor(canvas, dados, id, finalizar = c => c) {
+        if (!dados) return finalizar(canvas);
         const ctx = canvas.getContext('2d');
         (dados.textos[id] || []).filter(t => t.texto.trim()).forEach(t => {
           const imagem = imagemTexto(t.texto, dados.estilos?.[id] || estiloTexto(id)); const escala = canvas.width / 1086;
           ctx.drawImage(imagem, t.x * canvas.width / 100, t.y * canvas.height / 100, imagem.width * escala, imagem.height * escala);
         });
+        canvas = finalizar(canvas);
         const topo = imagemCabecalho(dados.cabecalho); if (!topo) return canvas;
         const resultado = document.createElement('canvas'); resultado.width = canvas.width;
         const altura = Math.round(topo.height * canvas.width / topo.width); resultado.height = canvas.height + altura;
