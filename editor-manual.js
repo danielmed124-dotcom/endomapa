@@ -1049,6 +1049,8 @@
     if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
     // Montagens anteriores à hidrosalpinge não possuem as três novas vistas.
     const vistas = { ...montagem.vistas };
+    // Mapas salvos antes do mapa abdominal continuam abrindo sem esta vista.
+    if (!Object.hasOwn(vistas, 'ceco-apendice-ileo-diafragma')) vistas['ceco-apendice-ileo-diafragma'] = {lesoes:[],tracos:[]};
     if (!Object.hasOwn(vistas, 'parede-abdominal')) vistas['parede-abdominal'] = {lesoes:[],tracos:[]};
     window.endomapaParede?.validar(vistas['parede-abdominal']?.parede);
     for (const lado of lados) if (!Object.hasOwn(vistas, lado)) vistas[lado] = { lesoes: [], tracos: [] };
