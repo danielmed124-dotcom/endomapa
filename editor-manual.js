@@ -275,7 +275,7 @@
 
   document.querySelectorAll("[data-modelo]").forEach(function (botao) {
     const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(botao.dataset.nome);
-    const bilateral = ovariano || botao.dataset.nome === 'Ligamento uterossacro';
+    const bilateral = ovariano || ['Ligamento uterossacro','Ligamento redondo'].includes(botao.dataset.nome);
     let lado, quantidade;
     if (bilateral) {
       const grupo = document.createElement('div');
@@ -318,6 +318,14 @@
   });
 
   function posicaoDeInsercao(nome, lado, indice, total) {
+    if (nome === 'Retrocervical' && vistaAtiva === 'coronal') return {"x":"50.8","y":"52.1","giro":"31","tamanho":"30","medidaX":"62","medidaY":"58.5","nomeNoMapa":"Retrocervical"};
+    if (nome === 'Ligamento redondo') {
+      const posicoes={"direito":{"x":34,"y":30.6,"giro":-136,"tamanho":65,"medidaX":31.8,"medidaY":22.4},"esquerdo":{"x":68.9,"y":30.6,"giro":-140,"tamanho":65,"medidaX":72,"medidaY":23.2}};
+      return { ...(vistaAtiva === 'coronal' ? posicoes[lado] : {}), nomeNoMapa: 'Ligamento redondo ' + lado };
+    }
+    if (nome === 'Intestinal coronal' && vistaAtiva === 'coronal') return {"nome":"Intestinal coronal","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"39.9","y":"63.0","giro":"0","tamanho":"160","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"18","medidaY":"77"};
+    if (nome === 'Intestinal sagital' && vistaAtiva === 'sagital') return {"nome":"Intestinal sagital","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"73.3","y":"39.8","giro":"-75","tamanho":"130","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"82","medidaY":"52"};
+
     if (vistaAtiva === 'parede-abdominal') return null;
     const sagital = vistaAtiva === 'sagital';
     const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(nome);
@@ -369,7 +377,14 @@
   eixoY.addEventListener("input", aplicarControles);
   nomeNoMapa.addEventListener("input", function () {
     if (!selecionada) return;
-    selecionada.dataset.nomeNoMapa = normalizarNomeLesao(nomeNoMapa.value);
+    const anterior = (selecionada.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR');
+    const novoNome = normalizarNomeLesao(nomeNoMapa.value);
+    if (ehFoliculo(selecionada) && anterior) {
+      selecionada.closest('[data-camada-editor]').querySelectorAll('.lesao-editavel').forEach(item => {
+        if (ehFoliculo(item) && (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === anterior) item.dataset.nomeNoMapa = novoNome;
+      });
+    }
+    selecionada.dataset.nomeNoMapa = novoNome;
     atualizarTodasAsLinhas();
   });
   document.querySelectorAll("[data-medida]").forEach(function (campo) {
@@ -611,7 +626,7 @@
     lesao.dataset.id = String(proximoId++);
     nome=normalizarNomeLesao(nome);
     lesao.dataset.nome = nome;
-    lesao.dataset.nomeNoMapa = nome.replace(/\s+[123]$/, '');
+    lesao.dataset.nomeNoMapa = (/^Intestinal (coronal|sagital)$/.test(nome) ? 'Intestinal' : nome).replace(/\s+[123]$/, '');
     lesao.dataset.proporcao = proporcao;
     lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
@@ -630,7 +645,10 @@
     lesao.dataset.nomeNoMapa=normalizarNomeLesao(lesao.dataset.nomeNoMapa).replace(/^Leiomioma 5$/i, 'Leiomioma');
     if (dadosCopiados?.medida1 === undefined) {
       const existentes = Array.from(camada.querySelectorAll('.lesao-editavel'));
-      const ocupados = existentes.filter(item => item.dataset.nomeNoMapa && (ehLeiomioma(lesao) || item.dataset.nomeNoMapa !== lesao.dataset.nomeNoMapa));
+      // Novos folículos mantêm o grupo sem nome quando o usuário já apagou o texto.
+      const foliculos = existentes.filter(ehFoliculo);
+      if (ehFoliculo(lesao) && foliculos.length && foliculos.every(item => !(item.dataset.nomeNoMapa || '').trim())) lesao.dataset.nomeNoMapa = '';
+      const ocupados = existentes.filter(item => item.dataset.nomeNoMapa && !(ehFoliculo(lesao) && ehFoliculo(item) && item.dataset.nomeNoMapa === lesao.dataset.nomeNoMapa));
       let y = Number(lesao.dataset.medidaY);
       for (let tentativa = 0; tentativa < 20 && ocupados.some(item => Math.abs(Number(item.dataset.medidaX) - Number(lesao.dataset.medidaX)) < 20 && Math.abs(Number(item.dataset.medidaY) - y) < 4); tentativa++) y = y >= 86 ? 20 : y + 4;
       lesao.dataset.medidaY = String(y);
@@ -787,6 +805,10 @@
     atualizarLinhaDeMedida(lesao, Boolean(linhas.length));
   }
 
+  function ehFoliculo(lesao) {
+    return normalizarNomeLesao(lesao.dataset.nome).toLocaleLowerCase('pt-BR') === 'folículo';
+  }
+
   function ehLeiomioma(lesao) {
     return /^Leiomioma\b/i.test(normalizarNomeLesao(lesao.dataset.nome));
   }
@@ -796,7 +818,7 @@
     if (lesao.anotacoesOcultas ?? anotacoesOcultas) return [];
     let nome = (lesao.dataset.nomeNoMapa || "").trim();
     const itens = grupo || Array.from(lesao.closest?.('[data-camada-editor]')?.querySelectorAll('.lesao-editavel') || []);
-    const primeiro = itens.find(item => (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR'));
+    const primeiro = ehFoliculo(lesao) ? itens.find(item => ehFoliculo(item) && (item.dataset.nomeNoMapa || '').trim().toLocaleLowerCase('pt-BR') === nome.toLocaleLowerCase('pt-BR')) : null;
     if (ehLeiomioma(lesao)) {
       if (/^(?:[0-8]|2-5)$/.test(lesao.dataset.figo || '')) {
         nome = (nome || 'Leiomioma').replace(/\s*\(FIGO (?:[0-8]|2-5)\)/gi, '');
@@ -804,7 +826,7 @@
           ? nome.replace(/Leiomioma\b/i, `Leiomioma (FIGO ${lesao.dataset.figo})`)
           : `Leiomioma (FIGO ${lesao.dataset.figo}) ${nome}`;
       }
-    } else if (primeiro && primeiro !== lesao) nome = '';
+    } else if (ehFoliculo(lesao) && primeiro && primeiro !== lesao) nome = '';
     const unidade = lesao.unidadeMedidas || unidadeMedidas;
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
       .filter(Boolean).map(valor => formatarMedida(converterMedida(valor, unidade === 'mm' ? 10 : 1)));
