@@ -10,12 +10,10 @@
     let cabecalho = { ativo: false, campos: [] };
     const painel = document.createElement('details');
     painel.className = 'documento-opcoes';
-    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><label><input type="checkbox" data-cabecalho-ativo> Mostrar cabeçalho da paciente</label><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Preencha os dados da paciente deste exame. Ao abrir um mapa salvo, os valores vêm em branco e os nomes dos campos são mantidos. Baixar PDF, PNG ou JPEG não salva alterações na biblioteca; somente o botão Salvar na biblioteca faz isso.</p>`;
+    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Os dados preenchidos aparecem automaticamente no laudo. Ao abrir um mapa salvo, os valores vêm em branco e os nomes dos campos são mantidos. Baixar PDF, PNG ou JPEG não salva alterações na biblioteca; somente o botão Salvar na biblioteca faz isso.</p>`;
     document.querySelector('.editor-manual__area').prepend(painel);
     const campos = painel.querySelector('[data-campos-paciente]');
-    const ativo = painel.querySelector('input');
     function formulario() {
-      ativo.checked = cabecalho.ativo;
       campos.replaceChildren();
       cabecalho.campos.forEach((campo, indice) => {
         const linha = document.createElement('div'); linha.className = 'documento-campo';
@@ -31,7 +29,6 @@
       });
       painel.querySelector('[data-novo-campo]').disabled = cabecalho.campos.length >= 12;
     }
-    ativo.onchange = () => { cabecalho.ativo = ativo.checked; atualizarCabecalho(); };
     painel.querySelector('[data-novo-campo]').onclick = () => {
       if (cabecalho.campos.length >= 12) return;
       cabecalho.campos.push({ nome: '', valor: '' }); formulario(); campos.lastChild.querySelector('input').focus();
@@ -76,7 +73,6 @@
       return tela;
     }
     function imagemCabecalho(dados) {
-      if (!dados.ativo) return null;
       const campos = dados.campos.filter(c => c.nome.trim() && c.valor.trim());
       if (!campos.length) return null;
       const tela = document.createElement('canvas'); tela.width = 1086;
@@ -102,6 +98,8 @@
       return tela;
     }
     function atualizarCabecalho() {
+      // Mantém o formato dos mapas salvos; a visibilidade depende dos dados.
+      cabecalho.ativo = cabecalho.campos.some(c => c.nome.trim() && c.valor.trim());
       mapas.forEach(mapa => {
         const previa = vistas[mapa.dataset.mapaEditor].previa;
         const tela = imagemCabecalho(cabecalho); previa.replaceChildren(); previa.hidden = !tela;
