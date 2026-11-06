@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=parede-20261101" />
+    <link rel="stylesheet" href="styles.css?v=istmocele-20261105" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
@@ -443,6 +443,7 @@
             <img src="assets/lesoes/endometrioma-parede-v3.png" alt="" style="object-fit:contain;border-radius:0" />
             <span>Endometrioma de parede</span>
           </button>
+<button class="modelo-lesao" type="button" data-modelo="assets/lesoes/istmocele-v9.png" data-nome="Istmocele" data-proporcao="1.6928" data-sem-recorte="true" data-tamanho-inicial="100" data-tamanho-minimo="5"><img src="assets/lesoes/istmocele-v9.png" alt="" style="object-fit:contain;border-radius:0"><span>Istmocele</span></button>
 </div>
           <button class="modelo-lesao" type="button" data-modelo="assets/lesoes/somp-direito.png?v=1" data-nome="SOMP direito" data-proporcao="0.72680412371134" data-sem-recorte="true" data-tamanho-inicial="100" data-tamanho-minimo="5" data-x-inicial="70.48802946593" data-y-inicial="49.9309392265193" data-vista-inicial="coronal">
             <img src="assets/lesoes/somp-direito.png?v=1" alt="" style="object-fit: contain; border-radius: 0" />
@@ -734,7 +735,7 @@
             <span>3ª medida · opcional</span>
             <input type="text" inputmode="decimal" placeholder="Ex.: 0,5" data-medida="3" />
           </label>
-        </fieldset>
+        <label hidden data-medida-extra><span></span><input type="text" inputmode="decimal" data-medida="4"></label><label hidden data-medida-extra><span></span><input type="text" inputmode="decimal" data-medida="5"></label></fieldset>
         <label class="campo" data-campo-figo hidden>
           <span class="campo__rotulo">Classificação FIGO</span>
           <select data-controle-figo>
@@ -832,7 +833,7 @@
     <script src="tubas/editor.js?v=tubas-20261029"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="editor-manual.js?v=abdome-margens-20261104"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=istmocele-20261105"></script>
     <script src="historico-manual.js?v=parede-20261101"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>

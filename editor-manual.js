@@ -1,5 +1,6 @@
 (function () {
   "use strict";
+  const nomesMedidasIstmocele=['Comprimento','Profundidade','Espessura do miométrio residual','Espessura do miométrio adjacente','Distância da prega vesicovaginal'];
   let camada = document.querySelector("[data-camada-editor]");
   const controles = document.querySelector("[data-controles-lesao]");
   const alternarControles = document.querySelector("[data-alternar-controles]");
@@ -301,6 +302,9 @@
       grupo.append(inserir);
     }
     botao.addEventListener("click", function () {
+      if(botao.dataset.nome==='Istmocele' && vistaAtiva!=='sagital'){
+        const escolha=document.querySelector('input[name="vistas-editor"][value="sagital"]');escolha.checked=true;escolha.dispatchEvent(new Event('change',{bubbles:true}));ativarVista('sagital');
+      }
       const ladoAtual = lado?.value;
       if (ovariano && (vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
         mostrar('Este ovário foi retirado no mapa escolhido. Escolha o outro lado ou outro mapa.');
@@ -318,6 +322,7 @@
   });
 
   function posicaoDeInsercao(nome, lado, indice, total) {
+    if(nome==='Istmocele')return {x:'56.93',y:'39.53',tamanho:'100',giro:'-49',eixoX:'84',eixoY:'154',medidaX:'50',medidaY:'5',medida4:'',medida5:''};
     if (nome === 'Retrocervical' && vistaAtiva === 'coronal') return {"x":"50.8","y":"52.1","giro":"31","tamanho":"30","medidaX":"62","medidaY":"58.5","nomeNoMapa":"Retrocervical"};
     if (nome === 'Ligamento redondo') {
       const posicoes={"direito":{"x":34,"y":30.6,"giro":-136,"tamanho":65,"medidaX":31.8,"medidaY":22.4},"esquerdo":{"x":68.9,"y":30.6,"giro":-140,"tamanho":65,"medidaX":72,"medidaY":23.2}};
@@ -422,7 +427,7 @@
     if (legenda) legenda.textContent = unidadeMedidas === 'mm' ? 'Medidas em milímetros' : 'Medidas em centímetros';
     document.querySelectorAll('[data-medida]').forEach(campo => {
       const exemplos = unidadeMedidas === 'mm' ? ['10', '3', '5'] : ['1,0', '0,3', '0,5'];
-      campo.placeholder = `Ex.: ${exemplos[Number(campo.dataset.medida) - 1]}`;
+      campo.placeholder = `Ex.: ${exemplos[(Number(campo.dataset.medida) - 1) % exemplos.length]}`;
     });
     if (selecionada) selecionar(selecionada);
     document.querySelectorAll('[data-camada-editor] .lesao-editavel').forEach(atualizarRotuloDeMedidas);
@@ -597,6 +602,7 @@
       mostrar(`${selecionada.dataset.nome} copiada com os ajustes atuais. Use Ctrl+V para colar.`);
     } else if (comando && !evento.shiftKey && tecla === "v" && imagemCopiada) {
       evento.preventDefault();
+      if(imagemCopiada.dados.nome==='Istmocele'&&vistaAtiva!=='sagital'){mostrar('Escolha a vista sagital para colar a istmocele.');return;}
       if (evento.repeat) return;
       const dados = { ...imagemCopiada.dados };
       delete dados.id;
@@ -667,8 +673,8 @@
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
     lesao.addEventListener("pointerdown", iniciarMovimento);
     lesao.addEventListener("click", function () { selecionar(lesao); });
-    atualizarVisual(lesao);
     camada.append(lesao);
+    atualizarVisual(lesao);
     if(vistaAtiva==='parede-abdominal'&&/endometrioma-parede-v[23]\.png(?:\?|$)/.test(src)&&!restaurandoMontagem){
       lesao.dataset.paredePar=crypto.randomUUID();window.endomapaParede?.inserirPar(lesao.dataset.paredePar);
     }
@@ -702,6 +708,14 @@
     tamanho.min = lesao.dataset.tamanhoMinimo || "40";
     tamanho.step = /diu-(cobre|hormonal)-sagital-/.test(lesao.querySelector('img')?.getAttribute('src') || '') ? '1' : '5';
     tamanho.value = lesao.dataset.tamanho;
+    const istmocele=lesao.dataset.nome==='Istmocele';
+    for(const controle of [eixoX,eixoY]){controle.min=istmocele?'5':'40';controle.max=istmocele?'400':'250';controle.step=istmocele?'1':'5';}
+    eixoX.closest('label').querySelector('span').firstChild.textContent=istmocele?'Profundidade na parede ':'Eixo X · horizontal ';
+    eixoY.closest('label').querySelector('span').firstChild.textContent=istmocele?'Largura da abertura ':'Eixo Y · vertical ';
+    document.querySelectorAll('[data-medida]').forEach(campo=>{
+      const i=Number(campo.dataset.medida)-1,label=campo.closest('label');label.hidden=i>=3&&!istmocele;
+      label.querySelector('span').textContent=istmocele?nomesMedidasIstmocele[i]:["1ª medida","2ª medida","3ª medida · opcional"][i]||'';
+    });
     eixoX.value = lesao.dataset.eixoX;
     eixoY.value = lesao.dataset.eixoY;
     nomeNoMapa.value = lesao.dataset.nomeNoMapa || "";
@@ -828,6 +842,9 @@
       }
     } else if (ehFoliculo(lesao) && primeiro && primeiro !== lesao) nome = '';
     const unidade = lesao.unidadeMedidas || unidadeMedidas;
+    if(lesao.dataset.nome==='Istmocele')return [nome,...nomesMedidasIstmocele.map((titulo,i)=>{
+      const v=lesao.dataset['medida'+(i+1)];return v?titulo+': '+formatarMedida(converterMedida(v,unidade==='mm'?10:1))+' '+unidade:'';
+    })].filter(Boolean);
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
       .filter(Boolean).map(valor => formatarMedida(converterMedida(valor, unidade === 'mm' ? 10 : 1)));
     return [nome, valores.length ? `${valores.join(" × ")} ${unidade}` : ""].filter(Boolean);
@@ -877,8 +894,10 @@
     linha.style.transform = `rotate(${angulo}deg)`;
   }
 
+  window.addEventListener('endocarta:istmocele-pronta',atualizarTodasAsLinhas);
   function atualizarTodasAsLinhas() {
     document.querySelectorAll("[data-camada-editor] .lesao-editavel").forEach(function (lesao) {
+      if(lesao.dataset.nome==='Istmocele')atualizarVisual(lesao);
       atualizarRotuloDeMedidas(lesao);
     });
   }
@@ -907,6 +926,7 @@
     lesao.style.setProperty("--tamanho-editor", Number(lesao.dataset.tamanho) / 100);
     lesao.style.setProperty("--escala-x-editor", Number(lesao.dataset.eixoX) / 100);
     lesao.style.setProperty("--escala-y-editor", Number(lesao.dataset.eixoY) / 100);
+    if(lesao.dataset.nome==='Istmocele')window.endocartaIstmocele.atualizar(lesao);
   }
 
   function atualizarValoresControles() {
@@ -1093,7 +1113,10 @@
         if (l.dados.uteroX !== undefined || l.dados.uteroY !== undefined) {
           if(id!=='sagital'||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
         }
-        for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',10,300],['eixoY',10,300]]) {
+        const istmocele=l.src==='assets/lesoes/istmocele-v9.png';
+        if(istmocele&&id!=='sagital')falhar();
+        for(const c of ['medida4','medida5'])if(l.dados[c]!==undefined&&(typeof l.dados[c]!=='string'||l.dados[c].length>40))falhar();
+        for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',istmocele?5:10,istmocele?400:300],['eixoY',istmocele?5:10,istmocele?400:300]]) {
           if (!Number.isFinite(Number(l.dados[campo])) || Number(l.dados[campo]) < min || Number(l.dados[campo]) > max) falhar();
         }
         for (const campo of ['nomeNoMapa','medida1','medida2','medida3']) if (typeof l.dados[campo] !== 'string' || l.dados[campo].length > 1000) falhar();
@@ -1137,6 +1160,7 @@
         if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
         if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
+        for(const c of ['medida4','medida5'])if(l.dados[c]!==undefined)dados[c]=l.dados[c];
         if (l.dados.figo !== undefined) dados.figo = l.dados.figo;
         adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });
@@ -1361,6 +1385,7 @@
   }
 
   async function renderizarMontagem(lesoes, opcoes, incluirMascaras = false, fonteBase = obterFonteDaBase(), assinatura = fotografarAssinatura(), caneta = fotografarCaneta(), orgaos = fotografarOrgaos(vistaAtiva)) {
+    if(lesoes.some(l=>l.dataset.nome==='Istmocele'))await window.endocartaIstmocele.pronto;
     if (window.endomapaTubas?.ocupado()) throw Error('Aguarde o preparo das tubas.');
     // Fotografa a escolha antes de carregar imagens, inclusive em downloads demorados.
     const escalaCinza = opcoes.escalaCinza ?? Boolean(opcaoEscalaCinza?.checked);
@@ -1411,6 +1436,12 @@
 
   function geometriaDaLesao(lesao, larguraMapa, alturaMapa) {
     const tamanhoGeral = Number(lesao.dataset.tamanho) / 100;
+    if(lesao.dataset.nome==='Istmocele'){
+      const largura=larguraMapa*.085*tamanhoGeral*Number(lesao.dataset.eixoX)/100;
+      const altura=alturaMapa*.03765625*tamanhoGeral*Number(lesao.dataset.eixoY)/100;
+      const giro=Number(lesao.dataset.giro)*Math.PI/180;
+      return {x:larguraMapa*Number(lesao.dataset.x)/100-.24*largura*Math.cos(giro),y:alturaMapa*Number(lesao.dataset.y)/100-.24*largura*Math.sin(giro),largura,altura,giro};
+    }
     return {
       x: larguraMapa * Number(lesao.dataset.x) / 100,
       y: alturaMapa * Number(lesao.dataset.y) / 100,
@@ -1422,6 +1453,7 @@
 
   function desenharLesao(contexto, imagem, lesao, geometria, opcoes = {}) {
     const { x, y, largura, altura, giro } = geometria;
+    if(lesao.dataset.nome==='Istmocele')imagem=window.endocartaIstmocele.imagem(lesao.dataset)||imagem;
     contexto.save();
     contexto.translate(x, y);
     contexto.rotate(giro);
