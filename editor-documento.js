@@ -149,7 +149,11 @@
       };
     });
     function desenhar(id) {
-      const estado = vistas[id]; estado.camada.replaceChildren();
+      const estado = vistas[id];
+      // Biblioteca restaura com editor oculto. Não rasterizar nem limitar
+      // posições usando a largura provisória de uma vista sem dimensões.
+      if (!estado.camada.getBoundingClientRect().width) return;
+      estado.camada.replaceChildren();
       estado.textos.forEach(item => {
         const botao = estado.criarBotao(item);
         // Mantém a caixa inteira no mapa após editar o texto ou mudar a tela.
@@ -161,6 +165,18 @@
       });
     }
     formulario();
+    const larguras = new Map();
+    const observador = new ResizeObserver(entradas => {
+      entradas.forEach(entrada => {
+        const id = Object.keys(vistas).find(id => vistas[id].camada === entrada.target);
+        const largura = entrada.contentRect.width;
+        if (id && largura !== larguras.get(id)) {
+          larguras.set(id, largura);
+          if (largura > 0) desenhar(id);
+        }
+      });
+    });
+    Object.values(vistas).forEach(v => observador.observe(v.camada));
     window.addEventListener('resize', () => Object.keys(vistas).forEach(desenhar));
     return {
       ativar(id) { Object.entries(vistas).forEach(([vista, estado]) => { estado.barra.hidden = vista !== id; }); },
