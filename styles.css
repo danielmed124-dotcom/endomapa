@@ -2220,3 +2220,11 @@ body:has(.fusao-integrada:not([hidden])){min-width:0}
 .lesao-editavel[data-nome="Istmocele"] img{opacity:0;position:absolute;inset:0;width:100%;height:100%}
 .lesao-editavel[data-nome="Istmocele"] canvas{display:block;width:100%;height:100%;pointer-events:none}
 .medidas-editor label[hidden]{display:none}
+
+/* Campos próprios das lesões intestinais. */
+.medidas-intestinais{display:grid;grid-template-columns:1fr;gap:10px;min-inline-size:0;margin:0;padding:10px 12px 12px;border:1px solid var(--borda);border-radius:12px}
+.medidas-intestinais[hidden]{display:none}
+.medidas-intestinais legend{font-size:.85rem;font-weight:700;padding-inline:4px}
+.medidas-intestinais label{display:grid;gap:5px;min-width:0}
+.medidas-intestinais label span{font-size:.8rem;line-height:1.35;color:var(--texto-suave)}
+.medidas-intestinais input,.medidas-intestinais select{width:100%;min-width:0;min-height:44px;padding:8px;color:var(--texto);background:var(--fundo);border:1px solid var(--borda);border-radius:9px;font:inherit}

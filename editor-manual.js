@@ -17,6 +17,22 @@
     selecionada.dataset.figo = controleFigo.value;
     atualizarTodasAsLinhas();
   });
+  const camposIntestinais=['distanciaBordaAnal','extensaoCircunferencial','profundidadeParietal'];
+  const profundidadesIntestinais=['','Serosa/subserosa','Muscular própria','Submucosa','Mucosa'];
+  function ehIntestinal(lesao){return /^Intestinal(?: coronal| sagital)?$/.test(lesao.dataset.nome||'');}
+  function numeroIntestinal(valor){return /^(?:\d+(?:[,.]\d*)?|[,.]\d+)$/.test(valor)&&Number.isFinite(Number(valor.replace(',','.')));}
+  document.querySelectorAll('[data-intestinal]').forEach(campo=>{
+    campo.addEventListener(campo.tagName==='SELECT'?'change':'input',()=>{
+      if(!selecionada||!ehIntestinal(selecionada))return;
+      const chave=campo.dataset.intestinal;
+      if(chave!=='profundidadeParietal'){
+        campo.value=limparMedida(campo.value);
+        if(chave==='extensaoCircunferencial'&&Number(campo.value.replace(',','.'))>100)campo.value='100';
+      }
+      selecionada.dataset[chave]=chave==='profundidadeParietal'?campo.value:(numeroIntestinal(campo.value)?campo.value:'');
+      atualizarRotuloDeMedidas(selecionada);
+    });
+  });
   let selecionada = null;
   let imagemCopiada = null;
   let quantidadeDeColagens = 0;
@@ -708,6 +724,9 @@
     tamanho.min = lesao.dataset.tamanhoMinimo || "40";
     tamanho.step = /diu-(cobre|hormonal)-sagital-/.test(lesao.querySelector('img')?.getAttribute('src') || '') ? '1' : '5';
     tamanho.value = lesao.dataset.tamanho;
+    const painelIntestinal=document.querySelector('[data-medidas-intestinais]');
+    painelIntestinal.hidden=!ehIntestinal(lesao);
+    document.querySelectorAll('[data-intestinal]').forEach(campo=>{campo.value=ehIntestinal(lesao)?lesao.dataset[campo.dataset.intestinal]||'':'';});
     const istmocele=lesao.dataset.nome==='Istmocele';
     for(const controle of [eixoX,eixoY]){controle.min=istmocele?'5':'40';controle.max=istmocele?'400':'250';controle.step=istmocele?'1':'5';}
     eixoX.closest('label').querySelector('span').firstChild.textContent=istmocele?'Profundidade na parede ':'Eixo X · horizontal ';
@@ -816,6 +835,13 @@
     rotulo.hidden = !linhas.length;
     rotulo.style.left = `${lesao.dataset.medidaX}%`;
     rotulo.style.top = `${lesao.dataset.medidaY}%`;
+    if(ehIntestinal(lesao)&&camadaDaLesao.clientWidth&&linhas.length){
+      const margem=100*(rotulo.offsetWidth/2+6)/camadaDaLesao.clientWidth;
+      const altura=100*(rotulo.offsetHeight+6)/camadaDaLesao.clientHeight;
+      lesao.dataset.medidaX=String(limitar(Number(lesao.dataset.medidaX),Math.min(50,margem),Math.max(50,100-margem)));
+      lesao.dataset.medidaY=String(limitar(Number(lesao.dataset.medidaY),1,Math.max(1,100-altura)));
+      rotulo.style.left=lesao.dataset.medidaX+'%';rotulo.style.top=lesao.dataset.medidaY+'%';
+    }
     atualizarLinhaDeMedida(lesao, Boolean(linhas.length));
   }
 
@@ -847,7 +873,18 @@
     })].filter(Boolean);
     const valores = [lesao.dataset.medida1, lesao.dataset.medida2, lesao.dataset.medida3]
       .filter(Boolean).map(valor => formatarMedida(converterMedida(valor, unidade === 'mm' ? 10 : 1)));
-    return [nome, valores.length ? `${valores.join(" × ")} ${unidade}` : ""].filter(Boolean);
+    const linhas=[nome, valores.length ? `${valores.join(" × ")} ${unidade}` : ""].filter(Boolean);
+    if(ehIntestinal(lesao)){
+      if(lesao.dataset.distanciaBordaAnal)linhas.push('Distância da borda anal: '+formatarMedida(lesao.dataset.distanciaBordaAnal)+' cm');
+      if(lesao.dataset.extensaoCircunferencial)linhas.push('Extensão circunferencial: '+Number(lesao.dataset.extensaoCircunferencial.replace(',','.')).toLocaleString('pt-BR')+'%');
+      if(lesao.dataset.profundidadeParietal)linhas.push('Profundidade de infiltração parietal: '+lesao.dataset.profundidadeParietal);
+    }
+    // Quebras explícitas mantêm o mesmo texto na tela e no PDF.
+    return ehIntestinal(lesao)?linhas.flatMap(texto=>{
+      const partes=[];let linha='';
+      for(const palavra of texto.split(' ')){if(linha&&(linha+' '+palavra).length>35){partes.push(linha);linha=palavra}else linha+=(linha?' ':'')+palavra;}
+      if(linha)partes.push(linha);return partes;
+    }):linhas;
   }
 
   function iniciarMovimentoDaMedida(evento) {
@@ -1107,6 +1144,12 @@
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
+        for(const c of camposIntestinais){
+          const v=l.dados[c];if(v===undefined)continue;
+          if(typeof v!=='string'||v.length>40)falhar();
+          if(c==='profundidadeParietal'){if(!profundidadesIntestinais.includes(v))falhar();}
+          else if(v&&(!numeroIntestinal(v)||Number(v.replace(',','.'))<0||(c==='extensaoCircunferencial'&&Number(v.replace(',','.'))>100)))falhar();
+        }
         if (l.dados.figo !== undefined && (typeof l.dados.figo !== 'string' || !/^(?:[0-8]|2-5)?$/.test(l.dados.figo))) falhar();
         if(l.dados.paredePar!==undefined&&(id!=='parede-abdominal'||!/^assets\/lesoes\/endometrioma-parede-v[23]\.png$/.test(l.src)||typeof l.dados.paredePar!=='string'||!/^[a-zA-Z0-9-]{1,80}$/.test(l.dados.paredePar)))falhar();
         if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
@@ -1161,6 +1204,7 @@
         if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
         for(const c of ['medida4','medida5'])if(l.dados[c]!==undefined)dados[c]=l.dados[c];
+        for(const c of camposIntestinais)if(l.dados[c]!==undefined)dados[c]=l.dados[c];
         if (l.dados.figo !== undefined) dados.figo = l.dados.figo;
         adicionarLesao(modelo.modelo, modelo.nome, modelo.proporcao, modelo.semRecorte, modelo.tamanhoInicial, modelo.giroInicial, modelo.tamanhoMinimo, dados);
       });

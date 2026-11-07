@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=istmocele-20261105" />
+    <link rel="stylesheet" href="styles.css?v=intestinais-istmocele-20261105" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
@@ -736,6 +736,14 @@
             <input type="text" inputmode="decimal" placeholder="Ex.: 0,5" data-medida="3" />
           </label>
         <label hidden data-medida-extra><span></span><input type="text" inputmode="decimal" data-medida="4"></label><label hidden data-medida-extra><span></span><input type="text" inputmode="decimal" data-medida="5"></label></fieldset>
+        <fieldset class="medidas-intestinais" data-medidas-intestinais hidden>
+          <legend>Lesão intestinal</legend>
+          <label><span>Distância da borda anal (cm)</span><input type="text" inputmode="decimal" maxlength="12" data-intestinal="distanciaBordaAnal" placeholder="Ex.: 12,5"></label>
+          <label><span>Extensão circunferencial (%)</span><input type="text" inputmode="decimal" maxlength="6" data-intestinal="extensaoCircunferencial" placeholder="Ex.: 30"></label>
+          <label><span>Profundidade de infiltração parietal</span><select data-intestinal="profundidadeParietal">
+            <option value="">Não informada</option><option>Serosa/subserosa</option><option>Muscular própria</option><option>Submucosa</option><option>Mucosa</option>
+          </select></label>
+        </fieldset>
         <label class="campo" data-campo-figo hidden>
           <span class="campo__rotulo">Classificação FIGO</span>
           <select data-controle-figo>
@@ -833,7 +841,7 @@
     <script src="tubas/editor.js?v=tubas-20261029"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=istmocele-20261105"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=intestinais-istmocele-20261105"></script>
     <script src="historico-manual.js?v=parede-20261101"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>
