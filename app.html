@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=intestinais-istmocele-20261105" />
+    <link rel="stylesheet" href="styles.css?v=barra-inferior-istmocele-20261105" />
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
@@ -770,7 +770,6 @@
           <input type="text" maxlength="100" data-titulo-montagem placeholder="Ex.: exemplo coronal" />
         </label>
         <button class="botao" type="button" data-salvar-manual>Salvar na biblioteca</button>
-        <button class="botao botao--secundario" type="button" data-novo-manual>Iniciar novo mapa</button>
         <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
         <p class="texto-apoio">Somente Salvar na biblioteca guarda esta montagem em Meus mapas. Baixar PDF, PNG ou JPEG não salva o mapa na biblioteca.</p>
         <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
@@ -797,8 +796,11 @@
 
     <nav class="navegacao" aria-label="Navegação principal">
       <div class="navegacao__conteudo navegacao__conteudo--app">
-        <button class="navegacao__item" type="button" data-tela-alvo="novo-mapa">
+        <button class="navegacao__item" type="button" data-novo-manual>
           Novo mapa
+        </button>
+        <button class="navegacao__item navegacao__alternar" type="button" data-alternar-mapa aria-label="Alternar para o mapa sagital">
+          <span>Alternar</span><span><span data-alternar-vista="coronal">Coronal</span> / <span data-alternar-vista="sagital">Sagital</span></span>
         </button>
         <button class="navegacao__item" type="button" data-tela-alvo="editor-manual">
           Editor manual
@@ -841,8 +843,8 @@
     <script src="tubas/editor.js?v=tubas-20261029"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=intestinais-istmocele-20261105"></script>
-    <script src="historico-manual.js?v=parede-20261101"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=barra-inferior-istmocele-20261105"></script>
+    <script src="historico-manual.js?v=novo-mapa-inferior-20261106"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>
 </html>

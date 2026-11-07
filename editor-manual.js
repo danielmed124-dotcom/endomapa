@@ -489,6 +489,22 @@
     aplicarVistasManuais(evento.detail);
   });
   window.addEventListener("resize", atualizarTodasAsLinhas);
+  document.querySelector('[data-alternar-mapa]')?.addEventListener('click',()=>{
+    if(window.endomapaEditorManual.ocupado()||window.endomapaHistoricoManual?.ocupado()){
+      mostrar('Aguarde o salvamento ou a exportação terminar.');return;
+    }
+    const escolha=document.querySelector('input[name="vistas-editor"]:checked')?.value;
+    const vistas=vistasDaEscolha(escolha);
+    if(vistas.length!==2)return;
+    const destino=vistas.find(vista=>vista!==vistaAtiva);
+    if(!destino)return;
+    window.endomapaAbrirTela('editor-manual');
+    ativarVista(destino);
+    requestAnimationFrame(()=>{
+      const mapa=mapasManuais.find(m=>m.dataset.mapaEditor===destino);
+      mapa?.querySelector('.mapa-editor__desenho')?.scrollIntoView({behavior:'smooth',block:'center',inline:'nearest'});
+    });
+  });
   window.addEventListener("endomapa:tela-aberta", function (evento) {
     if (evento.detail === "editor-manual") atualizarTodasAsLinhas();
   });
@@ -533,7 +549,9 @@
     const titulo = document.querySelector('[data-titulo-montagem]');
     const temConteudo = Boolean(titulo?.value.trim()) || JSON.stringify(atual) !== JSON.stringify(montagemInicialVazia);
     if (temConteudo && !window.confirm('Deseja descartar a montagem atual e iniciar um novo mapa?')) return;
-    restaurarMontagemEditavel(structuredClone(montagemInicialVazia));
+    const limpa=structuredClone(montagemInicialVazia);
+    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    restaurarMontagemEditavel(limpa);
     if (titulo) titulo.value = '';
     const aviso = document.querySelector('[data-estado-salvar-manual]');
     if (aviso) { aviso.textContent = ''; aviso.hidden = true; }
@@ -596,6 +614,15 @@
       item.classList.toggle("vista-manual--ativa", item.dataset.vistaManual === vistaAtiva);
     });
     documento?.ativar(vistaAtiva);
+    document.querySelectorAll('[data-alternar-vista]').forEach(item=>{
+      item.classList.toggle('vista-selecionada',item.dataset.alternarVista===(vistaAtiva==='sagital'?'sagital':'coronal'));
+    });
+    const alternar=document.querySelector('[data-alternar-mapa]');
+    if(alternar){
+      alternar.disabled=vistasDaEscolha(document.querySelector('input[name="vistas-editor"]:checked')?.value).length!==2;
+      alternar.title=alternar.disabled?'Selecione duas vistas para alternar':'Ir para a outra vista selecionada';
+      alternar.setAttribute('aria-label',alternar.disabled?'Alternar vistas: selecione duas vistas':`Alternar para a vista ${vistaAtiva==='sagital'?'coronal':'sagital'}`);
+    }
     const indicacao = document.querySelector("[data-vista-em-edicao]");
     if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${nomeDaVista(vistaAtiva)}.`;
     if (botaoBaixar) botaoBaixar.textContent = `Baixar vista ${nomeDaVista(vistaAtiva)} (PNG)`;

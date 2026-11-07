@@ -55,11 +55,16 @@
     if (ocupado || editor.ocupado()) { mensagem('Aguarde o salvamento ou a exportação terminar.'); return false; }
     return !alterado() || window.confirm('Há alterações não salvas na montagem aberta. Deseja descartá-las e continuar?');
   }
-  novo.addEventListener('click', () => {
+  novo.addEventListener('click', evento => {
+    // Este comando inicia uma montagem; não é apenas navegação para a capa.
+    // Intercepta antes do manipulador genérico de troca de tela.
+    evento.preventDefault(); evento.stopImmediatePropagation();
     if (!podeSubstituir()) return;
-    editor.restaurar(vazia); id = crypto.randomUUID(); versao = 0; salvo = ''; titulo.value = '';
+    const atual=editor.capturar(),limpa=structuredClone(vazia);
+    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    editor.restaurar(limpa); id = crypto.randomUUID(); versao = 0; salvo = ''; titulo.value = '';
     mensagem('Novo mapa iniciado. Monte e salve quando desejar.');
-  });
+  }, true);
   window.addEventListener('beforeunload', e => { if (alterado() || ocupado) { e.preventDefault(); e.returnValue = ''; } });
   async function abrir(mapaId, botao) {
     if (!podeSubstituir()) return;
