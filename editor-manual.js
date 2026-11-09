@@ -341,7 +341,8 @@
     if(nome==='Istmocele')return {x:'56.93',y:'39.53',tamanho:'100',giro:'-49',eixoX:'84',eixoY:'154',medidaX:'50',medidaY:'5',medida4:'',medida5:''};
     if (nome === 'Retrocervical' && vistaAtiva === 'coronal') return {"x":"50.8","y":"52.1","giro":"31","tamanho":"30","medidaX":"62","medidaY":"58.5","nomeNoMapa":"Retrocervical"};
     if (nome === 'Ligamento redondo') {
-      const posicoes={"direito":{"x":34,"y":30.6,"giro":-136,"tamanho":65,"medidaX":31.8,"medidaY":22.4},"esquerdo":{"x":68.9,"y":30.6,"giro":-140,"tamanho":65,"medidaX":72,"medidaY":23.2}};
+      // Segue os lados indicados no mapa, como ovários e ligamentos uterossacros.
+      const posicoes={"direito":{"x":68.9,"y":30.6,"giro":-140,"tamanho":65,"medidaX":72,"medidaY":23.2},"esquerdo":{"x":34,"y":30.6,"giro":-136,"tamanho":65,"medidaX":31.8,"medidaY":22.4}};
       return { ...(vistaAtiva === 'coronal' ? posicoes[lado] : {}), nomeNoMapa: 'Ligamento redondo ' + lado };
     }
     if (nome === 'Intestinal coronal' && vistaAtiva === 'coronal') return {"nome":"Intestinal coronal","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"39.9","y":"63.0","giro":"0","tamanho":"160","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"18","medidaY":"77"};
