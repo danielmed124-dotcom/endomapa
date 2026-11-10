@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="tubas/editor.css?v=tubas-20261029" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261031-2">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
-  <style>.modelos-adenomiose-parede{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style><style>.par-intestinal{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style></head>
+  <style>.modelos-adenomiose-parede{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style><style>.par-intestinal{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}</style><style>[data-opcoes-histerectomia] select{width:100%;min-height:44px;margin-bottom:8px;padding:10px 12px;background:#19211c;color:#f5f2e9;border:1px solid #c9a24d;border-radius:8px;font:inherit}[data-opcoes-histerectomia] option{background:#19211c;color:#f5f2e9}.opcao-vista--especiais{min-width:0;max-width:100%}[data-opcoes-histerectomia]{min-width:0}</style></head>
   <body class="autenticacao-pendente">
     <header class="topo">
       <div class="topo__conteudo">
@@ -393,9 +393,15 @@
               <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
               <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
               <option value="kissing-ovaries">Kissing Ovaries</option>
+              <option value="histerectomia">Histerectomia</option>
               <option value="hidrosalpinge">Hidrosalpinge</option>
             </select>
-            <div data-opcoes-hidrosalpinge hidden>
+            <div data-opcoes-histerectomia hidden>
+<label class="rotulo-mapa-especial" for="tipo-histerectomia">Tipo de histerectomia</label>
+<select id="tipo-histerectomia" data-tipo-histerectomia><option value="parcial">Parcial — colo preservado</option><option value="total">Total — sem colo</option></select>
+<label class="rotulo-mapa-especial" for="ovarios-histerectomia">Ovários</label>
+<select id="ovarios-histerectomia" data-ovarios-histerectomia><option value="preservados">Ambos preservados</option><option value="direita">Ooforectomia direita</option><option value="esquerda">Ooforectomia esquerda</option><option value="bilateral">Ooforectomia bilateral</option></select>
+</div><div data-opcoes-hidrosalpinge hidden>
               <label class="rotulo-mapa-especial" for="lado-hidrosalpinge">Lado da hidrosalpinge</label>
               <select id="lado-hidrosalpinge" data-lado-hidrosalpinge>
                 <option value="hidrosalpinge-direita">Direita</option>
@@ -548,7 +554,63 @@
             <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
           </figure>
         </section>
-        <section class="vista-manual" data-vista-manual="sagital" aria-labelledby="titulo-mapa-manual-sagital">
+        <section class="vista-manual" data-vista-manual="histerectomia-parcial-preservados" aria-labelledby="titulo-histerectomia-parcial-preservados" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-parcial-preservados">Histerectomia parcial — ovários preservados</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-parcial-preservados" aria-pressed="false">Editar Histerectomia parcial — ovários preservados</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-parcial-preservados"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/parcial-ovarios-preservados.png" data-mapa-base data-src-clinica="assets/histerectomias/parcial-ovarios-preservados.png" data-src-visitante="assets/histerectomias/parcial-ovarios-preservados.png" alt="Histerectomia parcial — ovários preservados" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-parcial-preservados" aria-label="Lesões adicionadas ao mapa Histerectomia parcial — ovários preservados"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-parcial-direita" aria-labelledby="titulo-histerectomia-parcial-direita" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-parcial-direita">Histerectomia parcial — ooforectomia direita</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-parcial-direita" aria-pressed="false">Editar Histerectomia parcial — ooforectomia direita</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-parcial-direita"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/parcial-ooforectomia-direita-v1.png" data-mapa-base data-src-clinica="assets/histerectomias/parcial-ooforectomia-direita-v1.png" data-src-visitante="assets/histerectomias/parcial-ooforectomia-direita-v1.png" alt="Histerectomia parcial — ooforectomia direita" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-parcial-direita" aria-label="Lesões adicionadas ao mapa Histerectomia parcial — ooforectomia direita"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-parcial-esquerda" aria-labelledby="titulo-histerectomia-parcial-esquerda" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-parcial-esquerda">Histerectomia parcial — ooforectomia esquerda</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-parcial-esquerda" aria-pressed="false">Editar Histerectomia parcial — ooforectomia esquerda</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-parcial-esquerda"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/parcial-ooforectomia-esquerda-v1.png" data-mapa-base data-src-clinica="assets/histerectomias/parcial-ooforectomia-esquerda-v1.png" data-src-visitante="assets/histerectomias/parcial-ooforectomia-esquerda-v1.png" alt="Histerectomia parcial — ooforectomia esquerda" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-parcial-esquerda" aria-label="Lesões adicionadas ao mapa Histerectomia parcial — ooforectomia esquerda"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-parcial-bilateral" aria-labelledby="titulo-histerectomia-parcial-bilateral" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-parcial-bilateral">Histerectomia parcial — ooforectomia bilateral</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-parcial-bilateral" aria-pressed="false">Editar Histerectomia parcial — ooforectomia bilateral</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-parcial-bilateral"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/parcial-ooforectomia-bilateral-v1.png" data-mapa-base data-src-clinica="assets/histerectomias/parcial-ooforectomia-bilateral-v1.png" data-src-visitante="assets/histerectomias/parcial-ooforectomia-bilateral-v1.png" alt="Histerectomia parcial — ooforectomia bilateral" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-parcial-bilateral" aria-label="Lesões adicionadas ao mapa Histerectomia parcial — ooforectomia bilateral"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-total-preservados" aria-labelledby="titulo-histerectomia-total-preservados" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-total-preservados">Histerectomia total — ovários preservados</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-total-preservados" aria-pressed="false">Editar Histerectomia total — ovários preservados</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-total-preservados"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/total-ovarios-preservados-v3.png" data-mapa-base data-src-clinica="assets/histerectomias/total-ovarios-preservados-v3.png" data-src-visitante="assets/histerectomias/total-ovarios-preservados-v3.png" alt="Histerectomia total — ovários preservados" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-total-preservados" aria-label="Lesões adicionadas ao mapa Histerectomia total — ovários preservados"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-total-direita" aria-labelledby="titulo-histerectomia-total-direita" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-total-direita">Histerectomia total — ooforectomia direita</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-total-direita" aria-pressed="false">Editar Histerectomia total — ooforectomia direita</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-total-direita"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/total-ooforectomia-direita-v3.png" data-mapa-base data-src-clinica="assets/histerectomias/total-ooforectomia-direita-v3.png" data-src-visitante="assets/histerectomias/total-ooforectomia-direita-v3.png" alt="Histerectomia total — ooforectomia direita" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-total-direita" aria-label="Lesões adicionadas ao mapa Histerectomia total — ooforectomia direita"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-total-esquerda" aria-labelledby="titulo-histerectomia-total-esquerda" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-total-esquerda">Histerectomia total — ooforectomia esquerda</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-total-esquerda" aria-pressed="false">Editar Histerectomia total — ooforectomia esquerda</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-total-esquerda"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/total-ooforectomia-esquerda-v3.png" data-mapa-base data-src-clinica="assets/histerectomias/total-ooforectomia-esquerda-v3.png" data-src-visitante="assets/histerectomias/total-ooforectomia-esquerda-v3.png" alt="Histerectomia total — ooforectomia esquerda" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-total-esquerda" aria-label="Lesões adicionadas ao mapa Histerectomia total — ooforectomia esquerda"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="histerectomia-total-bilateral" aria-labelledby="titulo-histerectomia-total-bilateral" hidden>
+<h2 class="secao-dados__titulo" id="titulo-histerectomia-total-bilateral">Histerectomia total — ooforectomia bilateral</h2>
+<button class="botao botao--secundario" type="button" data-editar-vista="histerectomia-total-bilateral" aria-pressed="false">Editar Histerectomia total — ooforectomia bilateral</button>
+<figure class="mapa-visual mapa-editor" data-mapa-editor="histerectomia-total-bilateral"><div class="mapa-editor__desenho">
+<img src="assets/histerectomias/total-ooforectomia-bilateral-v3.png" data-mapa-base data-src-clinica="assets/histerectomias/total-ooforectomia-bilateral-v3.png" data-src-visitante="assets/histerectomias/total-ooforectomia-bilateral-v3.png" alt="Histerectomia total — ooforectomia bilateral" draggable="false" loading="eager" />
+<canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
+<div class="mapa-editor__camada" data-camada-editor="histerectomia-total-bilateral" aria-label="Lesões adicionadas ao mapa Histerectomia total — ooforectomia bilateral"></div></div></figure></section>
+<section class="vista-manual" data-vista-manual="sagital" aria-labelledby="titulo-mapa-manual-sagital">
           <h2 class="secao-dados__titulo" id="titulo-mapa-manual-sagital">Vista sagital</h2>
           <figure class="mapa-visual mapa-editor" data-mapa-editor="sagital" tabindex="0" aria-label="Mapa sagital. Toque ou selecione pelo teclado para editar esta vista.">
             <div class="mapa-editor__desenho">
@@ -824,7 +886,7 @@
     <script src="contador-exportacoes.js?v=20261031-1"></script>
     <script src="painel-adesao.js?v=20261031-2"></script>
     <script src="app-auth.js?v=abdome-margens-20261104"></script>
-    <script src="prototipo.js?v=abdome-margens-20261104"></script>
+    <script src="histerectomias.js?v=histerectomias-20261110"></script><script src="prototipo.js?v=histerectomias-20261110"></script>
     <script src="orgaos-deformar.js?v=1"></script>
     <script src="orgaos-motor.js?v=tubas-20261029"></script>
     <script src="orgaos-editor.js?v=tubas-20261029"></script>
@@ -843,8 +905,8 @@
     <script src="tubas/editor.js?v=tubas-20261029"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=lados-redondos-20261109"></script>
-    <script src="historico-manual.js?v=novo-mapa-inferior-20261106"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="editor-manual.js?v=histerectomias-20261110"></script>
+    <script src="historico-manual.js?v=histerectomias-20261110"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   </body>
 </html>

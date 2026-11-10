@@ -322,7 +322,7 @@
         const escolha=document.querySelector('input[name="vistas-editor"][value="sagital"]');escolha.checked=true;escolha.dispatchEvent(new Event('change',{bubbles:true}));ativarVista('sagital');
       }
       const ladoAtual = lado?.value;
-      if (ovariano && (vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
+      if (ovariano && (window.endocartaHisterectomias.semOvario(vistaAtiva, ladoAtual) || vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
         mostrar('Este ovário foi retirado no mapa escolhido. Escolha o outro lado ou outro mapa.');
         return;
       }
@@ -551,7 +551,7 @@
     const temConteudo = Boolean(titulo?.value.trim()) || JSON.stringify(atual) !== JSON.stringify(montagemInicialVazia);
     if (temConteudo && !window.confirm('Deseja descartar a montagem atual e iniciar um novo mapa?')) return;
     const limpa=structuredClone(montagemInicialVazia);
-    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge','histerectomia'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
     restaurarMontagemEditavel(limpa);
     if (titulo) titulo.value = '';
     const aviso = document.querySelector('[data-estado-salvar-manual]');
@@ -563,6 +563,7 @@
     if (!mapasManuais.length) return;
     const opcoesHidrosalpinge = document.querySelector('[data-opcoes-hidrosalpinge]');
     if (opcoesHidrosalpinge) opcoesHidrosalpinge.hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'hidrosalpinge';
+    document.querySelector('[data-opcoes-histerectomia]').hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'histerectomia';
     const vistasVisiveis = vistasDaEscolha(escolha);
     escolha = resolverVista(escolha);
     document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
@@ -578,6 +579,7 @@
   function resolverVista(escolha) {
     if (escolha !== 'especiais') return escolha;
     const especial = document.querySelector('[data-mapa-especial]').value;
+    if (especial === 'histerectomia') return window.endocartaHisterectomias.vista();
     return especial === 'hidrosalpinge' ? document.querySelector('[data-lado-hidrosalpinge]').value : especial;
   }
 
@@ -588,6 +590,8 @@
   }
 
   function nomeDaVista(vista) {
+    const histerectomia = window.endocartaHisterectomias.modelos.find(m => m.id === vista);
+    if (histerectomia) return histerectomia.nome;
     const lado = document.querySelector(`[data-lado-hidrosalpinge] option[value="${vista}"]`);
     if (lado) return `Hidrosalpinge ${lado.textContent.toLowerCase()}`;
     return document.querySelector(`[data-mapa-especial] option[value="${vista}"]`)?.textContent || vista;
@@ -1129,7 +1133,7 @@
         tracos: JSON.parse(JSON.stringify(canetas.get(vista).tracos)),
       };
     });
-    return { versao: 1, especialSagital: incluirSagital.checked, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), transparenciaCinza: obterTransparenciaCinza(), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
+    return { versao: 1, histerectomia: window.endocartaHisterectomias.capturar(), especialSagital: incluirSagital.checked, documento: documento?.capturar(), escalaCinza: Boolean(opcaoEscalaCinza?.checked), transparenciaCinza: obterTransparenciaCinza(), escolha: document.querySelector('input[name="vistas-editor"]:checked')?.value || 'coronal', especial: document.querySelector('[data-mapa-especial]').value, hidrosalpinge: document.querySelector('[data-lado-hidrosalpinge]')?.value || 'hidrosalpinge-direita', ativa: vistaAtiva, vistas };
   }
 
   function validarMontagemEditavel(montagem) {
@@ -1148,6 +1152,7 @@
     especiais.push('utero-retrofletido'); // Compatibilidade com montagens anteriores.
     const falhar = () => { throw new Error('Esta montagem contém dados incompatíveis. O mapa aberto foi preservado.'); };
     if (montagem?.versao !== 1 || !montagem.vistas || !['coronal','sagital','ambas','especiais'].includes(montagem.escolha) || !especiais.includes(montagem.especial) || !ids.includes(montagem.ativa)) falhar();
+    window.endocartaHisterectomias.validar(montagem.histerectomia);
     const lados = ['hidrosalpinge-direita','hidrosalpinge-esquerda','hidrosalpinge-bilateral'];
     if (montagem.escalaCinza !== undefined && typeof montagem.escalaCinza !== 'boolean') falhar();
     if (montagem.transparenciaCinza !== undefined && (!Number.isInteger(montagem.transparenciaCinza) || montagem.transparenciaCinza < 0 || montagem.transparenciaCinza > 100)) falhar();
@@ -1156,6 +1161,7 @@
     if (montagem.especial === 'hidrosalpinge' && !lados.includes(montagem.hidrosalpinge)) falhar();
     // Montagens anteriores à hidrosalpinge não possuem as três novas vistas.
     const vistas = { ...montagem.vistas };
+    for (const modelo of window.endocartaHisterectomias.modelos) if (!Object.hasOwn(vistas, modelo.id)) vistas[modelo.id] = {lesoes:[],tracos:[]};
     // Mapas salvos antes do mapa abdominal continuam abrindo sem esta vista.
     if (!Object.hasOwn(vistas, 'ceco-apendice-ileo-diafragma')) vistas['ceco-apendice-ileo-diafragma'] = {lesoes:[],tracos:[]};
     if (!Object.hasOwn(vistas, 'parede-abdominal')) vistas['parede-abdominal'] = {lesoes:[],tracos:[]};
@@ -1245,6 +1251,7 @@
       legado.textContent='Útero retrofletido (mapa salvo)';legado.hidden=true;legado.disabled=true;seletorEspecial.append(legado);
     }
     seletorEspecial.value = montagem.especial;
+    window.endocartaHisterectomias.restaurar(montagem.histerectomia);
     const ladoHidrosalpinge = document.querySelector('[data-lado-hidrosalpinge]');
     if (ladoHidrosalpinge) ladoHidrosalpinge.value = montagem.hidrosalpinge || 'hidrosalpinge-direita';
     incluirSagital.checked = montagem.especialSagital === true;

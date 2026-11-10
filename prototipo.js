@@ -27,7 +27,7 @@ const assinaturaFinal = document.querySelector("[data-assinatura-final]");
 const imagensPorVista = document.querySelectorAll("[data-vista]");
 const mapasBase = document.querySelectorAll("[data-mapa-base]");
 const identificacoesDaClinica = document.querySelectorAll("[data-identificacao-clinica]");
-const vistasComLados = new Set(['coronal', 'ooforectomia-direita', 'ooforectomia-esquerda',
+const vistasComLados = new Set([...window.endocartaHisterectomias.modelos.map(m=>m.id), 'coronal', 'ooforectomia-direita', 'ooforectomia-esquerda',
   'ooforectomia-bilateral', 'kissing-ovaries', 'hidrosalpinge-direita',
   'hidrosalpinge-esquerda', 'hidrosalpinge-bilateral']);
 let perfilDosLados = null;
@@ -200,7 +200,7 @@ function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const contexto = canvas.getContext("2d");
   contexto.clearRect(0, 0, canvas.width, canvas.height);
   const logoPersonalizada = logoDoPerfil(perfilDosLados);
-  const centrusAbdome = canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor === 'ceco-apendice-ileo-diafragma' && Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
+  const centrusAbdome = (canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor === 'ceco-apendice-ileo-diafragma' || canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor.startsWith('histerectomia-')) && Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
   canvas.hidden = !nome && !indicarLados && !logoPersonalizada && !centrusAbdome;
   if (centrusAbdome && baseLogoCentrus.naturalWidth) {
     contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, 850, 0, 220, 160);

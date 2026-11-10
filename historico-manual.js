@@ -61,7 +61,7 @@
     evento.preventDefault(); evento.stopImmediatePropagation();
     if (!podeSubstituir()) return;
     const atual=editor.capturar(),limpa=structuredClone(vazia);
-    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge','histerectomia'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
     editor.restaurar(limpa); id = crypto.randomUUID(); versao = 0; salvo = ''; titulo.value = '';
     mensagem('Novo mapa iniciado. Monte e salve quando desejar.');
   }, true);
