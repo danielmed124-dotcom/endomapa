@@ -127,7 +127,129 @@
   let vistaAtiva = camada.dataset.camadaEditor || "coronal";
   const canetas = new Map();
   let canetaAtiva = null;
+  let borrachaAtiva = null;
   mapasManuais.forEach(prepararCaneta);
+
+  function mascaraBorracha(dados, largura = 512, altura = 512) {
+    const tela = document.createElement('canvas');
+    tela.width = largura; tela.height = altura;
+    const ctx = tela.getContext('2d');
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, largura, altura);
+    ctx.globalCompositeOperation = 'destination-out';
+    JSON.parse(dados || '[]').forEach(([x, y, rx, ry]) => {
+      ctx.beginPath(); ctx.ellipse(x * largura, y * altura, rx * largura, ry * altura, 0, 0, Math.PI * 2); ctx.fill();
+    });
+    return tela;
+  }
+
+  function atualizarRecorte(lesao) {
+    const img = lesao.querySelector('img');
+    const mascara = lesao.dataset.apagamentos ? `url("${mascaraBorracha(lesao.dataset.apagamentos).toDataURL()}")` : '';
+    img.style.maskImage = mascara; img.style.webkitMaskImage = mascara;
+    img.style.maskSize = img.style.webkitMaskSize = '100% 100%';
+  }
+
+  function definirBorracha(estado) {
+    if (borrachaAtiva) borrachaAtiva.finalizarBorracha();
+    borrachaAtiva = estado;
+    canetas.forEach(item => {
+      const ativa = item === estado;
+      item.barra.querySelector('[data-borracha-alternar]').setAttribute('aria-pressed', String(ativa));
+      item.barra.querySelector('[data-borracha-alternar]').setAttribute('aria-expanded', String(ativa));
+      item.barra.querySelector('[data-borracha-opcoes]').hidden = !ativa;
+      item.tela.classList.toggle('mapa-editor__caneta--ativa', ativa || item === canetaAtiva);
+      item.tela.classList.toggle('mapa-editor__borracha--ativa', ativa);
+      if (!ativa) item.cursorBorracha.hidden = true;
+    });
+  }
+
+  function prepararBorracha(estado, mapa) {
+    const { barra, tela } = estado;
+    const cursor = document.createElement('span');
+    cursor.className = 'mapa-editor__cursor-borracha';
+    cursor.setAttribute('aria-hidden', 'true');
+    cursor.hidden = true;
+    tela.after(cursor);
+    estado.cursorBorracha = cursor;
+    let gesto = null;
+    const historico = [];
+    const desfazer = barra.querySelector('[data-borracha-desfazer]');
+    estado.limparBorracha = () => { estado.finalizarBorracha(); historico.length = 0; desfazer.disabled = true; };
+    const tamanho = barra.querySelector('[data-borracha-tamanho]');
+    const dimensionarCursor = () => {
+      cursor.style.width = `${Number(tamanho.value) * 100 / 1086}%`;
+      cursor.style.height = `${Number(tamanho.value) * 100 / 1448}%`;
+    };
+    dimensionarCursor();
+    tamanho.addEventListener('input', () => { barra.querySelector('[data-borracha-valor]').textContent = tamanho.value; dimensionarCursor(); });
+    const moverCursor = evento => {
+      if (borrachaAtiva !== estado || evento.isPrimary === false) return;
+      const area = tela.getBoundingClientRect();
+      const x = (evento.clientX - area.left) / area.width;
+      const y = (evento.clientY - area.top) / area.height;
+      cursor.style.left = `${x * 100}%`; cursor.style.top = `${y * 100}%`;
+      cursor.hidden = x < 0 || x > 1 || y < 0 || y > 1;
+    };
+    ['pointerenter', 'pointermove', 'pointerdown'].forEach(tipo => tela.addEventListener(tipo, moverCursor));
+    ['pointerleave', 'pointercancel'].forEach(tipo => tela.addEventListener(tipo, () => { cursor.hidden = true; }));
+    tela.addEventListener('pointerup', evento => { if (evento.pointerType !== 'mouse') cursor.hidden = true; });
+    barra.querySelector('[data-borracha-alternar]').addEventListener('click', () => {
+      const ligar = borrachaAtiva !== estado;
+      ativarVista(mapa.dataset.mapaEditor);
+      definirCaneta(null);
+      if (ligar) {
+        window.endomapaTubas?.desativar(); orgaosDaVista(vistaAtiva)?.desativar();
+        window.endomapaUtero?.desativar(); window.endomapaUteroCoronal?.desativar();
+        controles.hidden = true; definirBorracha(estado);
+      }
+    });
+    estado.finalizarBorracha = () => {
+      if (!gesto) return;
+      const anterior = gesto; gesto = null;
+      if (anterior.antes.size) { historico.push(anterior.antes); if (historico.length > 30) historico.shift(); }
+      desfazer.disabled = !historico.length;
+      if (tela.hasPointerCapture(anterior.id)) tela.releasePointerCapture(anterior.id);
+    };
+    desfazer.addEventListener('click', () => {
+      estado.finalizarBorracha();
+      historico.pop()?.forEach((dados, lesao) => {
+        if (!lesao.isConnected) return;
+        if (dados === undefined) delete lesao.dataset.apagamentos; else lesao.dataset.apagamentos = dados;
+        atualizarRecorte(lesao);
+      });
+      desfazer.disabled = !historico.length;
+    });
+    const apagar = evento => {
+      const area = tela.getBoundingClientRect();
+      const p = [(evento.clientX - area.left) * 1086 / area.width, (evento.clientY - area.top) * 1448 / area.height];
+      const inicio = gesto.ultimo || p, raio = Number(tamanho.value) / 2;
+      const passos = Math.max(1, Math.ceil(Math.hypot(p[0]-inicio[0], p[1]-inicio[1]) / Math.max(1, raio / 2)));
+      mapa.querySelectorAll('.lesao-editavel').forEach(lesao => {
+        const g = geometriaDaLesao(lesao, 1086, 1448);
+        const pontos = JSON.parse(lesao.dataset.apagamentos || '[]');
+        let mudou = false;
+        for (let i = 1; i <= passos; i++) {
+          const dx = inicio[0] + (p[0]-inicio[0])*i/passos - g.x, dy = inicio[1] + (p[1]-inicio[1])*i/passos - g.y;
+          const x = (dx*Math.cos(g.giro)+dy*Math.sin(g.giro))/g.largura + 0.5;
+          const y = (-dx*Math.sin(g.giro)+dy*Math.cos(g.giro))/g.altura + 0.5;
+          const rx = raio/g.largura, ry = raio/g.altura;
+          if (x+rx < 0 || x-rx > 1 || y+ry < 0 || y-ry > 1) continue;
+          if (!gesto.antes.has(lesao)) gesto.antes.set(lesao, lesao.dataset.apagamentos);
+          pontos.push([x,y,rx,ry]); mudou = true;
+        }
+        if (mudou) { lesao.dataset.apagamentos = JSON.stringify(pontos); atualizarRecorte(lesao); }
+      });
+      gesto.ultimo = p;
+    };
+    tela.addEventListener('pointerdown', e => {
+      if (borrachaAtiva !== estado || gesto || e.button !== 0 || e.isPrimary === false) return;
+      e.preventDefault(); gesto = { id: e.pointerId, antes: new Map() };
+      tela.setPointerCapture(e.pointerId); apagar(e);
+    });
+    tela.addEventListener('pointermove', e => { if (gesto?.id === e.pointerId) { e.preventDefault(); apagar(e); } });
+    tela.addEventListener('pointerup', e => { if (gesto?.id === e.pointerId) { apagar(e); estado.finalizarBorracha(); } });
+    ['pointercancel', 'lostpointercapture'].forEach(tipo => tela.addEventListener(tipo, e => { if (gesto?.id === e.pointerId) estado.finalizarBorracha(); }));
+  }
 
   function prepararCaneta(mapa) {
     const barra = document.createElement("div");
@@ -137,6 +259,7 @@
     const cores = [["#9b2424", "Vermelho"], ["#202020", "Preto"], ["#1956ad", "Azul"], ["#23864b", "Verde"], ["#e29318", "Laranja"], ["#e2c52c", "Amarelo"], ["#873db0", "Roxo"], ["#dc518d", "Rosa"], ["#785039", "Marrom"], ["#ffffff", "Branco"]];
     barra.innerHTML = `<div class="caneta-manual__acoes">
       <button type="button" class="botao botao--secundario" data-caneta-alternar aria-pressed="false" aria-expanded="false" aria-controls="${idOpcoes}">Caneta</button>
+      <button type="button" class="botao botao--secundario" data-borracha-alternar aria-pressed="false" aria-expanded="false" aria-controls="${idOpcoes}-borracha">Borracha</button>
       <button type="button" class="botao botao--secundario" data-caneta-desfazer disabled>Desfazer último traço</button>
       <button type="button" class="botao botao--secundario" data-caneta-limpar disabled>Apagar traços</button></div>
       <div class="caneta-manual__opcoes" id="${idOpcoes}" data-caneta-opcoes hidden>
@@ -149,6 +272,10 @@
         </label>
         <div class="caneta-manual__previa" aria-label="Prévia da cor e espessura"><span data-caneta-previa></span></div>
         <p data-caneta-aviso role="status">Toque em Caneta novamente para voltar a mover lesões.</p>
+      </div><div class="caneta-manual__opcoes" id="${idOpcoes}-borracha" data-borracha-opcoes hidden>
+        <label class="caneta-manual__espessura">Tamanho da borracha <output data-borracha-valor>30</output><input type="range" min="5" max="100" value="30" data-borracha-tamanho aria-label="Tamanho da borracha" /></label>
+        <button type="button" class="botao botao--secundario" data-borracha-desfazer disabled>Desfazer última apagada</button>
+        <p>Passe sobre as lesões para apagar partes. Toque em Borracha novamente para voltar a mover lesões.</p>
       </div>`;
     const corAtual = barra.querySelector("[data-caneta-cor]");
     const espessuraAtual = barra.querySelector("[data-caneta-espessura]");
@@ -182,6 +309,7 @@
       barra.querySelector("[data-caneta-limpar]").disabled = !estado.tracos.length;
     };
     estado.atualizar = atualizar;
+    prepararBorracha(estado, mapa);
     barra.querySelector("[data-caneta-alternar]").addEventListener("click", () => {
       ativarVista(mapa.dataset.mapaEditor);
       definirCaneta(canetaAtiva === estado ? null : estado);
@@ -230,6 +358,7 @@
   }
 
   function definirCaneta(estado) {
+    definirBorracha(null);
     if (estado) window.endomapaTubas?.desativar();
     if (estado) orgaosDaVista(vistaAtiva)?.desativar();
     if (estado) window.endomapaUtero?.desativar();
@@ -719,6 +848,7 @@
     lesao.style.setProperty("--proporcao-lesao", proporcao);
     lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
+    atualizarRecorte(lesao);
     lesao.addEventListener("pointerdown", iniciarMovimento);
     lesao.addEventListener("click", function () { selecionar(lesao); });
     camada.append(lesao);
@@ -1025,6 +1155,7 @@
     window.endomapaTubas?.restaurar(vistaAtiva);
     const caneta = canetas.get(vistaAtiva);
     if (caneta) {
+      caneta.limparBorracha();
       finalizarTraco(caneta); caneta.tracos.length = 0; redesenharCaneta(caneta); caneta.atualizar();
     }
     documento?.limpar(vistaAtiva);
@@ -1178,6 +1309,10 @@
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
         if (!modelos.has(l.src) || !l.dados) falhar();
+        if (l.dados.apagamentos !== undefined) {
+          let pontos; try { pontos = JSON.parse(l.dados.apagamentos); } catch { falhar(); }
+          if (!Array.isArray(pontos) || pontos.length > 100000 || pontos.some(p => !Array.isArray(p) || p.length !== 4 || p.some(n => !Number.isFinite(n) || Math.abs(n) > 10000) || p[2] <= 0 || p[3] <= 0)) falhar();
+        }
         for(const c of camposIntestinais){
           const v=l.dados[c];if(v===undefined)continue;
           if(typeof v!=='string'||v.length>40)falhar();
@@ -1226,13 +1361,14 @@
     selecionada = null; selecoesPorVista.clear(); imagemCopiada = null;
     mapasManuais.forEach(mapa => {
       mapa.querySelector('[data-camada-editor]').replaceChildren();
-      const c = canetas.get(mapa.dataset.mapaEditor); c.tracos = []; c.atualizar(); redesenharCaneta(c);
+      const c = canetas.get(mapa.dataset.mapaEditor); c.limparBorracha(); c.tracos = []; c.atualizar(); redesenharCaneta(c);
     });
     ids.forEach(id => {
       aplicarVistasManuais(id);
       vistas[id].lesoes.forEach(l => {
         const modelo = modelos.get(l.src);
         const dados = {};
+        if (l.dados.apagamentos !== undefined) dados.apagamentos = l.dados.apagamentos;
         if(l.dados.paredePar!==undefined)dados.paredePar=l.dados.paredePar;
         if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
         if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
@@ -1531,8 +1667,16 @@
   }
 
   function desenharLesao(contexto, imagem, lesao, geometria, opcoes = {}) {
-    const { x, y, largura, altura, giro } = geometria;
     if(lesao.dataset.nome==='Istmocele')imagem=window.endocartaIstmocele.imagem(lesao.dataset)||imagem;
+    if (lesao.dataset.apagamentos) {
+      const recorte = document.createElement('canvas');
+      recorte.width = imagem.naturalWidth || imagem.width; recorte.height = imagem.naturalHeight || imagem.height;
+      const ctx = recorte.getContext('2d'); ctx.drawImage(imagem, 0, 0);
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.drawImage(mascaraBorracha(lesao.dataset.apagamentos, recorte.width, recorte.height), 0, 0);
+      imagem = recorte;
+    }
+    const { x, y, largura, altura, giro } = geometria;
     contexto.save();
     contexto.translate(x, y);
     contexto.rotate(giro);
