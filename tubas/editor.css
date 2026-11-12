@@ -20,3 +20,4 @@
 .tubas-marcador.fim span{background:#a84d27}.tubas-marcador.tuba span{background:#6651a5;border-radius:7px}.tubas-marcador.posicao span{background:#2368a2}
 .tubas-marcador::before{content:'';position:absolute;left:22px;top:21px;width:var(--guia-comprimento,0px);transform-origin:left center;transform:rotate(var(--guia-angulo,0rad));border-top:1px solid #176b57;pointer-events:none}
 .tubas-painel [hidden]{display:none!important}
+.cartografico .tubas-canvas,.cartografico .tubas-marcadores,.cartografico .tubas-painel{display:none!important}

@@ -46,7 +46,7 @@ window.endomapaCriarTubas=async function(vista,fonte){
  const espessador=window.criarEspessamentoTubas(referencia,tubas,config);
  const fundoLimpo=criar();fundoLimpo.getContext('2d').drawImage(config.trajetoProprio?fundo:fundoMovimento,0,0);
  const movimento=window.criarMovimentoTubas(tubas,fundo,motores,{direita:recortes[0],esquerda:recortes[1]},fundoLimpo,{...config,utero,limpezaLocal:vista!=='coronal'});
- let chave='',base;
+ let chave='',base,chaveProtecoes='';
  const tela=criar(),ctx=tela.getContext('2d');
  function preparar(estado){
   const k=JSON.stringify(lados.map(l=>{const e=estado[l];return[e.inserida,e.inicio,e.fim,e.tuba,e.espessamento]}));
@@ -57,7 +57,11 @@ window.endomapaCriarTubas=async function(vista,fonte){
    else{ctx.putImageData(patches[lado].limpo,a.x,a.y);ctx.save();ctx.beginPath();ctx.rect(a.x,a.y,a.w,a.h);ctx.clip();ctx.drawImage(camada,0,0);ctx.restore()}
    protecoes.push({canvas:camada,secoes:motor.secoes(e.inicio,e.fim)});
   }
-  if(lados.some(l=>estado[l].tuba.ativo)){tubas.proteger(protecoes);tubas.aplicar(ctx,estadoTubas(estado))}
+  if(lados.some(l=>estado[l].tuba.ativo)){
+   const cp=JSON.stringify(lados.map(l=>{const e=estado[l];return[e.inserida,e.inicio,e.fim]}));
+   if(cp!==chaveProtecoes){tubas.proteger(protecoes);chaveProtecoes=cp}
+   tubas.aplicar(ctx,estadoTubas(estado));
+  }
   espessador.desenhar(ctx,estado);base=ctx.getImageData(0,0,W,H);chave=k;
  }
  const estadoTubas=e=>Object.fromEntries(['direita','esquerda'].map(l=>[l,e[l].tuba]));

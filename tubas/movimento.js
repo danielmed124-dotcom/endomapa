@@ -19,7 +19,10 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
  }
  const regiao=l=>opcoes.areas?.[l]||(l==='direita'?{x:640,y:450,w:330,h:460}:{x:130,y:450,w:330,h:450});
  const ativo=pose=>pose.some(p=>p.x||p.y);
+ const proximosFixos=Object.fromEntries(lados.map(l=>[l,new Float64Array(W*H).fill(NaN)]));
  function maisProximo(lado,p){
+  const indice=Number.isInteger(p.x)&&Number.isInteger(p.y)&&p.x>=0&&p.x<W&&p.y>=0&&p.y<H?p.y*W+p.x:-1;
+  if(indice>=0&&!Number.isNaN(proximosFixos[lado][indice]))return proximosFixos[lado][indice];
   let melhor=0,dist=Infinity;
   const ps=caminhos[lado];
   for(let i=1;i<ps.length;i++){
@@ -28,6 +31,7 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
    const d=(p.x-a.x-u*dx)**2+(p.y-a.y-u*dy)**2;
    if(d<dist){dist=d;melhor=a.t+(b.t-a.t)*u}
   }
+  if(indice>=0)proximosFixos[lado][indice]=melhor;
   return melhor;
  }
  function deslocamento(t,pose){
@@ -43,8 +47,12 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
   return transformar(lado,p,maisProximo(lado,p),pose);
  }
  // Gira a seção transversal sem reduzir sua largura quando o eixo se inclina.
+ const geometriasFixas=Object.fromEntries(lados.map(l=>[l,new Map()]));
  function transformar(lado,p,t,pose){
-  const centro=tubas.ponto(lado,t*100),a=tubas.ponto(lado,Math.max(0,t-.002)*100),b=tubas.ponto(lado,Math.min(1,t+.002)*100);
+  const cache=geometriasFixas[lado];
+  let geometria=cache.get(t);
+  if(!geometria){geometria={centro:tubas.ponto(lado,t*100),a:tubas.ponto(lado,Math.max(0,t-.002)*100),b:tubas.ponto(lado,Math.min(1,t+.002)*100)};cache.set(t,geometria)}
+  const {centro,a,b}=geometria;
   const d=deslocamento(t,pose),da=deslocamento(Math.max(0,t-.002),pose),db=deslocamento(Math.min(1,t+.002),pose);
   const ang=Math.atan2(b.y+db.y-a.y-da.y,b.x+db.x-a.x-da.x)-Math.atan2(b.y-a.y,b.x-a.x);
   const co=Math.cos(ang),si=Math.sin(ang),x=p.x-centro.x,y=p.y-centro.y;
@@ -100,7 +108,9 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
  }
  function mascara(lado,e,tecido=false){
   const tela=criar(),g=tela.getContext('2d');
-  g.lineCap='round';g.lineJoin='round';g.strokeStyle='#fff';g.fillStyle='#fff';g.filter=tecido?'blur(.6px)':'blur(9px)';
+  g.lineCap='round';g.lineJoin='round';g.strokeStyle='#fff';g.fillStyle='#fff';
+  const agrupar=e.inserida||e.espessamento.ativo;
+  if(!agrupar)g.filter=tecido?'blur(.6px)':'blur(9px)';
   // Limpeza inclui o fundo sombreado; o recorte móvel contém só o corpo da tuba.
   g.lineWidth=tecido?32:100;g.beginPath();let anteriorRecorte;
   caminhos[lado].forEach((p,i)=>{
@@ -129,13 +139,18 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
     g.beginPath();g.arc(x,y,raio,0,Math.PI*2);g.fill();
    }
   }
+  // Suaviza a máscara pronta uma vez, não cada seção individual do trajeto.
+  if(agrupar){const suavizada=criar(),sg=suavizada.getContext('2d');sg.filter=tecido?'blur(.6px)':'blur(9px)';sg.drawImage(tela,0,0);g.clearRect(0,0,W,H);g.drawImage(suavizada,0,0);}
   if(e.inserida){
    if(tecido){
     // Mantém o eixo estreito da tuba nas transições, evitando interrupções
     // entre o segmento normal e uma dilatação parcial.
     g.save();g.filter='none';
     const r=recortesHidro[lado];g.drawImage(opcoes.trajetoProprio||opcoes.nativas?.includes(lado)?camadas[lado].motor.desenhar(e.inicio,e.fim):(e.inicio===0&&e.fim===100?r.original:r.motor.desenhar(e.inicio,e.fim)),0,0);g.restore();
-   }else for(const p of camadas[lado].motor.secoes(e.inicio,e.fim)){g.beginPath();g.arc(p.xFinal,p.yFinal,p.raioFinal+5,0,Math.PI*2);g.fill()}
+   }else{
+    // Uma única máscara da dilatação: evita centenas de desfocagens sobrepostas.
+    g.filter='blur(9px)';g.beginPath();for(const p of camadas[lado].motor.secoes(e.inicio,e.fim)){g.moveTo(p.xFinal+p.raioFinal+5,p.yFinal);g.arc(p.xFinal,p.yFinal,p.raioFinal+5,0,Math.PI*2)}g.fill();g.filter='none';
+   }
   }
   const a=regiao(lado),m=g.getImageData(a.x,a.y,a.w,a.h);
   for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){
@@ -155,14 +170,14 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
  function prepararRecorte(lado,e){
   const chave=JSON.stringify([e.inserida,e.inicio,e.fim,e.espessamento,e.removida]);
   if(recortesProntos[lado]?.chave===chave)return recortesProntos[lado];
-  const {a,m}=mascara(lado,e),recorte=mascara(lado,e,true).m,raiz=caminhos[lado][0],pixels=[];
+  const {a,m}=mascara(lado,e),recorte=e.removida?m:mascara(lado,e,true).m,raiz=caminhos[lado][0],pixels=[];
   for(let y=0;y<a.h;y++)for(let x=0;x<a.w;x++){
    const k=(y*a.w+x)*4,alfa=m.data[k+3];if(!alfa)continue;
    const origem={x:x+a.x,y:y+a.y},perto=1-suave((Math.hypot(origem.x-raiz.x,origem.y-raiz.y)-25)/25);
    pixels.push({i:(origem.y*W+origem.x)*4,alfa,tecido:Math.min(alfa,recorte.data[k+3]),origem,perto,t:perto||opcoes.limpezaLocal?maisProximo(lado,origem):0});
   }
   // A interpolação lê os vizinhos: inclui margem para não descartar bordas.
-  const triangulos=mapas[lado].filter(triangulo=>{
+  const triangulos=e.removida?[]:mapas[lado].filter(triangulo=>{
    const x0=Math.max(a.x,Math.min(...triangulo.map(p=>p.x))-1),x1=Math.min(a.x+a.w-1,Math.max(...triangulo.map(p=>p.x))+1);
    const y0=Math.max(a.y,Math.min(...triangulo.map(p=>p.y))-1),y1=Math.min(a.y+a.h-1,Math.max(...triangulo.map(p=>p.y))+1);
    for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const k=((y-a.y)*a.w+x-a.x)*4+3;if(m.data[k]&&recorte.data[k])return true}
@@ -173,7 +188,7 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
  function aplicar(ctx,estados,separar=false){
   if(!separar&&!lados.some(l=>ativo(estados[l].posicao)||estados[l].removida))return;
   const camadasMoveis={};
-  const original=ctx.getImageData(0,0,W,H),composicao=new Uint8ClampedArray(original.data);
+  const original=ctx.getImageData(0,0,W,H),composicao=new Uint8ClampedArray(original.data),pixelsLimpeza=separar?new Uint8ClampedArray(W*H*4):null;
   for(const lado of lados){
    const e=estados[lado];if(!separar&&!ativo(e.posicao)&&!e.removida)continue;
    const {pixels,triangulos}=prepararRecorte(lado,e),fonte=new Uint8ClampedArray(W*H*4);
@@ -183,6 +198,7 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
     // Não troca pelo fundo limpo a raiz que permanece no mesmo lugar.
     const pesoMovimento=suave(Math.hypot(destino.x-origem.x,destino.y-origem.y)/4);
     const limpeza=alfa/255*(separar||e.removida?1:opcoes.limpezaLocal?pesoMovimento:(1-perto+perto*pesoMovimento));
+    if(pixelsLimpeza){for(let c=0;c<3;c++)pixelsLimpeza[i+c]=fundoPixels[i+c];pixelsLimpeza[i+3]=Math.max(pixelsLimpeza[i+3],Math.round(limpeza*255));}
     for(let c=0;c<3;c++){fonte[i+c]=original.data[i+c];composicao[i+c]=composicao[i+c]*(1-limpeza)+fundoPixels[i+c]*limpeza}
     fonte[i+3]=tecido;
    }
@@ -219,7 +235,8 @@ window.criarMovimentoTubas=function(tubas,fundo,camadas,recortes,fundoMovimento,
     const peso=1-suave((Math.hypot(x-p.x,y-p.y)-3)/15),i=(y*W+x)*4;if(!peso)continue;
     fixas.data[i]=original.data[i];fixas.data[i+1]=original.data[i+1];fixas.data[i+2]=original.data[i+2];fixas.data[i+3]=peso*255;
    }}r.putImageData(fixas,0,0);
-   original.data.set(composicao);fundo.getContext('2d').putImageData(original,0,0);return{fundo,raizes,camadas:camadasMoveis};
+   const limpeza=criar();limpeza.getContext('2d').putImageData(new ImageData(pixelsLimpeza,W,H),0,0);
+   original.data.set(composicao);fundo.getContext('2d').putImageData(original,0,0);return{fundo,raizes,limpeza,camadas:camadasMoveis};
   }
   // Somente as fixações continuam protegidas; tubas passam à frente dos ovários e ligamentos; o útero fica na base.
   for(let j=0;j<protecaoFrente.length;j++)if(protecaoFrente[j]){

@@ -1,0 +1,6 @@
+.mapa-editor__orgaos-linha.com-utero{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:480px){.mapa-editor__orgaos-linha.com-utero .botao{padding:8px 2px;font-size:.7rem;overflow-wrap:anywhere}}
+.utero-coronal-painel{padding:10px;margin-bottom:8px;border:1px solid #718679;border-radius:8px}
+.utero-coronal-painel[hidden]{display:none}
+.utero-coronal-painel p{margin:0 0 8px}
+.utero-coronal-combinado>canvas.mapa-editor__orgaos:not([data-utero-coronal]){visibility:hidden}

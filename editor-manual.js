@@ -362,6 +362,7 @@
     if (estado) window.endomapaTubas?.desativar();
     if (estado) orgaosDaVista(vistaAtiva)?.desativar();
     if (estado) window.endomapaUtero?.desativar();
+    if (estado) window.endomapaUteroCoronal?.desativar();
     if (canetaAtiva) finalizarTraco(canetaAtiva);
     canetaAtiva = estado;
     if (estado) controles.hidden = true;
@@ -801,6 +802,7 @@
     window.endomapaTubas?.desativar();
     orgaosDaVista(vistaAtiva)?.desativar();
     window.endomapaUtero?.desativar();
+    window.endomapaUteroCoronal?.desativar();
     definirCaneta(null);
     const lesao = document.createElement("button");
     const deslocamento = ((proximoId - 1) % 5) * 3;
@@ -843,8 +845,8 @@
       lesao.dataset.orgao = dadosCopiados?.orgao || orgaosDaVista(vistaAtiva)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
     }
     lesao.setAttribute("aria-label", `${nome}. Arraste para mover.`);
-    if(vistaAtiva==='sagital'&&dadosCopiados?.uteroX===undefined) vincularUtero(lesao);
-    if(vistaAtiva!=='sagital'){delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
+    if(['sagital','coronal'].includes(vistaAtiva)&&dadosCopiados?.uteroX===undefined) vincularUtero(lesao);
+    if(!['sagital','coronal'].includes(vistaAtiva)){delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
     lesao.style.setProperty("--proporcao-lesao", proporcao);
     lesao.classList.toggle("lesao-editavel--sem-recorte", semRecorte === "true");
     lesao.innerHTML = `<img src="${src}" alt="" draggable="false" />`;
@@ -927,7 +929,7 @@
     };
     const terminar = function () {
       if (orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)) lesao.dataset.orgao = orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
-      if (camadaDoMovimento.dataset.camadaEditor === 'sagital') vincularUtero(lesao);
+      if (['sagital','coronal'].includes(camadaDoMovimento.dataset.camadaEditor)) vincularUtero(lesao);
       lesao.removeEventListener("pointermove", mover);
       lesao.removeEventListener("pointerup", terminar);
       lesao.removeEventListener("pointercancel", terminar);
@@ -1149,6 +1151,7 @@
   }
 
   function limparMapa() {
+    if (vistaAtiva === 'coronal') window.endomapaUteroCoronal?.restaurar();
     if (vistaAtiva === 'parede-abdominal') window.endomapaParede?.restaurar();
     orgaosDaVista(vistaAtiva)?.restaurar();
     if (vistaAtiva === 'sagital') window.endomapaUtero?.restaurar();
@@ -1180,26 +1183,30 @@
     return String(nome||'').replace(/\bmiomas?\b/gi,m=>m.toLowerCase().endsWith('s')?'Leiomiomas':'Leiomioma').replace(/^Adenomiose 1$/i,'Adenomiose').replace(/Leiomioma endocavitário/gi,'Leiomioma 4').replace(/Leiomioma pediculado/gi,'Leiomioma 5');
   }
   function vincularUtero(lesao) {
-    const p=window.endomapaUtero?.vincular(Number(lesao.dataset.x),Number(lesao.dataset.y));
+    const vista=lesao.closest('[data-camada-editor]')?.dataset.camadaEditor || vistaAtiva;
+    const p=uteroDaVista(vista)?.vincular(Number(lesao.dataset.x),Number(lesao.dataset.y));
     if(p){lesao.dataset.uteroX=String(p.x);lesao.dataset.uteroY=String(p.y)}
     else {delete lesao.dataset.uteroX;delete lesao.dataset.uteroY;}
   }
+  function uteroDaVista(vista) { return vista==='coronal'?window.endomapaUteroCoronal:vista==='sagital'?window.endomapaUtero:null; }
   function orgaosDaVista(vista) { return window.endomapaOrgaos?.paraVista?.(vista)||(vista==='coronal'?window.endomapaOrgaos:null); }
-  function fotografarOrgaos(vista) { return window.endomapaParede?.fotografar(vista)||window.endomapaTubas?.fotografar(vista)||window.endomapaUtero?.fotografar(vista)||orgaosDaVista(vista)?.fotografar(vista); }
+  function fotografarOrgaos(vista) { return window.endomapaParede?.fotografar(vista)||window.endomapaUteroCoronal?.fotografar(vista)||window.endomapaTubas?.fotografar(vista)||window.endomapaUtero?.fotografar(vista)||orgaosDaVista(vista)?.fotografar(vista); }
   window.addEventListener('endomapa:movimentar-parede',()=>{ativarVista('parede-abdominal');definirCaneta(null);controles.hidden=true;});
   window.addEventListener('endomapa:alterar-tubas',()=>{definirCaneta(null);controles.hidden=true;});
-  window.addEventListener('endomapa:movimentar-utero',()=>{
-    ativarVista('sagital');definirCaneta(null);controles.hidden=true;
-    document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(vincularUtero);
+  window.addEventListener('endomapa:movimentar-utero',evento=>{
+    const vista=evento.detail?.vista||'sagital';
+    ativarVista(vista);definirCaneta(null);controles.hidden=true;
+    document.querySelectorAll(`[data-camada-editor="${vista}"] .lesao-editavel`).forEach(vincularUtero);
     mostrar('Arraste o corpo do útero. Toque novamente em Movimentar útero para voltar a ajustar lesões.');
   });
   window.addEventListener('endomapa:utero-movido',evento=>{
+    const vista=evento.detail?.vista||'sagital',w=vista==='coronal'?1086:1087,h=vista==='coronal'?1448:1447;
     const variacao = Number(evento.detail?.depois) - Number(evento.detail?.antes);
-    document.querySelectorAll('[data-camada-editor="sagital"] .lesao-editavel').forEach(l=>{
+    document.querySelectorAll(`[data-camada-editor="${vista}"] .lesao-editavel`).forEach(l=>{
       if(l.dataset.uteroX===undefined)return;
-      const p=window.endomapaUtero.posicao(Number(l.dataset.uteroX),Number(l.dataset.uteroY));
-      if(!p)return;l.dataset.x=String(limitar(p.x*100/1087,0,100));l.dataset.y=String(limitar(p.y*100/1447,0,100));
-      if(Number.isFinite(variacao)&&/^DIU\b/.test(l.dataset.nome||'')){
+      const p=uteroDaVista(vista).posicao(Number(l.dataset.uteroX),Number(l.dataset.uteroY));
+      if(!p)return;l.dataset.x=String(limitar(p.x*100/w,0,100));l.dataset.y=String(limitar(p.y*100/h,0,100));
+      if(vista==='sagital'&&Number.isFinite(variacao)&&/^DIU\b/.test(l.dataset.nome||'')){
         l.dataset.giro=String(window.endomapaUtero.orientar(Number(l.dataset.uteroX),Number(l.dataset.uteroY),Number(l.dataset.giro),evento.detail.antes,evento.detail.depois));
       }
       atualizarVisual(l);atualizarRotuloDeMedidas(l);
@@ -1254,7 +1261,7 @@
         lados: window.endomapaLados?.ativo(vista),
         ovarios: orgaosDaVista(vista)?.estado(),
         ureteres: orgaosDaVista(vista)?.ureteres(),
-        utero: vista === 'sagital' ? window.endomapaUtero?.estado() : undefined,
+        utero: uteroDaVista(vista)?.estado(),
         tubas: window.endomapaTubas?.estado(vista),
         parede: vista === 'parede-abdominal' ? window.endomapaParede?.estado() : undefined,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
@@ -1304,7 +1311,7 @@
       if (vista?.lados !== undefined && typeof vista.lados !== 'boolean') falhar();
       orgaosDaVista(id)?.validar(vista?.ovarios);
       if (orgaosDaVista(id) && vista?.ureteres !== undefined && typeof vista.ureteres !== 'boolean') falhar();
-      if (id === 'sagital') window.endomapaUtero?.validar(vista?.utero);
+      uteroDaVista(id)?.validar(vista?.utero);
       window.endomapaTubas?.validar(id,vista?.tubas);
       if (!vista || !Array.isArray(vista.lesoes) || vista.lesoes.length > 500 || !Array.isArray(vista.tracos) || vista.tracos.length > 2000) falhar();
       vista.lesoes.forEach(l => {
@@ -1323,7 +1330,7 @@
         if(l.dados.paredePar!==undefined&&(id!=='parede-abdominal'||!/^assets\/lesoes\/endometrioma-parede-v[23]\.png$/.test(l.src)||typeof l.dados.paredePar!=='string'||!/^[a-zA-Z0-9-]{1,80}$/.test(l.dados.paredePar)))falhar();
         if (l.dados.orgao !== undefined && !['','esquerdo','direito'].includes(l.dados.orgao)) falhar();
         if (l.dados.uteroX !== undefined || l.dados.uteroY !== undefined) {
-          if(id!=='sagital'||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
+          if(!['sagital','coronal'].includes(id)||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
         }
         const istmocele=l.src==='assets/lesoes/istmocele-v9.png';
         if(istmocele&&id!=='sagital')falhar();
@@ -1352,6 +1359,7 @@
     if(window.endomapaOrgaos?.restaurarTodas)window.endomapaOrgaos.restaurarTodas(vistas);
     else window.endomapaOrgaos?.restaurar(vistas.coronal.ovarios,vistas.coronal.ureteres);
     window.endomapaUtero?.restaurar(vistas.sagital.utero);
+    window.endomapaUteroCoronal?.restaurar(vistas.coronal.utero);
     window.endomapaParede?.restaurar(vistas['parede-abdominal'].parede);
     window.endomapaTubas?.restaurarTodas(vistas).catch(erro=>mostrar(erro.message));
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
@@ -1403,7 +1411,7 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal') {
+    if (!camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaUteroCoronal?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal') {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }

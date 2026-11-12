@@ -38,7 +38,7 @@ window.endomapaCriarOrgaos = async function(canvas, fontes, opcoes) {
   const area=lado==='esquerdo'?{x:205,y:450,w:235,h:440}:{x:650,y:450,w:240,h:440};
   const fonte=novoCanvas();fonte.getContext('2d').drawImage(imagens.base,0,0);
   const bordaTrompa=lado==='esquerdo'?{suavidade:2.8,atenuacaoBorda:1.5}:{suavidade:2.3,atenuacaoBorda:1.1,bordasSuaves:[{de:525,ate:635},{de:720,ate:780}]};
-  camadas[lado]={frente,fundo,trompa:window.criarFaixaTexturizada(fonte,tubo,30,area,bordaTrompa),ligamento:window.criarFaixaTexturizada(fonte,ligamento,14,area)};
+  camadas[lado]={frente,fundo,caminhoTuba:tubo,caminhoLigamento:ligamento,trompa:window.criarFaixaTexturizada(fonte,tubo,30,area,bordaTrompa),ligamento:window.criarFaixaTexturizada(fonte,ligamento,14,area)};
  }
  function transformarEixo(lado,x,y){
   const g=grupos[lado],p=peso(y),t=Math.max(0,Math.min(1,(y-470)/155));
@@ -79,6 +79,20 @@ window.endomapaCriarOrgaos = async function(canvas, fontes, opcoes) {
   for(const lado of lados)if(ureteresAtivos||grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
  }
  return {
+  fotografarCombinacao(ligar,apenasUreteres=false){
+   const partes=Object.fromEntries(['limpeza','ligamentos','tubas','ovarios'].map(k=>[k,novoCanvas()]));
+   partes.ureteres=ureteresAtivos?camadaUreteres:null;
+   partes.apenasUreteres=apenasUreteres;
+   for(const lado of lados){
+    if(apenasUreteres){partes.ovarios.getContext('2d').drawImage(camadas[lado].frente,0,0);continue;}
+    const g=grupos[lado],transformar=ligar(camadas[lado].caminhoTuba,g),ligamento=ligar(camadas[lado].caminhoLigamento,g);
+    partes.limpeza.getContext('2d').drawImage(camadas[lado].fundo,0,0);
+    partes.ligamentos.getContext('2d').drawImage(camadas[lado].ligamento.desenhar(ligamento),0,0);
+    partes.tubas.getContext('2d').drawImage(camadas[lado].trompa.desenhar(transformar),0,0);
+    partes.ovarios.getContext('2d').drawImage(camadas[lado].frente,g.x,g.y);
+   }
+   return partes;
+  },
   fotografarParaTubas(){
    semTubas=true;renderizar();const copia=novoCanvas();copia.getContext('2d').drawImage(canvas,0,0);semTubas=false;renderizar();return copia;
   },

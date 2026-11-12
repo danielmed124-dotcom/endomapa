@@ -5,12 +5,17 @@
  const ocupado=()=>window.endomapaEditorManual?.ocupado()||window.endomapaHistoricoManual?.ocupado();
  const ativo=e=>JSON.stringify(e.estado)!==JSON.stringify(M.inicial(e.vista));
  const orgaosDaVista=v=>window.endomapaOrgaos?.paraVista?.(v)||(v==='coronal'?window.endomapaOrgaos:null);
- const transformar=(e,l,p)=>orgaosDaVista(e.vista)?.transformarTuba(pares[l],p)||p;
+ function transformacao(e,l){const o=orgaosDaVista(e.vista),u=window.endomapaUteroCoronal;return e.vista==='coronal'&&u?.alterado('coronal')?u.ligar(M.normal[l],o?.estado()[pares[l]]):(x,y)=>o?.transformarTuba(pares[l],{x,y})||{x,y};}
+ const transformar=(e,l,p)=>transformacao(e,l)(p.x,p.y);
+ function inverter(e,l,alvo,origem){const p={...origem};for(let i=0;i<30;i++){const q=transformar(e,l,p);p.x+=alvo.x-q.x;p.y+=alvo.y-q.y;}return p;}
+ const notificar=e=>window.dispatchEvent(new CustomEvent('endomapa:tubas-redesenhadas',{detail:{vista:e.vista}}));
  function mensagem(e,texto){e.msg.textContent=texto}
  function renderizar(e){
   if(!e.motor)return;
   const g=e.tela.getContext('2d');g.clearRect(0,0,1086,1448);
-  if(!ativo(e)){e.valido=true;posicionar(e);return}
+  if(!ativo(e)){e.valido=true;posicionar(e);notificar(e);return}
+  // Na combinação, a imagem final é montada pelo útero; não renderizar uma cópia oculta.
+  if(e.vista==='coronal'&&window.endomapaUteroCoronal?.alterado('coronal')){e.valido=true;posicionar(e);notificar(e);return}
   const orgaos=orgaosDaVista(e.vista);
   const comOrgaos=orgaos?.alterado(e.vista);let final;
   if(comOrgaos){
@@ -25,9 +30,9 @@
    f.drawImage(partes.raizes,0,0);
   }else final=e.motor.renderizar(e.estado);
   // Apenas a região anatômica: cabeçalho, marca e assinatura vêm da conta.
-  g.drawImage(final,80,420,930,720,80,420,930,720);e.valido=true;posicionar(e);
+  g.drawImage(final,80,420,930,720,80,420,930,720);e.valido=true;posicionar(e);notificar(e);
  }
- function agendar(e){if(!e.quadro)e.quadro=requestAnimationFrame(()=>{e.quadro=0;renderizar(e)})}
+ function agendar(e,mostrarSelecao=false){if(!e.quadro){const executar=()=>{e.quadro=0;renderizar(e)};e.quadro=requestAnimationFrame(()=>{if(mostrarSelecao)e.quadro=requestAnimationFrame(executar);else executar()})}}
  async function preparar(e){
   if(e.motor)return e.motor;if(e.carregando)return e.carregando;
   e.abrir.disabled=true;mensagem(e,'Preparando as tubas…');
@@ -54,6 +59,7 @@
  }
  function executar(e,tipo){
   if(!e.motor||ocupado())return;
+  const antes=JSON.stringify(e.estado);
   orgaosDaVista(e.vista)?.desativar();window.endomapaUtero?.desativar();
   window.dispatchEvent(new Event('endomapa:alterar-tubas'));
   for(const l of e.lado==='ambos'?e.config.lados:[e.lado]){
@@ -63,10 +69,11 @@
    if(tipo==='hidro'&&!s.inserida){s.tubaAnterior=structuredClone(s.tuba);s.inserida=true;s.inicio=0;s.fim=100}
    if(tipo==='espessamento')s.espessamento.ativo=true;
   }
-  renderizar(e);selecionar(e,tipo);
+  selecionar(e,tipo);if(JSON.stringify(e.estado)!==antes){e.valido=false;agendar(e,true)}
  }
  function alternarLado(e,lado){
   if(ocupado()||e.lado===lado)return;
+  const antes=JSON.stringify(e.estado);
   const tipo=e.tipo,anteriores=e.lado==='ambos'?e.config.lados:[e.lado];
   e.lado=lado;
   if(!tipo||tipo==='posicao'){selecionar(e,tipo);return}
@@ -90,7 +97,7 @@
    else if(tipo==='espessamento')s.espessamento={ativo:false,inicio:38,fim:60};
    else delete s.removida;
   }
-  renderizar(e);selecionar(e,tipo);
+  selecionar(e,tipo);if(JSON.stringify(e.estado)!==antes){e.valido=false;agendar(e,true)}
  }
  function ponto(e,l,chave){return transformar(e,l,e.motor.ponto(l,e.tipo,chave,e.estado))}
  function posicionar(e){
@@ -116,9 +123,10 @@
   };
   b.onpointerdown=ev=>{if(ocupado()||ev.button!==0||ev.isPrimary===false||e.arraste)return;e.arraste={id:ev.pointerId,x:ev.clientX,y:ev.clientY,p:ponto(e,l,chave),pose:{...e.estado[l].posicao[Number(chave)]}};b.setPointerCapture(ev.pointerId);ev.preventDefault();ev.stopPropagation()};
   b.onpointermove=ev=>{const a=e.arraste;if(a?.id!==ev.pointerId||ocupado())return;const r=e.tela.getBoundingClientRect(),dx=(ev.clientX-a.x)*1086/r.width,dy=(ev.clientY-a.y)*1448/r.height;
-   if(e.tipo==='posicao'){e.motor.movimento.definir(l,e.estado[l].posicao,Number(chave),a.pose.x+dx,a.pose.y+dy);agendar(e);posicionar(e)}else{
+   if(e.tipo==='posicao'){const base=e.motor.ponto(l,e.tipo,chave,e.estado),antes=inverter(e,l,a.p,base),depois=inverter(e,l,{x:a.p.x+dx,y:a.p.y+dy},antes);e.motor.movimento.definir(l,e.estado[l].posicao,Number(chave),a.pose.x+depois.x-antes.x,a.pose.y+depois.y-antes.y);agendar(e);posicionar(e)}else{
     // Busca no trajeto exibido, incluindo o deslocamento ovariano.
-    let dist=Infinity,v=0;for(let t=0;t<=100;t+=.25){const s=e.tipo==='hidro'?e.estado[l]:e.tipo==='tubas'?e.estado[l].tuba:e.estado[l].espessamento,antes=s[chave];s[chave]=t;const p=ponto(e,l,chave);s[chave]=antes;const d=(p.x-a.p.x-dx)**2+(p.y-a.p.y-dy)**2;if(d<dist){dist=d;v=t}}definir(e,l,chave,v);
+    if(!a.caminho){a.caminho=[];const s=e.tipo==='hidro'?e.estado[l]:e.tipo==='tubas'?e.estado[l].tuba:e.estado[l].espessamento,antes=s[chave];for(let t=0;t<=100;t+=.25){s[chave]=t;a.caminho.push({t,...ponto(e,l,chave)})}s[chave]=antes;}
+    let dist=Infinity,v=0;for(const p of a.caminho){const d=(p.x-a.p.x-dx)**2+(p.y-a.p.y-dy)**2;if(d<dist){dist=d;v=p.t}}definir(e,l,chave,v);
    }ev.preventDefault();
   };
   b.onpointerup=b.onpointercancel=b.onlostpointercapture=ev=>{if(e.arraste?.id===ev.pointerId)e.arraste=null};e.marcadores.append(b);
@@ -142,18 +150,51 @@
   new ResizeObserver(()=>posicionar(e)).observe(desenho);
   desenho.addEventListener('pointerdown',ev=>{if(!ev.target.closest('.tubas-marcador'))selecionar(e,null)});
  }
- function restaurar(vista,dados){const e=entradas.get(vista);M.validar(vista,dados);if(!e)return;e.estado=structuredClone(dados||M.inicial(vista));e.valido=false;selecionar(e,null);if(e.motor)renderizar(e);else if(ativo(e))return preparar(e);else{e.tela.getContext('2d').clearRect(0,0,1086,1448);e.valido=true}}
+ function restaurar(vista,dados){const e=entradas.get(vista);M.validar(vista,dados);if(!e)return;e.estado=structuredClone(dados||M.inicial(vista));e.valido=false;selecionar(e,null);if(e.motor)renderizar(e);else if(ativo(e))return preparar(e);else{e.tela.getContext('2d').clearRect(0,0,1086,1448);e.valido=true;notificar(e)}}
  window.endomapaTubas={
   estado:v=>{const e=entradas.get(v);return e&&ativo(e)?structuredClone(e.estado):undefined},validar:M.validar,
   alterado:v=>Boolean(entradas.get(v)&&ativo(entradas.get(v))),
+  combinacaoPronta:v=>{const e=entradas.get(v);return !e||!ativo(e)||Boolean(e.motor)},
   ocupado:()=>restaurando||[...entradas.values()].some(e=>e.carregando),
   async aguardar(){await Promise.all([...entradas.values()].map(e=>e.carregando))},
-  restaurar,restaurarTodas(vistas){const pendentes=[];restaurando=true;for(const e of entradas.values()){e.estado=structuredClone(vistas?.[e.vista]?.tubas||M.inicial(e.vista));e.valido=false;selecionar(e,null);if(e.motor)renderizar(e);else if(ativo(e))pendentes.push(e);else{e.tela.getContext('2d').clearRect(0,0,1086,1448);e.valido=true}}if(!pendentes.length){restaurando=false;return Promise.resolve()}return (async()=>{for(const e of pendentes)await preparar(e)})().finally(()=>{restaurando=false})},
+  restaurar,restaurarTodas(vistas){const pendentes=[];restaurando=true;for(const e of entradas.values()){e.estado=structuredClone(vistas?.[e.vista]?.tubas||M.inicial(e.vista));e.valido=false;selecionar(e,null);if(e.motor)renderizar(e);else if(ativo(e))pendentes.push(e);else{e.tela.getContext('2d').clearRect(0,0,1086,1448);e.valido=true;notificar(e)}}if(!pendentes.length){restaurando=false;return Promise.resolve()}return (async()=>{for(const e of pendentes)await preparar(e)})().finally(()=>{restaurando=false})},
   desativar(){for(const e of entradas.values())selecionar(e,null)},
   fotografar(v){const e=entradas.get(v);if(!e||!ativo(e))return null;if(!e.motor&&!e.valido)throw Error('Aguarde o preparo das tubas.');if(e.motor)renderizar(e);const c=M.canvas();c.getContext('2d').drawImage(e.tela,0,0);return c},
+  fotografarCombinacao(v){
+   const e=entradas.get(v);if(!e||!ativo(e))return null;
+   if(!e.motor)throw Error('Aguarde o preparo das tubas.');
+   // Movimento simples usa a faixa original contínua, como os ovários do coronal.
+   // Evita recortes de proteção fixos e a reconstrução pixel a pixel da imagem inteira.
+   if(Object.values(e.estado).every(s=>s.removida||(!s.inserida&&!s.tuba.ativo&&!s.espessamento.ativo))){
+    if(!e.faixasCombinacao){
+     const fonte=M.canvas();fonte.getContext('2d').drawImage(e.motor.original,0,0);
+     e.faixasCombinacao=Object.fromEntries(Object.keys(M.normal).map(l=>[l,window.criarFaixaTexturizada(fonte,M.normal[l],30,{x:180,y:450,w:730,h:450},{suavidade:2.3})]));
+    }
+    const frente=M.canvas();
+    for(const l of Object.keys(M.normal)){if(e.estado[l].removida)continue;const converter=transformacao(e,l);frente.getContext('2d').drawImage(e.faixasCombinacao[l].desenhar((x,y)=>{const p=e.motor.movimento.deformar(l,{x,y},e.estado[l].posicao);return converter(p.x,p.y)}),0,0)}
+    return {limpeza:null,frente,removidas:Object.keys(e.estado).filter(l=>e.estado[l].removida)};
+   }
+   const partes=e.motor.renderizar(e.estado,true),frente=M.canvas();
+   for(const [lado,camada] of Object.entries(partes.camadas)){
+    const fonte=M.canvas(),g=fonte.getContext('2d');g.drawImage(camada,0,0);
+    g.save();g.beginPath();g.rect(lado==='esquerda'?0:550,0,lado==='esquerda'?550:536,1448);g.clip();g.drawImage(partes.raizes,0,0);g.restore();
+    const chave=JSON.stringify([lado,window.endomapaUteroCoronal.estado(),orgaosDaVista(v)?.estado()]);
+    e.malhasCombinacao ||= {};
+    if(e.malhasCombinacao[lado]?.chave!==chave){
+     const converter=transformacao(e,lado),triangulos=[],pontos=new Map();
+     const ponto=(sx,sy)=>{const k=sx+','+sy;if(!pontos.has(k))pontos.set(k,{sx,sy,...converter(sx,sy)});return pontos.get(k)};
+     for(let y=180;y<1150;y+=8)for(let x=80;x<1010;x+=8){const ps=[ponto(x,y),ponto(x+8,y),ponto(x+8,y+8),ponto(x,y+8)];triangulos.push([ps[0],ps[1],ps[2]],[ps[0],ps[2],ps[3]])}
+     e.malhasCombinacao[lado]={chave,triangulos};
+    }
+    const {triangulos}=e.malhasCombinacao[lado];
+    frente.getContext('2d').drawImage(window.criarDeformador(fonte,{x:80,y:150,w:930,h:1100})(triangulos),0,0);
+   }
+   return {limpeza:partes.limpeza,frente,removidas:Object.keys(e.estado).filter(l=>e.estado[l].removida)};
+  },
   preparar:async v=>preparar(entradas.get(v))
  };
  for(const tipo of ['endomapa:ovario-movido','endomapa:orgaos-redesenhados'])window.addEventListener(tipo,ev=>{const e=entradas.get(ev.detail?.vista||'coronal');if(e?.motor)renderizar(e);else if(e&&ativo(e))preparar(e).catch(()=>{})});
+ window.addEventListener('endomapa:utero-movido',ev=>{if(ev.detail?.vista==='coronal'){const e=entradas.get('coronal');if(e){if(e.motor&&!window.endomapaUteroCoronal?.alterado('coronal'))renderizar(e);else posicionar(e);}}});
  for(const tipo of ['endomapa:vistas-alteradas','endomapa:movimentar-ovarios','endomapa:movimentar-utero'])window.addEventListener(tipo,()=>window.endomapaTubas.desativar());
  window.addEventListener('endomapa:perfil-carregado',ev=>{if(conta!==ev.detail.id)window.endomapaTubas.restaurarTodas({}).catch(()=>{});conta=ev.detail.id});
 })();

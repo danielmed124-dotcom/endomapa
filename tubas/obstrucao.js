@@ -23,7 +23,7 @@ window.criarAfilamentoTubas=function(fundo,opcoes){
  og.stroke(new Path2D('M 695 496 C 700 535 718 588 732 629'));
  const orgaos=og.getImageData(0,0,W,H).data;
  if(opcoes.orgaos)orgaos.set(opcoes.orgaos);
- const protecao=criar(),pg=protecao.getContext('2d',{willReadFrequently:true});
+ const protecao=criar(),pg=protecao.getContext('2d');
  let protegidos=new Uint8ClampedArray(W*H*4);
  const distancias=new Float32Array(W*H);
  function preparar(lado){
@@ -87,6 +87,8 @@ window.criarAfilamentoTubas=function(fundo,opcoes){
    pg.save();pg.clip(recorte);pg.drawImage(canvas,0,0);pg.restore();
   }
   protegidos=pg.getImageData(0,0,W,H).data;
+  // Sem dilatação, não há borda protegida cuja distância precise ser calculada.
+  if(!protegidos.some((v,i)=>i%4===3&&v)){distancias.fill(1000);return}
   // Distância contínua da região protegida: a largura retorna ao original
   // antes da junção, sem degraus nem recorte brusco ao tocar a dilatação.
   for(let i=0;i<distancias.length;i++)distancias[i]=protegidos[i*4+3]?0:1000;

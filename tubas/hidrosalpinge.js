@@ -120,14 +120,18 @@ window.criarHidrosalpingeAfilada=function(imagem,normal,lado,modelo,area,opcoes=
   const normal={x:a.normal.x+(b.normal.x-a.normal.x)*u,y:a.normal.y+(b.normal.y-a.normal.y)*u,nx:a.normal.nx+(b.normal.nx-a.normal.nx)*u,ny:a.normal.ny+(b.normal.ny-a.normal.ny)*u};
   return{...p,t,r,k,normal,xFinal:normal.x+(p.x-normal.x)*k,yFinal:normal.y+(p.y-normal.y)*k,raioFinal:14+(r-14)*k};
  }
+ let ultimaSecao,ultimoDesenho;
  function secoes(inicio,fim){
+  if(ultimaSecao?.inicio===inicio&&ultimaSecao.fim===fim)return ultimaSecao.lista;
   if(inicio===fim)return[];
   const n=Math.max(20,Math.ceil(L*(fim-inicio)/100/2));
   const lista=Array.from({length:n+1},(_,i)=>secao((inicio+(fim-inicio)*i/n)/100,inicio,fim));
   // Normal do eixo final: conserva a seção transversal mesmo nas transições.
-  return lista.map((p,i)=>{const a=lista[Math.max(0,i-1)],b=lista[Math.min(n,i+1)],dx=b.xFinal-a.xFinal,dy=b.yFinal-a.yFinal,l=Math.hypot(dx,dy)||1;return{...p,nfx:-dy/l,nfy:dx/l,opacidade:1}});
+  const resultado=lista.map((p,i)=>{const a=lista[Math.max(0,i-1)],b=lista[Math.min(n,i+1)],dx=b.xFinal-a.xFinal,dy=b.yFinal-a.yFinal,l=Math.hypot(dx,dy)||1;return{...p,nfx:-dy/l,nfy:dx/l,opacidade:1}});
+  ultimaSecao={inicio,fim,lista:resultado};return resultado;
  }
  function desenhar(inicio,fim){
+  if(ultimoDesenho?.inicio===inicio&&ultimoDesenho.fim===fim)return tela;
   const s=secoes(inicio,fim),triangulos=[],margem=4.4;
   const bordas=p=>[-1,1].map(sinal=>({x:p.xFinal+p.nfx*(p.raioFinal+margem*p.raioFinal/p.r)*sinal,y:p.yFinal+p.nfy*(p.raioFinal+margem*p.raioFinal/p.r)*sinal,sx:p.x+p.nx*(p.r+margem)*sinal,sy:p.y+p.ny*(p.r+margem)*sinal,hx:p.normal.x+p.normal.nx*14*(1+margem/p.r)*sinal,hy:p.normal.y+p.normal.ny*14*(1+margem/p.r)*sinal,k:p.k}));
   for(let i=0;i<s.length-1;i++){const a=bordas(s[i]),b=bordas(s[i+1]);triangulos.push([a[0],a[1],b[1]],[a[0],b[1],b[0]])}
@@ -139,7 +143,7 @@ window.criarHidrosalpingeAfilada=function(imagem,normal,lado,modelo,area,opcoes=
    const borda=ang=>{const n=Math.cos(ang),v=Math.sin(ang)*sentido;return{x:p.xFinal+(p.nfx*n+p.nfy*v)*(p.raioFinal+margem),y:p.yFinal+(p.nfy*n-p.nfx*v)*(p.raioFinal+margem),sx:p.x+(p.nx*n+p.ny*v)*(p.r+margem),sy:p.y+(p.ny*n-p.nx*v)*(p.r+margem),hx:p.normal.x,hy:p.normal.y,k:p.k}};
    for(let j=0;j<24;j++)triangulos.push([centro,borda(j*Math.PI/24),borda((j+1)*Math.PI/24)]);
   }
-  return rasterizar(triangulos);
+  const resultado=rasterizar(triangulos);ultimoDesenho={inicio,fim};return resultado;
  }
  return{desenhar,secoes,perfil,pontos:origem};
 };
