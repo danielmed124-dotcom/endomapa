@@ -811,7 +811,7 @@
     lesao.dataset.id = String(proximoId++);
     nome=normalizarNomeLesao(nome);
     lesao.dataset.nome = nome;
-    lesao.dataset.nomeNoMapa = (/^Intestinal (coronal|sagital)$/.test(nome) ? 'Intestinal' : nome).replace(/\s+[123]$/, '');
+    lesao.dataset.nomeNoMapa = (/^Aderência em traços [123]$/.test(nome) ? 'Aderências' : /^Intestinal (coronal|sagital)$/.test(nome) ? 'Intestinal' : nome).replace(/\s+[123]$/, '');
     lesao.dataset.proporcao = proporcao;
     lesao.dataset.semRecorte = semRecorte;
     lesao.dataset.x = String(44 + deslocamento);
