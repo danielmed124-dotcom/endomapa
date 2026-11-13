@@ -66,6 +66,8 @@ window.endocartaLogoCentrusPronta.catch(() => {});
 baseLogoCentrus.src = 'assets/mapa-base-coronal-aberto.png';
 
 function logoDoPerfil(perfil) {
+  const personalizada=window.endocartaConfiguracoes?.logo(perfil);
+  if(personalizada)return personalizada;
   return perfil?.logo_ana_paula ? logoAnaPaula : perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
 }
 
@@ -163,7 +165,7 @@ function aplicarPerfilMedico(perfil) {
       }
       if (logoPersonalizada) {
         logo.src = logoPersonalizada.src;
-        logo.alt = perfil.logo_ana_paula ? 'Ana Paula Carvalhal — radiologista da mulher' : perfil.logo_granvitta ? 'Granvittà' : 'Semeare — diagnóstico de precisão';
+        logo.alt = perfil.configuracoes?.logo_png ? 'Logomarca do usuário' : perfil.logo_ana_paula ? 'Ana Paula Carvalhal — radiologista da mulher' : perfil.logo_granvitta ? 'Granvittà' : 'Semeare — diagnóstico de precisão';
       }
       logo.hidden = !logoPersonalizada;
     }
@@ -206,9 +208,9 @@ function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
     contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, 850, 0, 220, 160);
   }
   if (logoPersonalizada?.naturalWidth) {
-    const larguraLogo = canvas.width * 0.175;
-    contexto.drawImage(logoPersonalizada, canvas.width * 0.799, canvas.height * 0.018,
-      larguraLogo, larguraLogo * logoPersonalizada.naturalHeight / logoPersonalizada.naturalWidth);
+    const escalaLogo=Math.min(canvas.width*.175/logoPersonalizada.naturalWidth,(perfilDosLados?.configuracoes?.logo_png ? canvas.height*.12 : Infinity)/logoPersonalizada.naturalHeight);
+    const larguraLogo=logoPersonalizada.naturalWidth*escalaLogo,alturaLogo=logoPersonalizada.naturalHeight*escalaLogo;
+    contexto.drawImage(logoPersonalizada,canvas.width*.974-larguraLogo,canvas.height*.018,larguraLogo,alturaLogo);
   }
   canvas.setAttribute("aria-label", `Assinatura: ${nome}${indicarLados ? '; E à esquerda e D à direita' : ''}`);
   // Mesma camada na tela e na captura: margens laterais, fora da anatomia.
@@ -297,3 +299,5 @@ window.addEventListener("endomapa:lesoes-confirmadas", () => {
 if (window.location.hash === "#editor-manual") {
   abrirTela("editor-manual");
 }
+
+window.endocartaLogoCadastro = perfil => {const original=logoDoPerfil({...perfil,configuracoes:null});return {src:original?.src||null,incorporada:!original&&Boolean(perfil?.clinica_id)}};

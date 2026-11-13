@@ -682,6 +682,8 @@
     if (temConteudo && !window.confirm('Deseja descartar a montagem atual e iniciar um novo mapa?')) return;
     const limpa=structuredClone(montagemInicialVazia);
     for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge','histerectomia'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    limpa.escalaCinza=window.endomapaMedico?.configuracoes?.cor_mapa==='cinza';
+    limpa.transparenciaCinza=window.endomapaMedico?.configuracoes?.transparencia_cinza??0;
     restaurarMontagemEditavel(limpa);
     if (titulo) titulo.value = '';
     const aviso = document.querySelector('[data-estado-salvar-manual]');

@@ -62,6 +62,8 @@
     if (!podeSubstituir()) return;
     const atual=editor.capturar(),limpa=structuredClone(vazia);
     for(const chave of ['escolha','ativa','especial','especialSagital','hidrosalpinge','histerectomia'])if(atual[chave]!==undefined)limpa[chave]=atual[chave];
+    limpa.escalaCinza=window.endomapaMedico?.configuracoes?.cor_mapa==='cinza';
+    limpa.transparenciaCinza=window.endomapaMedico?.configuracoes?.transparencia_cinza??0;
     editor.restaurar(limpa); id = crypto.randomUUID(); versao = 0; salvo = ''; titulo.value = '';
     mensagem('Novo mapa iniciado. Monte e salve quando desejar.');
   }, true);

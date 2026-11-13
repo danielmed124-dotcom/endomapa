@@ -58,6 +58,8 @@
       if (perfil.logo_ana_paula) await window.endomapaLogoAnaPaulaPronta;
       perfil.unidade_medidas = String(data.user.email || '').trim().toLowerCase() === 'letibecker@yahoo.com.br' ? 'mm' : 'cm';
       if (perfil.clinica_id && !perfil.logo_semeare && !perfil.logo_granvitta && !perfil.logo_ana_paula) await window.endocartaLogoCentrusPronta;
+      try {Object.assign(perfil,await window.endocartaConfiguracoes.carregar(perfil));}
+      catch {mostrarErro('Não foi possível carregar suas configurações. Atualize a página antes de editar os mapas.');return;}
       window.endomapaMedico = perfil;
       window.dispatchEvent(
         new CustomEvent("endomapa:perfil-carregado", {
