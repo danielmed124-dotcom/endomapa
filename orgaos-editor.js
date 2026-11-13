@@ -10,6 +10,7 @@
   acoes.innerHTML='<div class="mapa-editor__orgaos-linha"><button type="button" class="botao botao--secundario" data-movimentar-ovarios aria-pressed="false" disabled>Movimentar ovários</button><button type="button" class="botao botao--secundario" data-inserir-ureteres aria-pressed="false" disabled>Inserir ureteres</button></div><button type="button" class="botao botao--secundario" data-restaurar-ovarios disabled>Restaurar posições originais</button>';
   barra.append(acoes);
   const botao=acoes.querySelector('[data-movimentar-ovarios]'),restaurar=acoes.querySelector('[data-restaurar-ovarios]'),botaoUreteres=acoes.querySelector('[data-inserir-ureteres]');
+  const histerectomia=vista.startsWith('histerectomia-');if(histerectomia)botaoUreteres.hidden=true;
   const tela=Object.assign(document.createElement('canvas'),{width:1086,height:1448,className:'mapa-editor__orgaos'});desenho.querySelector('[data-mapa-base]').after(tela);
   const toque=document.createElement('div');toque.className='mapa-editor__orgaos-toque';toque.hidden=true;toque.tabIndex=0;
   toque.setAttribute('aria-label','Arraste o ovário para movê-lo. As setas movem o último ovário selecionado.');desenho.append(toque);
@@ -19,7 +20,7 @@
   const notificar=()=>window.dispatchEvent(new CustomEvent('endomapa:orgaos-redesenhados',{detail:{vista}}));
   function atualizar(){restaurar.disabled=!motor||!Object.values(estado()).some(g=>g.x||g.y)}
   function definirUreteres(valor){ureteres=valor===true;motor?.definirUreteres(ureteres);botaoUreteres.textContent=ureteres?'Remover ureteres':'Inserir ureteres';botaoUreteres.setAttribute('aria-pressed',String(ureteres));notificar()}
-  function validarUreteres(valor){if(valor!==undefined&&typeof valor!=='boolean')throw Error('Estado dos ureteres inválido. O mapa aberto foi preservado.')}
+  function validarUreteres(valor){if((histerectomia&&valor===true)||(valor!==undefined&&typeof valor!=='boolean'))throw Error('Estado dos ureteres inválido. O mapa aberto foi preservado.')}
   function modo(valor){ativo=Boolean(valor)&&Boolean(motor);arraste=null;toque.hidden=!ativo;botao.setAttribute('aria-pressed',String(ativo));if(ativo){for(const outra of instancias.values())if(outra!==api)outra.desativar();window.dispatchEvent(new CustomEvent('endomapa:movimentar-ovarios',{detail:{vista}}));toque.focus({preventScroll:true})}}
   function mover(lado,x,y){if(!motor||ocupado()||!lados.includes(lado))return;const antes=estado()[lado];motor.mover(lado,x,y);const depois=estado()[lado];window.dispatchEvent(new CustomEvent('endomapa:ovario-movido',{detail:{vista,lado,antes,depois}}));atualizar()}
   function validar(valores){
@@ -28,7 +29,7 @@
   }
   function iniciar(){
    if(preparo)return preparo;carregando=true;
-   preparo=window.endomapaCriarOrgaos(tela,undefined,{lados,base:mapa.querySelector('[data-mapa-base]').dataset.srcVisitante}).then(m=>{motor=m;if(pendente)motor.restaurar(pendente);motor.definirUreteres(ureteres);botao.disabled=false;atualizar();notificar();return m}).catch(()=>{preparo=null;botao.disabled=true;botao.title='Não foi possível carregar os ovários. Recarregue a página.'}).finally(()=>{carregando=false});
+   preparo=(histerectomia?window.endocartaCriarOvariosHisterectomia:window.endomapaCriarOrgaos)(tela,undefined,{lados,base:mapa.querySelector('[data-mapa-base]').dataset.srcVisitante}).then(m=>{motor=m;if(pendente)motor.restaurar(pendente);motor.definirUreteres(ureteres);botao.disabled=false;atualizar();notificar();return m}).catch(()=>{preparo=null;botao.disabled=true;botao.title='Não foi possível carregar os ovários. Recarregue a página.'}).finally(()=>{carregando=false});
    return preparo;
   }
   function iniciarUreteres(){if(!preparoUreteres)preparoUreteres=iniciar().then(m=>m?.ureteresProntos).then(()=>{if(!motor)return;ureteresCarregados=true;botaoUreteres.disabled=false;notificar()}).catch(()=>{preparoUreteres=null;botaoUreteres.title='Não foi possível carregar os ureteres. Recarregue a página.'});return preparoUreteres}
@@ -39,7 +40,7 @@
    alterado:v=>v===vista&&(ureteres||Object.values(estado()).some(g=>g.x||g.y)),
    restaurar(valores,incluirUreteres=false){validar(valores);validarUreteres(incluirUreteres);modo(false);pendente=structuredClone(valores||vazio());motor?.restaurar(pendente);definirUreteres(incluirUreteres);atualizar();if(ureteres||Object.values(pendente).some(p=>p.x||p.y))iniciarUreteres()},
    localizar:(x,y)=>motor?.localizar(x*1086/100,y*1448/100,selecionado)||null,
-   fotografar(v){if(!api.alterado(v))return null;if(!motor)throw Error('Aguarde o carregamento dos ovários.');if(ureteres&&!ureteresCarregados)throw Error('Aguarde o carregamento dos ureteres.');const c=Object.assign(document.createElement('canvas'),{width:1086,height:1448});c.getContext('2d').drawImage(tela,0,0);return c}
+   fotografar(v){if(!histerectomia&&!api.alterado(v))return null;if(!motor)throw Error('Aguarde o carregamento dos ovários.');if(ureteres&&!ureteresCarregados)throw Error('Aguarde o carregamento dos ureteres.');const c=Object.assign(document.createElement('canvas'),{width:1086,height:1448});c.getContext('2d').drawImage(tela,0,0);return c}
   };
   Object.defineProperties(api,{pronto:{get:iniciar},ureteresProntos:{get:iniciarUreteres}});
   botao.onclick=()=>{if(!ocupado())modo(!ativo)};botaoUreteres.onclick=()=>{if(!ocupado()&&ureteresCarregados)definirUreteres(!ureteres)};
@@ -55,6 +56,7 @@
   if(vista==='coronal')iniciarUreteres();return api;
  }
  for(const [vista,lados] of [['coronal',['esquerdo','direito']],['ooforectomia-direita',['esquerdo']],['ooforectomia-esquerda',['direito']]]){const api=criar(vista,lados);if(api)instancias.set(vista,api)}
+ for(const m of window.endocartaHisterectomias.modelos){const lados=['esquerdo','direito'].filter(l=>!window.endocartaHisterectomias.semOvario(m.id,l));if(lados.length){const api=criar(m.id,lados);if(api)instancias.set(m.id,api)}}
  const principal=instancias.get('coronal');if(!principal)return;
  principal.paraVista=v=>instancias.get(v)||null;
  principal.ocupado=()=>[...instancias.values()].some(a=>a.carregando());
