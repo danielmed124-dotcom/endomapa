@@ -1,6 +1,14 @@
 .adesao-contadores { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .adesao-contadores[hidden] { display: none; }
-.adesao-contadores .painel-total { margin: 0; min-width: 0; }
+.adesao-contadores .painel-total { margin: 0; min-width: 0; container-type: inline-size; padding-inline: 12px; }
+.adesao-contadores .painel-total__numero {
+  max-width: 100%;
+  font-size: 1.5rem;
+  font-size: clamp(1rem, 18cqi, 3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
 [data-painel-adesao] { margin: 20px 0; }
 [data-ranking-adesao] { margin-top: 20px; }
 .adesao-ranking { width: 100%; border-collapse: collapse; table-layout: fixed; }
