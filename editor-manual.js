@@ -113,9 +113,9 @@
       mapa.classList.toggle('mapa-editor--cinza', ativo);
       mapa.style.setProperty('--transparencia-cinza', String(transparencia / 100));
     });
-    if (painelTransparenciaCinza) painelTransparenciaCinza.hidden = !ativo;
+    if (painelTransparenciaCinza) painelTransparenciaCinza.hidden = false;
     if (controleTransparenciaCinza) {
-      controleTransparenciaCinza.disabled = !ativo;
+      controleTransparenciaCinza.disabled = false;
       controleTransparenciaCinza.setAttribute('aria-valuetext', `${transparencia}% de transparência`);
     }
     if (valorTransparenciaCinza) valorTransparenciaCinza.textContent = `${transparencia}%`;
@@ -1622,14 +1622,19 @@
     const contexto = canvas.getContext("2d");
     contexto.drawImage(base, 0, 0, canvas.width, canvas.height);
     if (orgaos) contexto.drawImage(orgaos, 0, 0, canvas.width, canvas.height);
-    if (escalaCinza) {
+    if (escalaCinza || transparenciaCinza > 0) {
       // Conversão por pixels funciona também em celulares sem filtro de canvas.
       // Só a base foi desenhada neste instante; as lesões conservam suas cores.
       const imagem = contexto.getImageData(0, 0, canvas.width, canvas.height);
       const pixels = imagem.data;
       for (let i = 0; i < pixels.length; i += 4) {
-        const cinza = Math.round(0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]);
-        pixels[i] = pixels[i + 1] = pixels[i + 2] = Math.round(cinza + (255 - cinza) * transparenciaCinza);
+        if (escalaCinza) {
+          const cinza = Math.round(0.2126 * pixels[i] + 0.7152 * pixels[i + 1] + 0.0722 * pixels[i + 2]);
+          pixels[i] = pixels[i + 1] = pixels[i + 2] = cinza;
+        }
+        for (let canal = 0; canal < 3; canal++) {
+          pixels[i + canal] = Math.round(pixels[i + canal] + (255 - pixels[i + canal]) * transparenciaCinza);
+        }
       }
       contexto.putImageData(imagem, 0, 0);
     }
