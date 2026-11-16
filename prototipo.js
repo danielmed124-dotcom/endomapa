@@ -202,7 +202,8 @@ function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const contexto = canvas.getContext("2d");
   contexto.clearRect(0, 0, canvas.width, canvas.height);
   const logoPersonalizada = logoDoPerfil(perfilDosLados);
-  const centrusAbdome = (canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor === 'ceco-apendice-ileo-diafragma' || canvas.closest('[data-mapa-editor]')?.dataset.mapaEditor.startsWith('histerectomia-')) && Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
+  // A identidade fica acima da anatomia para preservar a cor também nas exportações.
+  const centrusAbdome = Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
   canvas.hidden = !nome && !indicarLados && !logoPersonalizada && !centrusAbdome;
   if (centrusAbdome && baseLogoCentrus.naturalWidth) {
     contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, 850, 0, 220, 160);
