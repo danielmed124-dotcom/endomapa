@@ -580,6 +580,13 @@
     document.querySelectorAll('[data-camada-editor] .lesao-editavel').forEach(atualizarRotuloDeMedidas);
   }
   atualizarUnidadeMedidas(window.endomapaMedico);
+  function atualizarFonteLesoes(perfil) {
+    const acrescimo = perfil?.acrescimo_fonte_lesoes_pt === 2 ? '2pt' : '0pt';
+    document.body.style.setProperty('--acrescimo-fonte-lesoes', acrescimo);
+    atualizarTodasAsLinhas();
+  }
+  atualizarFonteLesoes(window.endomapaMedico);
+  window.addEventListener('endomapa:perfil-carregado', evento => atualizarFonteLesoes(evento.detail));
   window.addEventListener('endomapa:perfil-carregado', evento => atualizarUnidadeMedidas(evento.detail));
   window.addEventListener('endomapa:perfil-carregado', evento => atualizarPermissaoDivulgacao(evento.detail));
   const botaoAnotacoes = document.querySelector('[data-alternar-anotacoes]');

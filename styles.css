@@ -1990,6 +1990,10 @@ h1 span {
   user-select: none;
 }
 
+.medida-lesao-editavel[data-medida-id] {
+  font-size: calc(clamp(0.48rem, 2vw, 0.68rem) + var(--acrescimo-fonte-lesoes, 0pt));
+}
+
 .medida-lesao-editavel[hidden] {
   display: none;
 }
