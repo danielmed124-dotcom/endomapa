@@ -26,6 +26,7 @@ window.endocartaCriarOvariosHisterectomia=async function(canvas,fontes,opcoes){
  function desenhar(){ctx.clearRect(0,0,W,H);for(const lado of lados){const g=grupos[lado];if(camadas[lado].corrigir||g.x||g.y)ctx.drawImage(camadas[lado].limpeza,0,0)}for(const lado of lados){const g=grupos[lado];if(g.x||g.y)ctx.drawImage(camadas[lado].deformar((x,y)=>({x:x+g.x*peso(y),y:y+g.y*peso(y)})),0,0);else if(camadas[lado].corrigir)ctx.drawImage(camadas[lado].fonte,0,0)}}
  desenhar();
  return {
+  fotografarFrente(){const c=novo(),ctx=c.getContext('2d');for(const lado of lados){const g=grupos[lado];ctx.drawImage(g.x||g.y?camadas[lado].deformar((x,y)=>({x:x+g.x*peso(y),y:y+g.y*peso(y)})):camadas[lado].fonte,0,0);}return c;},
   estado:()=>Object.fromEntries(Object.entries(grupos).map(([k,g])=>[k,{x:g.x,y:g.y}])),
   mover(lado,x,y){if(!lados.includes(lado))return;const g=grupos[lado];g.x=Math.max(lado==='esquerdo'?-90:-530,Math.min(lado==='esquerdo'?530:90,x));g.y=Math.max(-360,Math.min(200,y));desenhar()},
   restaurar(v){for(const [lado,g] of Object.entries(grupos)){g.x=lados.includes(lado)?v?.[lado]?.x||0:0;g.y=lados.includes(lado)?v?.[lado]?.y||0:0}desenhar()},

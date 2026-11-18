@@ -172,5 +172,5 @@ window.endomapaCriarUteroCoronal=async function(canvas){
   if(reutilizar)ctx.drawImage(cacheComposicao.frente,0,0);
  }
  definir(0);
- return {definir,transformar,transformarAnexo,ligar,apoio,estado:()=>({angulo}),base,mascara,juncoes:()=>tubas.map(t=>({lado:t.lado,utero:transformar(t.raiz.x,t.raiz.y),tuba:transformarTuba(t,t.raiz.x,t.raiz.y),fim:transformarTuba(t,t.ponta.x,t.ponta.y),fimOriginal:t.ponta}))};
+ return {fotografarFrente:()=>deformar((x,y)=>transformar(x,y)),definir,transformar,transformarAnexo,ligar,apoio,estado:()=>({angulo}),base,mascara,juncoes:()=>tubas.map(t=>({lado:t.lado,utero:transformar(t.raiz.x,t.raiz.y),tuba:transformarTuba(t,t.raiz.x,t.raiz.y),fim:transformarTuba(t,t.ponta.x,t.ponta.y),fimOriginal:t.ponta}))};
 };

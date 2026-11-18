@@ -213,7 +213,7 @@ window.endomapaCriarUtero=async function(canvas){
   }
   return Math.hypot(transformar(p.x,p.y,a).x-x,transformar(p.x,p.y,a).y-y)<.1?p:null;
  }
- return {estado:()=>({angulo}),limites:()=>({min:limiteAnterior,max:limitePosterior}),localizar,origem,transformar,transformarTrompa,
+ return {fotografarFrente(){const c=novo(),g=c.getContext('2d');g.beginPath();pontosBorda.forEach((p,i)=>{const q=transformar(p.x,p.y);if(i)g.lineTo(q.x,q.y);else g.moveTo(q.x,q.y)});g.closePath();g.clip();g.drawImage(canvas,0,0);return c;},estado:()=>({angulo}),limites:()=>({min:limiteAnterior,max:limitePosterior}),localizar,origem,transformar,transformarTrompa,
   conferirContinuacao(){return{limite:limiteContinuacao(),total:comprimentoContinuacao,inicio:trajetoContinuacao.getPointAtLength(0),ponto:s=>trajetoContinuacao.getPointAtLength(s)}},
   conferirTrompa(a=angulo){prepararTrajetoTrompa(a);return{original:comprimentoTrompa,atual:comprimento(destinosTrompa),inicio:destinosTrompa[0],fim:destinosTrompa.at(-1),ancora:transformar(encaixeTrompa.x,encaixeTrompa.y,a),fimOriginal:pontosTrompa.at(-1),secoes:faixaTrompa.secoes((x,y)=>transformarTrompa(x,y,a))}},
   mover(a){if(!Number.isFinite(a))return;angulo=Math.max(limiteAnterior,Math.min(limitePosterior,a));desenhar()},

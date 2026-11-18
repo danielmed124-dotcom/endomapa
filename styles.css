@@ -2250,3 +2250,8 @@ body:has(.fusao-integrada:not([hidden])){min-width:0}
   pointer-events: none;
 }
 .mapa-editor__cursor-borracha[hidden] { display: none; }
+
+/* Ordem escolhida individualmente; rótulos continuam legíveis. */
+.lesao-editavel {z-index:2}
+.lesao-editavel[data-ordem-camada="tras"] {z-index:0}
+.ordem-lesoes-orgaos {position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}

@@ -553,6 +553,15 @@
     });
   });
   document.querySelector("[data-remover-lesao]").addEventListener("click", removerSelecionada);
+  document.querySelector('[data-trazer-lesao-frente]')?.addEventListener('click', () => {
+    if (!selecionada || exportacaoEmAndamento || window.endomapaHistoricoManual?.ocupado()) return;
+    // A ordem dos elementos é também a ordem capturada, salva e exportada.
+    const atras = selecionada.dataset.ordemCamada === 'frente';
+    selecionada.dataset.ordemCamada = atras ? 'tras' : 'frente';
+    if (atras) selecionada.parentElement.prepend(selecionada);
+    else selecionada.parentElement.append(selecionada);
+    atualizarBotaoOrdem();
+  });
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
   const botaoJpeg = document.querySelector('[data-baixar-jpeg-manual]');
@@ -882,6 +891,10 @@
     });
   }
 
+  function atualizarBotaoOrdem() {
+    const botao = document.querySelector('[data-trazer-lesao-frente]');
+    if (botao) botao.textContent = selecionada?.dataset.ordemCamada === 'frente' ? 'Enviar para trás' : 'Trazer para a frente';
+  }
   function selecionar(lesao) {
     window.endomapaParede?.editarNoPainel(false);
     if(!restaurandoMontagem&&lesao.dataset.paredePar)window.endomapaParede?.ativarPar(lesao.dataset.paredePar);
@@ -892,6 +905,7 @@
       item.classList.toggle("lesao-editavel--selecionada", item === lesao);
     });
     selecionada = lesao;
+    atualizarBotaoOrdem();
     controles.hidden = false;
     giro.value = lesao.dataset.giro;
     tamanho.min = lesao.dataset.tamanhoMinimo || "40";
@@ -1242,10 +1256,14 @@
 
   function fotografarLesoes(camadaDaCaptura = camada) {
     // O desenho e suas máscaras precisam pertencer ao mesmo instante do editor.
-    return Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
+    const fotos = Array.from(camadaDaCaptura.querySelectorAll(".lesao-editavel"), function (lesao) {
       return { dataset: { ...lesao.dataset }, src: lesao.querySelector("img").src, anotacoesOcultas, unidadeMedidas,
         estiloRotulo: fotografarEstiloRotulo(lesao, camadaDaCaptura) };
     });
+    // Cópias também podem ser inseridas no final do DOM; a captura segue a camada visual.
+    fotos.sort((a, b) => Number(b.dataset.ordemCamada === 'tras') - Number(a.dataset.ordemCamada === 'tras'));
+    if (fotos.some(l => l.dataset.ordemCamada === 'tras')) fotos.frenteOrgaos = window.endocartaOrdemLesoes?.fotografar(camadaDaCaptura.dataset.camadaEditor);
+    return fotos;
   }
 
   function fotografarEstiloRotulo(lesao, camadaDaCaptura) {
@@ -1387,6 +1405,7 @@
         const dados = {};
         if (l.dados.apagamentos !== undefined) dados.apagamentos = l.dados.apagamentos;
         if(l.dados.paredePar!==undefined)dados.paredePar=l.dados.paredePar;
+        if (['frente','tras'].includes(l.dados.ordemCamada)) dados.ordemCamada = l.dados.ordemCamada;
         if (l.dados.orgao !== undefined) dados.orgao = l.dados.orgao;
         if(l.dados.uteroX!==undefined){dados.uteroX=l.dados.uteroX;dados.uteroY=l.dados.uteroY;}
         for (const campo of ['x','y','medidaX','medidaY','tamanho','giro','eixoX','eixoY','nomeNoMapa','medida1','medida2','medida3']) dados[campo] = String(l.dados[campo]);
@@ -1658,7 +1677,13 @@
       telaMascara.height = canvas.height;
     }
     const contextoMascara = telaMascara?.getContext("2d", { willReadFrequently: true });
+    let frenteDesenhada = false;
+    const desenharFrente = () => {
+      if (!frenteDesenhada && lesoes.frenteOrgaos && !opcoes.semLesoes) contexto.drawImage(lesoes.frenteOrgaos, 0, 0, canvas.width, canvas.height);
+      frenteDesenhada = true;
+    };
     for (const lesao of opcoes.semLesoes ? [] : lesoes) {
+      if (lesao.dataset.ordemCamada !== 'tras') desenharFrente();
       const imagem = await carregarImagem(lesao.src);
       const geometria = geometriaDaLesao(lesao, canvas.width, canvas.height);
       desenharLesao(contexto, imagem, lesao, geometria, opcoes);
@@ -1668,6 +1693,7 @@
         mascaras.push(recortarAlfa(contextoMascara, geometria, canvas.width, canvas.height));
       }
     }
+    desenharFrente();
     return { canvas, mascaras, caneta };
   }
 

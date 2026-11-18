@@ -34,6 +34,7 @@
   }
   function iniciarUreteres(){if(!preparoUreteres)preparoUreteres=iniciar().then(m=>m?.ureteresProntos).then(()=>{if(!motor)return;ureteresCarregados=true;botaoUreteres.disabled=false;notificar()}).catch(()=>{preparoUreteres=null;botaoUreteres.title='Não foi possível carregar os ureteres. Recarregue a página.'});return preparoUreteres}
   const api={vista,lados,
+   fotografarFrente:()=>motor?.fotografarFrente?.(),
    fotografarCombinacao:(transformar,apenasUreteres)=>motor?.fotografarCombinacao(transformar,apenasUreteres),
    fotografarParaTubas:()=>motor?.fotografarParaTubas(),transformarTuba:(lado,p)=>motor?.transformarTuba(lado,p)||p,
    estado,validar,validarUreteres,ureteres:()=>ureteres,desativar:()=>modo(false),carregando:()=>carregando,

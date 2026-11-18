@@ -79,6 +79,7 @@ window.endomapaCriarOrgaos = async function(canvas, fontes, opcoes) {
   for(const lado of lados)if(ureteresAtivos||grupos[lado].x||grupos[lado].y)desenharGrupo(lado);
  }
  return {
+  fotografarFrente(){const c=novoCanvas(),g=c.getContext('2d');for(const lado of lados){const p=grupos[lado];g.drawImage(camadas[lado].frente,p.x,p.y);}return c;},
   fotografarCombinacao(ligar,apenasUreteres=false){
    const partes=Object.fromEntries(['limpeza','ligamentos','tubas','ovarios'].map(k=>[k,novoCanvas()]));
    partes.ureteres=ureteresAtivos?camadaUreteres:null;

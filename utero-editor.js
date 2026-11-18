@@ -34,6 +34,7 @@
    const ux=(a.yy*vx-a.xy*vy)/det,uy=(-a.yx*vx+a.xx*vy)/det;
    return Math.atan2(-(b.xx*ux+b.xy*uy),b.yx*ux+b.yy*uy)*180/Math.PI;
   },
+  fotografarFrente:()=>motor?.fotografarFrente(),
   fotografar(v){if(v!=='sagital')return null;if(!motor)throw Error('Aguarde o carregamento do útero.');const c=Object.assign(document.createElement('canvas'),{width:1087,height:1447});c.getContext('2d').drawImage(tela,0,0);return c;}
  };
  botao.onclick=()=>{if(!ocupado())modo(!ativo)};
