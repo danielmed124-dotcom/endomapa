@@ -46,21 +46,27 @@
         return;
       }
 
-      perfil.pode_ocultar_anotacoes = String(data.user.email || "").trim().toLowerCase() === "gusvieira2002@gmail.com";
-      perfil.pode_exportar_divulgacao = String(data.user.email || "").trim().toLowerCase() === "danielmed124@gmail.com";
+      const { data: recursos, error: erroRecursos } = await clienteSupabase
+        .from('recursos_conta')
+        .select('pode_ocultar_anotacoes,pode_exportar_divulgacao,indicar_lados_mapas,logo_semeare,logo_granvitta,logo_ana_paula,unidade_medidas,acrescimo_fonte_lesoes_pt,pode_ver_adesao')
+        .eq('user_id', data.user.id).maybeSingle();
+      if (erroRecursos) {
+        mostrarErro('Não foi possível carregar as preferências da sua conta. Atualize a página antes de editar.');
+        return;
+      }
+      Object.assign(perfil, {
+        pode_ocultar_anotacoes: false, pode_exportar_divulgacao: false,
+        indicar_lados_mapas: false, logo_semeare: false, logo_granvitta: false,
+        logo_ana_paula: false, unidade_medidas: 'cm', acrescimo_fonte_lesoes_pt: 0,
+        pode_ver_adesao: false,
+      }, recursos || {});
       // Estado inicial das letras; o botão Inserir lados está disponível para todas as contas.
-      perfil.indicar_lados_mapas = String(data.user.email || "").trim().toLowerCase() === "andreneide@yahoo.com.br";
-      perfil.logo_semeare = ['amandagoncalves1612@gmail.com', 'marcoaureliosala@gmail.com'].includes(String(data.user.email || '').trim().toLowerCase());
       if (perfil.logo_semeare) await window.endomapaLogoSemearePronta;
-      perfil.logo_granvitta = String(data.user.email || '').trim().toLowerCase() === 'claudetegrandi@hotmail.com';
       if (perfil.logo_granvitta) await window.endomapaLogoGranvittaPronta;
-      perfil.logo_ana_paula = String(data.user.email || '').trim().toLowerCase() === 'apcar@uol.com.br';
       if (perfil.logo_ana_paula) await window.endomapaLogoAnaPaulaPronta;
-      perfil.unidade_medidas = String(data.user.email || '').trim().toLowerCase() === 'letibecker@yahoo.com.br' ? 'mm' : 'cm';
       if (perfil.clinica_id && !perfil.logo_semeare && !perfil.logo_granvitta && !perfil.logo_ana_paula) await window.endocartaLogoCentrusPronta;
       try {Object.assign(perfil,await window.endocartaConfiguracoes.carregar(perfil));}
       catch {mostrarErro('Não foi possível carregar suas configurações. Atualize a página antes de editar os mapas.');return;}
-      perfil.acrescimo_fonte_lesoes_pt = String(data.user.email || '').trim().toLowerCase() === 'tuisacaetano21@gmail.com' ? 2 : 0;
       window.endomapaMedico = perfil;
       window.dispatchEvent(
         new CustomEvent("endomapa:perfil-carregado", {

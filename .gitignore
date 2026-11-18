@@ -1,5 +1,7 @@
 # Dependências instaladas no computador
 node_modules/
+dist-publico/
+dist-publico-*/
 
 # Segredos e configurações locais
 .env

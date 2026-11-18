@@ -10,7 +10,7 @@
     let cabecalho = { ativo: false, campos: [] };
     const painel = document.createElement('details');
     painel.className = 'documento-opcoes';
-    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Os dados preenchidos aparecem automaticamente no laudo. Ao abrir um mapa salvo, os valores vêm em branco e os nomes dos campos são mantidos. Baixar PDF, PNG ou JPEG não salva alterações na biblioteca; somente o botão Salvar na biblioteca faz isso.</p>`;
+    painel.innerHTML = `<summary>Dados da paciente (opcional)</summary><div data-campos-paciente></div><button type="button" class="botao botao--secundario" data-novo-campo>Adicionar campo</button><p>Os valores do cabeçalho aparecem no laudo exportado, mas não são enviados ao salvar na biblioteca. A biblioteca guarda o modelo e os nomes dos campos. Não coloque identificação de pacientes no título, nos nomes dos campos ou nas caixas de texto: esses conteúdos são salvos. Baixar PDF, PNG ou JPEG não salva o modelo na biblioteca.</p>`;
     document.querySelector('.editor-manual__area').prepend(painel);
     const campos = painel.querySelector('[data-campos-paciente]');
     function formulario() {

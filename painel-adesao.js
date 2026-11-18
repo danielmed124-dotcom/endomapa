@@ -18,7 +18,7 @@
     if (!cliente || document.querySelector('[data-tela="painel-dia"]')?.hidden) return;
     try {
       const { data, error } = await cliente.auth.getUser();
-      if (atual !== rodada || error || data?.user?.email?.toLowerCase() !== 'danielmed124@gmail.com') return;
+      if (atual !== rodada || error || !data?.user || data.user.id !== window.endomapaMedico?.user_id || !window.endomapaMedico?.pode_ver_adesao) return;
       painel.hidden = false; atualizar.disabled = true;
       estado.textContent = 'Carregando os totais de todos os usuários…';
       const resposta = await cliente.rpc('resumo_adesao_exportacoes');

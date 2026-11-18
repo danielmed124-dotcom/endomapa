@@ -26,8 +26,13 @@
     mensagem('Salvando a montagem na sua conta…');
     try {
       editor.validar(registro.montagem);
+      // Cabeçalho só acompanha o laudo exportado; a biblioteca guarda o modelo.
+      // Uma cópia preserva os dados na tela e na captura usada pela exportação.
+      const modelo = structuredClone(registro.montagem);
+      const campos = modelo.documento?.cabecalho?.campos;
+      if (Array.isArray(campos)) campos.forEach(campo => { campo.valor = ''; });
       const { data, error } = await cliente.rpc('salvar_mapa_manual', {
-        p_id: registro.id, p_titulo: registro.titulo, p_montagem: registro.montagem, p_versao: registro.versao, p_pdf_id: registro.pdf,
+        p_id: registro.id, p_titulo: registro.titulo, p_montagem: modelo, p_versao: registro.versao, p_pdf_id: registro.pdf,
       });
       if (error) {
         if (error.code === '40001') throw erroHistorico('Este mapa foi alterado em outra aba. Sua montagem continua aqui. Reabra o mapa salvo antes de atualizar esse registro.');
@@ -36,7 +41,7 @@
       const mapa = Array.isArray(data) ? data[0] : data;
       if (!mapa || mapa.id !== registro.id || !mapa.versao) throw new Error('Salvamento não confirmado');
       id = mapa.id; versao = mapa.versao; salvo = chave(registro);
-      mensagem(alterado() ? 'Versão salva. Há alterações feitas durante o salvamento; clique em Salvar na biblioteca para guardá-las.' : 'Mapa salvo na biblioteca. Você pode reabri-lo em Meus mapas.');
+      mensagem(alterado() ? 'Versão salva. Há alterações feitas durante o salvamento; clique em Salvar na biblioteca para guardá-las.' : 'Modelo salvo sem os valores do cabeçalho. Os dados continuam na tela para exportar o laudo.');
       return mapa;
     } catch (erro) {
       const texto = erro.historico ? erro.message : 'Não foi possível confirmar o salvamento na sua conta. Confira a conexão e tente novamente. A montagem permanece aberta.' + (registro.pdf ? ' O PDF não foi baixado nesta tentativa.' : '');

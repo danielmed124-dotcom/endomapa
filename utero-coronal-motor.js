@@ -6,16 +6,16 @@ window.endomapaCriarUteroCoronal=async function(canvas){
  const W=1086,H=1448,apoio={x:550,y:700};
  const novo=()=>Object.assign(document.createElement('canvas'),{width:W,height:H});
  const carregar=async src=>{const i=new Image();i.src=src;await i.decode();return i};
- const [original,fundo,semTubas,fundoLimpo,continuacao]=await Promise.all([carregar('assets/mapa-base-coronal-aberto-visitante.png'),carregar('output/utero-coronal/fundo-imagegen-v15.png'),carregar('assets/tubas/fundo-sem-tubas-imagegen-v4.png'),carregar('output/utero-coronal/fundo-imagegen-v11.png'),carregar('output/utero-coronal/continuacao-bexiga-v16.png')]);
+ const [original,fundo,semTubas,fundoLimpo,continuacao]=await Promise.all([carregar('assets/mapa-base-coronal-aberto-visitante.png'),carregar('assets/utero-coronal/fundo-imagegen-v15.png'),carregar('assets/tubas/fundo-sem-tubas-imagegen-v4.png'),carregar('assets/utero-coronal/fundo-imagegen-v11.png'),carregar('assets/utero-coronal/continuacao-bexiga-v16.png')]);
  const ctx=canvas.getContext('2d'),base=novo();base.getContext('2d').drawImage(original,0,0,W,H);
- const fundoInsercoes=await carregar('output/utero-coronal/fundo-insercoes-v29.png'),limpezaInsercoes={};
+ const fundoInsercoes=await carregar('assets/utero-coronal/fundo-insercoes-v29.png'),limpezaInsercoes={};
  for(const [lado,x] of [['esquerda',401],['direita',695]]){
   const c=novo(),g=c.getContext('2d');g.filter='blur(9px)';g.beginPath();g.ellipse(x,490,65,67,0,0,Math.PI*2);g.fill();g.filter='none';g.globalCompositeOperation='source-in';g.drawImage(fundoInsercoes,0,0,W,H);limpezaInsercoes[lado]=c;
  }
- const texturaBordas=novo();texturaBordas.getContext('2d').drawImage(await carregar('output/utero-coronal/textura-bordas-v17.png'),0,0,W,H);
- const texturaDireita=novo();texturaDireita.getContext('2d').drawImage(await carregar('output/utero-coronal/textura-direita-v19.png'),0,0,W,H);
+ const texturaBordas=novo();texturaBordas.getContext('2d').drawImage(await carregar('assets/utero-coronal/textura-bordas-v17.png'),0,0,W,H);
+ const texturaDireita=novo();texturaDireita.getContext('2d').drawImage(await carregar('assets/utero-coronal/textura-direita-v19.png'),0,0,W,H);
  // A imagem nova fornece apenas a ponta: nenhuma mudança no restante da textura.
- const ponta=novo(),pp=ponta.getContext('2d');pp.filter='blur(6px)';pp.fillRect(850,275,65,150);pp.filter='none';pp.globalCompositeOperation='source-in';pp.drawImage(await carregar('output/utero-coronal/textura-ponta-v20.png'),0,0,W,H);
+ const ponta=novo(),pp=ponta.getContext('2d');pp.filter='blur(6px)';pp.fillRect(850,275,65,150);pp.filter='none';pp.globalCompositeOperation='source-in';pp.drawImage(await carregar('assets/utero-coronal/textura-ponta-v20.png'),0,0,W,H);
  const texturaPonta=novo(),tp=texturaPonta.getContext('2d');tp.drawImage(texturaDireita,0,0);tp.drawImage(ponta,0,0);
  // A imagegen corrige apenas a margem externa; o corpo mantém a textura V20.
  const eixoBorda=document.createElementNS('http://www.w3.org/2000/svg','path');
@@ -29,7 +29,7 @@ window.endomapaCriarUteroCoronal=async function(canvas){
  }
  const contornoBorda=new Path2D();[...interna,...externa.reverse()].forEach((p,i)=>i?contornoBorda.lineTo(p.x,p.y):contornoBorda.moveTo(p.x,p.y));contornoBorda.closePath();
  const mascaraBorda=novo(),mb=mascaraBorda.getContext('2d');mb.filter='blur(3px)';mb.fill(contornoBorda);
- const bordaCorrigida=novo(),bc=bordaCorrigida.getContext('2d');bc.drawImage(await carregar('output/utero-coronal/recorte-borda-v25.png'),0,0,W,H);bc.globalCompositeOperation='destination-in';bc.drawImage(mascaraBorda,0,0);
+ const bordaCorrigida=novo(),bc=bordaCorrigida.getContext('2d');bc.drawImage(await carregar('assets/utero-coronal/recorte-borda-v25.png'),0,0,W,H);bc.globalCompositeOperation='destination-in';bc.drawImage(mascaraBorda,0,0);
  tp.globalCompositeOperation='destination-out';tp.drawImage(mascaraBorda,0,0);tp.globalCompositeOperation='source-over';tp.drawImage(bordaCorrigida,0,0);
  const suave=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
  // O contorno termina antes das inserções uterossacras e do colo inferior.
