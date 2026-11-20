@@ -71,6 +71,10 @@ function logoDoPerfil(perfil) {
   return perfil?.logo_ana_paula ? logoAnaPaula : perfil?.logo_granvitta ? logoGranvitta : perfil?.logo_semeare ? logoSemeare : null;
 }
 
+function cecoPresenteNoCoronal(mapa) {
+  return mapa?.dataset.mapaEditor === 'coronal' && Boolean(mapa.querySelector('[data-camada-editor="coronal"] .lesao-editavel[data-nome="Ceco, apêndice e íleo terminal"]'));
+}
+
 function atualizarLadosDosMapas() {
   if (!perfilDosLados) return;
   const nome = perfilDosLados.assinatura || perfilDosLados.nome.trim().split(/\s+/)[0];
@@ -98,6 +102,12 @@ function atualizarLadosDosMapas() {
       botao.hidden = !permitido;
       botao.setAttribute('aria-pressed', String(ativo));
       botao.title = ativo ? 'Lados ligados. Clique para ocultar.' : 'Lados desligados. Clique para inserir.';
+    }
+    if (vista === 'coronal') {
+      const base = mapa.querySelector('[data-mapa-base]');
+      const clinica = Boolean(perfilDosLados.clinica_id) && !logoDoPerfil(perfilDosLados);
+      const src = clinica && !cecoPresenteNoCoronal(mapa) ? base.dataset.srcClinica : base.dataset.srcVisitante;
+      if (base.getAttribute('src') !== src) base.setAttribute('src', src);
     }
     desenharAssinaturaManual(canvas, nome, ativo);
   });
@@ -204,14 +214,16 @@ function desenharAssinaturaManual(canvas, nome, indicarLados = false) {
   const logoPersonalizada = logoDoPerfil(perfilDosLados);
   // A identidade fica acima da anatomia para preservar a cor também nas exportações.
   const centrusAbdome = Boolean(perfilDosLados?.clinica_id) && !logoPersonalizada;
+  const logoNaEsquerda = cecoPresenteNoCoronal(canvas.closest('[data-mapa-editor]'));
+  canvas.dataset.ladoLogo = logoNaEsquerda ? 'esquerdo' : 'direito';
   canvas.hidden = !nome && !indicarLados && !logoPersonalizada && !centrusAbdome;
   if (centrusAbdome && baseLogoCentrus.naturalWidth) {
-    contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, 850, 0, 220, 160);
+    contexto.drawImage(baseLogoCentrus, 850, 0, 220, 160, logoNaEsquerda ? canvas.width - 1070 : 850, 0, 220, 160);
   }
   if (logoPersonalizada?.naturalWidth) {
     const escalaLogo=Math.min(canvas.width*.175/logoPersonalizada.naturalWidth,(perfilDosLados?.configuracoes?.logo_png ? canvas.height*.12 : Infinity)/logoPersonalizada.naturalHeight);
     const larguraLogo=logoPersonalizada.naturalWidth*escalaLogo,alturaLogo=logoPersonalizada.naturalHeight*escalaLogo;
-    contexto.drawImage(logoPersonalizada,canvas.width*.974-larguraLogo,canvas.height*.018,larguraLogo,alturaLogo);
+    contexto.drawImage(logoPersonalizada,logoNaEsquerda ? canvas.width*.026 : canvas.width*.974-larguraLogo,canvas.height*.018,larguraLogo,alturaLogo);
   }
   canvas.setAttribute("aria-label", `Assinatura: ${nome}${indicarLados ? '; E à esquerda e D à direita' : ''}`);
   // Mesma camada na tela e na captura: margens laterais, fora da anatomia.
@@ -302,3 +314,5 @@ if (window.location.hash === "#editor-manual") {
 }
 
 window.endocartaLogoCadastro = perfil => {const original=logoDoPerfil({...perfil,configuracoes:null});return {src:original?.src||null,incorporada:!original&&Boolean(perfil?.clinica_id)}};
+
+window.endocartaAtualizarLogoCoronal = atualizarLadosDosMapas;

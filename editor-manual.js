@@ -455,6 +455,11 @@
         mostrar(`Escolha a vista ${botao.dataset.corteAdenomiose} para inserir esta lesão.`);
         return;
       }
+      if (botao.hasAttribute('data-inserir-ceco')) {
+        ativarVista('coronal');
+        const existente = camada.querySelector('[data-nome="Ceco, apêndice e íleo terminal"]');
+        if (existente) { selecionar(existente); return; }
+      }
       const ladoAtual = lado?.value;
       if (ovariano && (window.endocartaHisterectomias.semOvario(vistaAtiva, ladoAtual) || vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
         mostrar('Este ovário foi retirado no mapa escolhido. Escolha o outro lado ou outro mapa.');
@@ -472,6 +477,8 @@
   });
 
   function posicaoDeInsercao(nome, lado, indice, total) {
+    if (nome === 'Ceco, apêndice e íleo terminal') return { x:78.7, y:25, tamanho:195, nomeNoMapa:'', orgao:'', eixoX:100, eixoY:100 };
+
     if(nome==='Istmocele')return {x:'56.93',y:'39.53',tamanho:'100',giro:'-49',eixoX:'84',eixoY:'154',medidaX:'50',medidaY:'5',medida4:'',medida5:''};
     if (nome === 'Retrocervical' && vistaAtiva === 'coronal') return {"x":"50.8","y":"52.1","giro":"31","tamanho":"30","medidaX":"62","medidaY":"58.5","nomeNoMapa":"Retrocervical"};
     if (nome === 'Ligamento redondo') {
@@ -877,7 +884,7 @@
       for (let tentativa = 0; tentativa < 20 && ocupados.some(item => Math.abs(Number(item.dataset.medidaX) - Number(lesao.dataset.medidaX)) < 20 && Math.abs(Number(item.dataset.medidaY) - y) < 4); tentativa++) y = y >= 86 ? 20 : y + 4;
       lesao.dataset.medidaY = String(y);
     }
-    if (orgaosDaVista(vistaAtiva) && dadosCopiados?.medida1 === undefined) {
+    if (nome !== 'Ceco, apêndice e íleo terminal' && orgaosDaVista(vistaAtiva) && dadosCopiados?.medida1 === undefined) {
       const ladoSomp = /somp-(esquerdo|direito)\.png/.exec(src)?.[1];
       const posicao = ladoSomp && orgaosDaVista(vistaAtiva)?.estado()[ladoSomp];
       if (posicao) { lesao.dataset.x = String(Number(lesao.dataset.x) + posicao.x * 100 / 1086); lesao.dataset.y = String(Number(lesao.dataset.y) + posicao.y * 100 / 1448); }
@@ -893,6 +900,7 @@
     lesao.addEventListener("pointerdown", iniciarMovimento);
     lesao.addEventListener("click", function () { selecionar(lesao); });
     camada.append(lesao);
+    window.endocartaAtualizarLogoCoronal?.();
     atualizarVisual(lesao);
     if(vistaAtiva==='parede-abdominal'&&/endometrioma-parede-v[23]\.png(?:\?|$)/.test(src)&&!restaurandoMontagem){
       lesao.dataset.paredePar=crypto.randomUUID();window.endomapaParede?.inserirPar(lesao.dataset.paredePar);
@@ -917,6 +925,8 @@
     if (botao) botao.textContent = selecionada?.dataset.ordemCamada === 'frente' ? 'Enviar para trás' : 'Trazer para a frente';
   }
   function selecionar(lesao) {
+    document.querySelector('[data-remover-lesao]').textContent = lesao.dataset.nome === 'Ceco, apêndice e íleo terminal' ? 'Excluir estrutura' : 'Excluir esta lesão';
+
     window.endomapaParede?.editarNoPainel(false);
     if(!restaurandoMontagem&&lesao.dataset.paredePar)window.endomapaParede?.ativarPar(lesao.dataset.paredePar);
     const vista = lesao.closest("[data-camada-editor]")?.dataset.camadaEditor;
@@ -972,7 +982,7 @@
       atualizarRotuloDeMedidas(lesao);
     };
     const terminar = function () {
-      if (orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)) lesao.dataset.orgao = orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
+      if (lesao.dataset.nome !== 'Ceco, apêndice e íleo terminal' && orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)) lesao.dataset.orgao = orgaosDaVista(camadaDoMovimento.dataset.camadaEditor)?.localizar(Number(lesao.dataset.x), Number(lesao.dataset.y)) || '';
       if (['sagital','coronal'].includes(camadaDoMovimento.dataset.camadaEditor)) vincularUtero(lesao);
       lesao.removeEventListener("pointermove", mover);
       lesao.removeEventListener("pointerup", terminar);
@@ -1200,6 +1210,7 @@
     camada.querySelector(`[data-medida-id="${selecionada.dataset.id}"]`)?.remove();
     camada.querySelector(`[data-linha-id="${selecionada.dataset.id}"]`)?.remove();
     selecionada.remove();
+    window.endocartaAtualizarLogoCoronal?.();
     atualizarTodasAsLinhas();
     selecionada = null;
     controles.hidden = true;
@@ -1219,6 +1230,7 @@
     }
     documento?.limpar(vistaAtiva);
     camada.replaceChildren();
+    window.endocartaAtualizarLogoCoronal?.();
     selecionada = null;
     controles.hidden = true;
     selecoesPorVista.delete(vistaAtiva);
@@ -1239,6 +1251,8 @@
     return String(nome||'').replace(/\bmiomas?\b/gi,m=>m.toLowerCase().endsWith('s')?'Leiomiomas':'Leiomioma').replace(/^Adenomiose 1$/i,'Adenomiose').replace(/Leiomioma endocavitário/gi,'Leiomioma 4').replace(/Leiomioma pediculado/gi,'Leiomioma 5');
   }
   function vincularUtero(lesao) {
+    if (lesao.dataset.nome === 'Ceco, apêndice e íleo terminal') { delete lesao.dataset.uteroX; delete lesao.dataset.uteroY; return; }
+
     const vista=lesao.closest('[data-camada-editor]')?.dataset.camadaEditor || vistaAtiva;
     const p=uteroDaVista(vista)?.vincular(Number(lesao.dataset.x),Number(lesao.dataset.y));
     if(p){lesao.dataset.uteroX=String(p.x);lesao.dataset.uteroY=String(p.y)}
@@ -1272,7 +1286,7 @@
     const vista=evento.detail?.vista||'coronal';
     ativarVista(vista); definirCaneta(null); controles.hidden = true;
     document.querySelectorAll(`[data-camada-editor="${vista}"] .lesao-editavel`).forEach(l => {
-      if (!l.dataset.orgao) l.dataset.orgao = orgaosDaVista(vista).localizar(Number(l.dataset.x), Number(l.dataset.y)) || '';
+      if (l.dataset.nome !== 'Ceco, apêndice e íleo terminal' && !l.dataset.orgao) l.dataset.orgao = orgaosDaVista(vista).localizar(Number(l.dataset.x), Number(l.dataset.y)) || '';
     });
     mostrar('Arraste um ovário. Toque novamente em Movimentar ovários para voltar a ajustar lesões.');
   });
@@ -1464,7 +1478,7 @@
     aplicarVistasManuais(montagem.escolha); ativarVista(montagem.ativa);
     controles.hidden = !selecionada;
     mostrar('Montagem aberta. Você pode continuar editando.');
-    } finally {restaurandoMontagem=false;}
+    } finally {restaurandoMontagem=false; window.endocartaAtualizarLogoCoronal?.();}
   }
 
   async function baixarMontagemManual(formato = 'png') {
@@ -1530,6 +1544,7 @@
   }
 
   function fotografarAssinatura(camadaDaCaptura = camada) {
+    window.endocartaAtualizarLogoCoronal?.();
     const assinatura = camadaDaCaptura.closest("[data-mapa-editor]")?.querySelector("[data-assinatura-manual]");
     if (!assinatura || assinatura.hidden) return null;
     const copia = document.createElement("canvas");
