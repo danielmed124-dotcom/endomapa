@@ -451,6 +451,10 @@
       if(botao.dataset.nome==='Istmocele' && vistaAtiva!=='sagital'){
         const escolha=document.querySelector('input[name="vistas-editor"][value="sagital"]');escolha.checked=true;escolha.dispatchEvent(new Event('change',{bubbles:true}));ativarVista('sagital');
       }
+      if (botao.dataset.corteAdenomiose && botao.dataset.corteAdenomiose !== vistaAtiva) {
+        mostrar(`Escolha a vista ${botao.dataset.corteAdenomiose} para inserir esta lesão.`);
+        return;
+      }
       const ladoAtual = lado?.value;
       if (ovariano && (window.endocartaHisterectomias.semOvario(vistaAtiva, ladoAtual) || vistaAtiva === 'ooforectomia-bilateral' || vistaAtiva === `ooforectomia-${ladoAtual === 'direito' ? 'direita' : 'esquerda'}`)) {
         mostrar('Este ovário foi retirado no mapa escolhido. Escolha o outro lado ou outro mapa.');
@@ -492,9 +496,26 @@
     } else if (nome === 'Ligamento uterossacro') ponto = sagital ? [70, 47] : [lado === 'direito' ? 59 : 42.5, lado === 'direito' ? 52 : 51.5];
     else if (nome === 'Intestinal') ponto = sagital ? [81, 43] : [46, 68];
     else if (cavidade) ponto = sagital ? [54, 37] : [50.5, nome.startsWith('DIU') ? 39 : 36.5];
+    else if (/^Adenomiose (difusa|discreta) (sagital|coronal)$/.test(nome)) ponto = sagital ? [52.7, 36.5] : [50.8, 37];
     else if (/^(Adenomiose|Leiomioma)/.test(nome)) ponto = sagital ? [51, 32] : [43.5, 36.5];
     if (!ponto) return null;
     const dados = { x: ponto[0], y: ponto[1], medidaX: ponto[0] < 50 ? 18 : 82, medidaY: ponto[1] + 9 };
+    if (/^Adenomiose (difusa|discreta) (sagital|coronal)$/.test(nome)) {
+      dados.nomeNoMapa = nome.replace(/ (sagital|coronal)$/, '');
+      if (nome === 'Adenomiose difusa sagital') {
+        dados.x = 52.1;
+        dados.y = 36.6;
+        dados.eixoX = 96;
+        dados.eixoY = 100;
+      }
+      if (nome.includes('discreta')) {
+        dados.x = sagital ? 52.2 : 51.56;
+        dados.y = sagital ? 35.42 : 36.08;
+        dados.tamanho = sagital ? 166.3 : 170;
+        dados.eixoX = dados.eixoY = 100;
+      }
+      if (sagital) dados.giro = window.endomapaUtero?.estado().angulo || 0;
+    }
     if (nome === 'Ligamento uterossacro') {
       dados.nomeNoMapa = `Ligamento uterossacro ${lado}`;
       if (!sagital) {
@@ -1099,6 +1120,17 @@
     rotulo.addEventListener("pointercancel", terminar);
   }
 
+  function pontaDaIndicacao(lesao, largura, altura) {
+    const g = geometriaDaLesao(lesao, largura, altura);
+    const nome = lesao.dataset.nome || '';
+    if (!/^Adenomiose (difusa|discreta) (sagital|coronal)$/.test(nome)) return { x: largura * Number(lesao.dataset.x) / 100, y: altura * Number(lesao.dataset.y) / 100 };
+    // Ponto dentro da trama, em vez do centro transparente da cavidade.
+    const sagital = nome.endsWith('sagital');
+    const dx = g.largura * (sagital ? 0.12 : 0);
+    const dy = g.altura * (sagital ? -0.21 : -0.32);
+    return { x: g.x + dx * Math.cos(g.giro) - dy * Math.sin(g.giro), y: g.y + dx * Math.sin(g.giro) + dy * Math.cos(g.giro) };
+  }
+
   function atualizarLinhaDeMedida(lesao, visivel) {
     const camadaDaLesao = lesao.closest("[data-camada-editor]");
     const linha = camadaDaLesao?.querySelector(`[data-linha-id="${lesao.dataset.id}"]`);
@@ -1106,8 +1138,9 @@
     linha.hidden = !visivel;
     if (!visivel) return;
     const area = camadaDaLesao.getBoundingClientRect();
-    const inicioX = area.width * Number(lesao.dataset.x) / 100;
-    const inicioY = area.height * Number(lesao.dataset.y) / 100;
+    const ponta = pontaDaIndicacao(lesao, area.width, area.height);
+    const inicioX = ponta.x;
+    const inicioY = ponta.y;
     const fimX = area.width * Number(lesao.dataset.medidaX) / 100;
     const fimY = area.height * Number(lesao.dataset.medidaY) / 100;
     const distancia = Math.hypot(fimX - inicioX, fimY - inicioY);
@@ -1817,8 +1850,9 @@
       if (!estilo) continue;
       const escala = canvas.width / estilo.largura;
       contexto.font = `${estilo.peso} ${estilo.fonte * escala}px ${estilo.familia}`;
-      const inicioX = canvas.width * Number(lesao.dataset.x) / 100;
-      const inicioY = canvas.height * Number(lesao.dataset.y) / 100;
+      const ponta = pontaDaIndicacao(lesao, canvas.width, canvas.height);
+      const inicioX = ponta.x;
+      const inicioY = ponta.y;
       const fimX = canvas.width * Number(lesao.dataset.medidaX) / 100;
       const fimY = canvas.height * Number(lesao.dataset.medidaY) / 100;
       contexto.beginPath();
