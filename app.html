@@ -8,7 +8,7 @@
       content="Monte mapas anatômicos manualmente no Endocarta."
     />
     <title>Área de trabalho | Endocarta</title>
-    <link rel="stylesheet" href="styles.css?v=adenomiose-20261120" />
+    <link rel="stylesheet" href="styles.css?v=falha-peritoneal-20261125" />
     <link rel="stylesheet" href="tubas/editor.css?v=utero-20261112" />
     <link rel="stylesheet" href="painel-adesao.css?v=20261116-numeros">
     <link rel="stylesheet" href="parede-abdominal.css?v=20261101-cor-lupa">
@@ -388,7 +388,7 @@
           <div class="opcao-vista opcao-vista--especiais">
             <label class="opcao-vista__titulo">Mapas especiais <input type="radio" name="vistas-editor" value="especiais" aria-controls="mapa-especial" /></label>
             <label class="rotulo-mapa-especial" for="mapa-especial">Selecione o mapa</label>
-            <select id="mapa-especial" data-mapa-especial><option value="ceco-apendice-ileo-diafragma">Ceco, apêndice, íleo terminal e diafragma</option><option value="parede-abdominal">Parede abdominal</option>
+            <select id="mapa-especial" data-mapa-especial><option value="falha-peritoneal-sagital">Falha peritoneal (sagital)</option><option value="ceco-apendice-ileo-diafragma">Ceco, apêndice, íleo terminal e diafragma</option><option value="parede-abdominal">Parede abdominal</option>
               <option value="ooforectomia-direita">Ooforectomia à direita</option>
               <option value="ooforectomia-esquerda">Ooforectomia à esquerda</option>
               <option value="ooforectomia-bilateral">Ooforectomia bilateral</option>
@@ -645,6 +645,23 @@
               <img src="assets/mapa-base-sagital-novo-visitante-suave.png" data-mapa-base data-src-clinica="assets/mapa-base-sagital-novo-suave.png" data-src-visitante="assets/mapa-base-sagital-novo-visitante-suave.png" alt="Mapa anatômico sagital sem lesões" draggable="false" />
               <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1086" height="1448" role="img" aria-label="Assinatura do médico" hidden></canvas>
               <div class="mapa-editor__camada" data-camada-editor="sagital" aria-label="Lesões adicionadas ao mapa sagital"></div>
+            </div>
+            <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
+          </figure>
+        </section>
+        <section class="vista-manual" data-vista-manual="falha-peritoneal-sagital" aria-labelledby="titulo-falha-peritoneal" hidden>
+          <h2 class="secao-dados__titulo" id="titulo-falha-peritoneal">Falha peritoneal (sagital)</h2>
+          <figure class="mapa-visual mapa-editor" data-mapa-editor="falha-peritoneal-sagital" tabindex="0" aria-label="Mapa sagital com falha peritoneal">
+            <div class="falha-peritoneal-ajustes" data-falha-ajustes style="grid-template-columns:1fr">
+              <label>Tamanho da falha <output data-falha-valor="comprimento">60%</output><input type="range" min="20" max="100" step="1" value="60" data-falha-comprimento disabled></label>
+              <label hidden style="display:none">Profundidade da falha <output data-falha-valor="profundidade">60%</output><input type="range" min="20" max="100" step="1" value="60" data-falha-profundidade disabled></label>
+              <button type="button" class="botao botao--secundario" data-falha-restaurar disabled>Restaurar dimensões originais</button>
+              <p data-falha-aviso role="status"></p>
+            </div>
+            <div class="mapa-editor__desenho">
+              <img src="assets/mapa-base-sagital-novo-visitante-suave.png" data-mapa-base data-src-clinica="assets/mapa-base-sagital-novo-suave.png" data-src-visitante="assets/mapa-base-sagital-novo-visitante-suave.png" alt="Mapa anatômico sagital com falha peritoneal ajustável" draggable="false" />
+              <canvas class="mapa-editor__assinatura" data-assinatura-manual width="1087" height="1447" role="img" aria-label="Assinatura do médico" hidden></canvas>
+              <div class="mapa-editor__camada" data-camada-editor="falha-peritoneal-sagital" aria-label="Lesões adicionadas ao mapa da falha peritoneal"></div>
             </div>
             <figcaption>Arraste a lesão ou o texto com nome e medidas para ajustar suas posições</figcaption>
           </figure>
@@ -938,7 +955,7 @@
     <script src="utero-coronal-editor.js?v=ordem-lesoes-20261118"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="istmocele.js?v=20261105"></script><script src="anastomoses-motores.js?v=20261124g"></script><script src="anastomoses-editor.js?v=20261124g"></script><script src="editor-manual.js?v=anastomoses-20261124g"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="anastomoses-motores.js?v=20261124g"></script><script src="anastomoses-editor.js?v=20261124g"></script><script src="falha-peritoneal-proporcional.js?v=20261125-60"></script><script src="editor-manual.js?v=falha-peritoneal-20261125"></script>
     <script src="historico-manual.js?v=lgpd-modelos-20261118"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   <script src="ordem-lesoes.js?v=ordem-lesoes-20261118"></script></body>

@@ -43,6 +43,8 @@
   let podeOcultarAnotacoes = false;
   if (!camada || !controles) return;
 
+  const vistaFalha = "falha-peritoneal-sagital";
+  const ehVistaSagital = vista => vista === "sagital" || vista === vistaFalha;
   const mapasManuais = Array.from(document.querySelectorAll("[data-mapa-editor]"));
   // A ordem do documento também vale para navegação por teclado e leitura da tela.
   const painelSagital = document.querySelector('[data-vista-manual="sagital"]');
@@ -448,10 +450,10 @@
       grupo.append(inserir);
     }
     botao.addEventListener("click", function () {
-      if(botao.dataset.nome==='Istmocele' && vistaAtiva!=='sagital'){
+      if(botao.dataset.nome==='Istmocele' && !ehVistaSagital(vistaAtiva)){
         const escolha=document.querySelector('input[name="vistas-editor"][value="sagital"]');escolha.checked=true;escolha.dispatchEvent(new Event('change',{bubbles:true}));ativarVista('sagital');
       }
-      if (botao.dataset.corteAdenomiose && botao.dataset.corteAdenomiose !== vistaAtiva) {
+      if (botao.dataset.corteAdenomiose && botao.dataset.corteAdenomiose !== (ehVistaSagital(vistaAtiva)?"sagital":vistaAtiva)) {
         mostrar(`Escolha a vista ${botao.dataset.corteAdenomiose} para inserir esta lesão.`);
         return;
       }
@@ -470,7 +472,7 @@
       const posicaoInicial = posicaoDeInsercao(botao.dataset.nome, ladoAtual, indice, total) || (botao.dataset.vistaInicial === vistaAtiva
         ? { x: botao.dataset.xInicial, y: botao.dataset.yInicial }
         : null);
-      adicionarLesao(vistaAtiva === 'sagital' && botao.dataset.modeloSagital || botao.dataset.modelo, botao.dataset.nome, vistaAtiva === 'sagital' && botao.dataset.proporcaoSagital || botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, vistaAtiva === 'sagital' && botao.dataset.modeloSagital ? '5' : botao.dataset.tamanhoMinimo, posicaoInicial);
+      adicionarLesao(ehVistaSagital(vistaAtiva) && botao.dataset.modeloSagital || botao.dataset.modelo, botao.dataset.nome, ehVistaSagital(vistaAtiva) && botao.dataset.proporcaoSagital || botao.dataset.proporcao, botao.dataset.semRecorte, botao.dataset.tamanhoInicial, botao.dataset.giroInicial, ehVistaSagital(vistaAtiva) && botao.dataset.modeloSagital ? '5' : botao.dataset.tamanhoMinimo, posicaoInicial);
       }
       if (total > 1) mostrar(`${total} folículos inseridos no ovário ${ladoAtual}. Você pode ajustar cada um separadamente.`);
     });
@@ -487,10 +489,10 @@
       return { ...(vistaAtiva === 'coronal' ? posicoes[lado] : {}), nomeNoMapa: 'Ligamento redondo ' + lado };
     }
     if (nome === 'Intestinal coronal' && vistaAtiva === 'coronal') return {"nome":"Intestinal coronal","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"39.9","y":"63.0","giro":"0","tamanho":"160","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"18","medidaY":"77"};
-    if (nome === 'Intestinal sagital' && vistaAtiva === 'sagital') return {"nome":"Intestinal sagital","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"73.3","y":"39.8","giro":"-75","tamanho":"130","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"82","medidaY":"52"};
+    if (nome === 'Intestinal sagital' && ehVistaSagital(vistaAtiva)) return {"nome":"Intestinal sagital","nomeNoMapa":"Intestinal","proporcao":"1.6683831101956745","semRecorte":"true","x":"73.3","y":"39.8","giro":"-75","tamanho":"130","tamanhoMinimo":"5","eixoX":"100","eixoY":"100","medida1":"","medida2":"","medida3":"","medidaX":"82","medidaY":"52"};
 
     if (vistaAtiva === 'parede-abdominal') return null;
-    const sagital = vistaAtiva === 'sagital';
+    const sagital = ehVistaSagital(vistaAtiva);
     const ovariano = /^(Folículo|Cisto|Endometrioma|Corpo Lúteo|Cisto hemorrágico|Teratoma)$/.test(nome);
     const cavidade = /^(Pólipo|DIU|Leiomioma 4\b|Leiomioma endocavitário)/.test(nome);
     let ponto;
@@ -521,7 +523,7 @@
         dados.tamanho = sagital ? 166.3 : 170;
         dados.eixoX = dados.eixoY = 100;
       }
-      if (sagital) dados.giro = window.endomapaUtero?.estado().angulo || 0;
+      if (sagital) dados.giro = uteroDaVista(vistaAtiva)?.estado().angulo || 0;
     }
     if (nome === 'Ligamento uterossacro') {
       dados.nomeNoMapa = `Ligamento uterossacro ${lado}`;
@@ -543,10 +545,11 @@
       if (nome.startsWith('DIU')) {
         dados.x = 53;
         dados.y = 36.5;
-        dados.giro = window.endomapaUtero?.orientar(dados.x*1087/100,dados.y*1447/100,-58,0,window.endomapaUtero.estado().angulo) ?? -58;
+        const motor=uteroDaVista(vistaAtiva);
+        dados.giro = motor?.orientar(dados.x*1087/100,dados.y*1447/100,-58,0,motor.estado().angulo) ?? -58;
         dados.tamanho = 65;
       }
-      const p = window.endomapaUtero?.posicao(dados.x * 1087 / 100, dados.y * 1447 / 100);
+      const p = uteroDaVista(vistaAtiva)?.posicao(dados.x * 1087 / 100, dados.y * 1447 / 100);
       if (p) { dados.x = p.x * 100 / 1087; dados.y = p.y * 100 / 1447; }
     }
     return dados;
@@ -746,6 +749,7 @@
     const opcoesHidrosalpinge = document.querySelector('[data-opcoes-hidrosalpinge]');
     if (opcoesHidrosalpinge) opcoesHidrosalpinge.hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'hidrosalpinge';
     document.querySelector('[data-opcoes-histerectomia]').hidden = escolha !== 'especiais' || document.querySelector('[data-mapa-especial]').value !== 'histerectomia';
+    opcaoEspecialSagital.hidden = escolha === "especiais" && resolverVista(escolha) === vistaFalha;
     const vistasVisiveis = vistasDaEscolha(escolha);
     escolha = resolverVista(escolha);
     document.querySelectorAll("[data-vista-manual]").forEach(function (vista) {
@@ -768,7 +772,7 @@
   function vistasDaEscolha(escolha) {
     if (escolha === 'ambas') return ['coronal', 'sagital'];
     const vista = resolverVista(escolha);
-    return escolha === 'especiais' && incluirSagital.checked ? [vista, 'sagital'] : [vista];
+    return escolha === 'especiais' && vista !== vistaFalha && incluirSagital.checked ? [vista, 'sagital'] : [vista];
   }
 
   function nomeDaVista(vista) {
@@ -803,13 +807,13 @@
     documento?.ativar(vistaAtiva);
     window.endocartaAnastomoses.ativar(vistaAtiva);
     document.querySelectorAll('[data-alternar-vista]').forEach(item=>{
-      item.classList.toggle('vista-selecionada',item.dataset.alternarVista===(vistaAtiva==='sagital'?'sagital':'coronal'));
+      item.classList.toggle('vista-selecionada',item.dataset.alternarVista===(ehVistaSagital(vistaAtiva)?'sagital':'coronal'));
     });
     const alternar=document.querySelector('[data-alternar-mapa]');
     if(alternar){
       alternar.disabled=vistasDaEscolha(document.querySelector('input[name="vistas-editor"]:checked')?.value).length!==2;
       alternar.title=alternar.disabled?'Selecione duas vistas para alternar':'Ir para a outra vista selecionada';
-      alternar.setAttribute('aria-label',alternar.disabled?'Alternar vistas: selecione duas vistas':`Alternar para a vista ${vistaAtiva==='sagital'?'coronal':'sagital'}`);
+      alternar.setAttribute('aria-label',alternar.disabled?'Alternar vistas: selecione duas vistas':`Alternar para a vista ${ehVistaSagital(vistaAtiva)?'coronal':'sagital'}`);
     }
     const indicacao = document.querySelector("[data-vista-em-edicao]");
     if (indicacao) indicacao.textContent = `Adicionando lesões à vista ${nomeDaVista(vistaAtiva)}.`;
@@ -836,7 +840,7 @@
       mostrar(`${selecionada.dataset.nome} copiada com os ajustes atuais. Use Ctrl+V para colar.`);
     } else if (comando && !evento.shiftKey && tecla === "v" && imagemCopiada) {
       evento.preventDefault();
-      if(imagemCopiada.dados.nome==='Istmocele'&&vistaAtiva!=='sagital'){mostrar('Escolha a vista sagital para colar a istmocele.');return;}
+      if(imagemCopiada.dados.nome==='Istmocele'&&!ehVistaSagital(vistaAtiva)){mostrar('Escolha a vista sagital para colar a istmocele.');return;}
       if (evento.repeat) return;
       const dados = { ...imagemCopiada.dados };
       delete dados.id;
@@ -1235,6 +1239,7 @@
     if (vistaAtiva === 'parede-abdominal') window.endomapaParede?.restaurar();
     orgaosDaVista(vistaAtiva)?.restaurar();
     if (vistaAtiva === 'sagital') window.endomapaUtero?.restaurar();
+    if (vistaAtiva === vistaFalha) window.endocartaFalhaPeritoneal.restaurar();
     window.endomapaTubas?.restaurar(vistaAtiva);
     const caneta = canetas.get(vistaAtiva);
     if (caneta) {
@@ -1273,7 +1278,7 @@
   }
   function uteroDaVista(vista) { return vista==='coronal'?window.endomapaUteroCoronal:vista==='sagital'?window.endomapaUtero:null; }
   function orgaosDaVista(vista) { return window.endomapaOrgaos?.paraVista?.(vista)||(vista==='coronal'?window.endomapaOrgaos:null); }
-  function fotografarOrgaos(vista) { return window.endomapaParede?.fotografar(vista)||window.endomapaUteroCoronal?.fotografar(vista)||window.endomapaTubas?.fotografar(vista)||window.endomapaUtero?.fotografar(vista)||orgaosDaVista(vista)?.fotografar(vista); }
+  function fotografarOrgaos(vista) { return window.endocartaFalhaPeritoneal.fotografar(vista)||window.endomapaParede?.fotografar(vista)||window.endomapaUteroCoronal?.fotografar(vista)||window.endomapaTubas?.fotografar(vista)||window.endomapaUtero?.fotografar(vista)||orgaosDaVista(vista)?.fotografar(vista); }
   window.addEventListener('endomapa:movimentar-parede',()=>{ativarVista('parede-abdominal');definirCaneta(null);controles.hidden=true;});
   window.addEventListener('endomapa:alterar-tubas',()=>{definirCaneta(null);controles.hidden=true;});
   window.addEventListener('endomapa:movimentar-utero',evento=>{
@@ -1356,6 +1361,7 @@
         utero: uteroDaVista(vista)?.estado(),
         tubas: window.endomapaTubas?.estado(vista),
         parede: vista === 'parede-abdominal' ? window.endomapaParede?.estado() : undefined,
+        falhaPeritoneal: vista === vistaFalha ? window.endocartaFalhaPeritoneal.estado() : undefined,
         lesoes: fotografarLesoes(mapa.querySelector('[data-camada-editor]')).map(lesao => {
           const dados = { ...lesao.dataset }; delete dados.id;
           return { src: new URL(lesao.src, document.baseURI).pathname.replace(/^\//, ''), dados };
@@ -1395,6 +1401,8 @@
     // Mapas salvos antes do mapa abdominal continuam abrindo sem esta vista.
     if (!Object.hasOwn(vistas, 'ceco-apendice-ileo-diafragma')) vistas['ceco-apendice-ileo-diafragma'] = {lesoes:[],tracos:[]};
     if (!Object.hasOwn(vistas, 'parede-abdominal')) vistas['parede-abdominal'] = {lesoes:[],tracos:[]};
+    if (!Object.hasOwn(vistas, vistaFalha)) vistas[vistaFalha] = {lesoes:[],tracos:[]};
+    window.endocartaFalhaPeritoneal.validar(vistas[vistaFalha].falhaPeritoneal);
     window.endomapaParede?.validar(vistas['parede-abdominal']?.parede);
     for (const lado of lados) if (!Object.hasOwn(vistas, lado)) vistas[lado] = { lesoes: [], tracos: [] };
     // Valida tudo antes de remover a montagem aberta. Fontes vêm somente da biblioteca.
@@ -1426,7 +1434,7 @@
           if(!['sagital','coronal'].includes(id)||!Number.isFinite(Number(l.dados.uteroX))||!Number.isFinite(Number(l.dados.uteroY))||Number(l.dados.uteroX)<0||Number(l.dados.uteroX)>1087||Number(l.dados.uteroY)<0||Number(l.dados.uteroY)>1447) falhar();
         }
         const istmocele=l.src==='assets/lesoes/istmocele-v9.png';
-        if(istmocele&&id!=='sagital')falhar();
+        if(istmocele&&!ehVistaSagital(id))falhar();
         for(const c of ['medida4','medida5'])if(l.dados[c]!==undefined&&(typeof l.dados[c]!=='string'||l.dados[c].length>40))falhar();
         for (const [campo,min,max] of [['x',0,100],['y',0,100],['medidaX',0,100],['medidaY',0,100],['tamanho',5,250],['giro',-180,180],['eixoX',istmocele?5:10,istmocele?400:300],['eixoY',istmocele?5:10,istmocele?400:300]]) {
           if (!Number.isFinite(Number(l.dados[campo])) || Number(l.dados[campo]) < min || Number(l.dados[campo]) > max) falhar();
@@ -1455,6 +1463,7 @@
     window.endomapaUtero?.restaurar(vistas.sagital.utero);
     window.endomapaUteroCoronal?.restaurar(vistas.coronal.utero);
     window.endomapaParede?.restaurar(vistas['parede-abdominal'].parede);
+    window.endocartaFalhaPeritoneal.restaurar(vistas[vistaFalha].falhaPeritoneal);
     window.endomapaTubas?.restaurarTodas(vistas).catch(erro=>mostrar(erro.message));
     if (opcaoEscalaCinza) opcaoEscalaCinza.checked = montagem.escalaCinza === true;
     if (controleTransparenciaCinza) controleTransparenciaCinza.value = String(montagem.transparenciaCinza ?? 0);
@@ -1506,7 +1515,7 @@
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!window.endocartaAnastomoses.tem(vistaAtiva) && !camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaUteroCoronal?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal') {
+    if (!window.endocartaAnastomoses.tem(vistaAtiva) && !camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaUteroCoronal?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal' && vistaAtiva !== vistaFalha) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
