@@ -333,7 +333,7 @@
 
         <section data-painel-adesao hidden aria-labelledby="titulo-adesao">
           <h2 id="titulo-adesao">Mapas gerados — todos os usuários</h2>
-          <p class="texto-apoio">Cada arquivo PDF, PNG ou JPEG preparado para liberação conta uma vez, inclusive novas cópias e fusão 3D/Hycosy. Não representa pacientes ou exames únicos nem confirma salvamento no aparelho. Horário de Brasília; semana de domingo a sábado; mês atual, desde o dia 1º.</p>
+          <p class="texto-apoio">Cada PDF, PNG, JPEG ou mapa preparado para copiar conta uma vez, inclusive novas cópias e fusão 3D/Hycosy. Não representa pacientes ou exames únicos nem confirma salvamento no aparelho. Horário de Brasília; semana de domingo a sábado; mês atual, desde o dia 1º.</p>
           <div class="adesao-contadores" data-numeros-adesao hidden>
             <div class="painel-total"><span class="painel-total__rotulo">Hoje</span><strong class="painel-total__numero" data-adesao="hoje">—</strong></div>
             <div class="painel-total"><span class="painel-total__rotulo">Nesta semana</span><strong class="painel-total__numero" data-adesao="semana">—</strong></div>
@@ -879,8 +879,8 @@
         </label>
         <button class="botao" type="button" data-salvar-manual>Salvar na biblioteca</button>
         <p class="mensagem-formulario" data-estado-salvar-manual role="status" aria-live="polite" hidden></p>
-        <p class="texto-apoio">Somente Salvar na biblioteca guarda esta montagem em Meus mapas. Baixar PDF, PNG ou JPEG não salva o mapa na biblioteca.</p>
-        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de baixar. O PDF usa folhas A4, com uma página por vista selecionada.</p>
+        <p class="texto-apoio">Somente Salvar na biblioteca guarda esta montagem em Meus mapas. Copiar ou baixar o mapa não salva a montagem na biblioteca.</p>
+        <p class="texto-apoio">Confira a posição das lesões, os nomes e as medidas antes de copiar ou baixar. A cópia usa a vista ativa. O PDF usa folhas A4, com uma página por vista selecionada.</p>
         <button class="botao botao--secundario" type="button" data-limpar-mapa>Limpar mapa</button>
         <button class="link-voltar" type="button" data-tela-alvo="novo-mapa">Voltar ao início</button>
         <p class="mensagem-formulario" data-estado-mapa-manual role="status" aria-live="polite" hidden></p>
@@ -888,7 +888,8 @@
           <input type="checkbox" data-exportar-divulgacao aria-describedby="ajuda-exportar-divulgacao" />
           <span>Exportar para divulgação</span>
         </label>
-        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para baixar PNG, JPEG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
+        <p class="texto-apoio" id="ajuda-exportar-divulgacao" data-opcao-divulgacao hidden>Marque para copiar o mapa ou baixar PNG, JPEG ou PDF sem logo da clínica, marca-d’água e assinatura do médico. A montagem na tela permanece igual.</p>
+        <button class="botao botao--secundario" type="button" data-copiar-mapa-manual>Copiar mapa</button>
         <button class="botao botao--secundario" type="button" data-baixar-mapa-manual>Baixar montagem manual (PNG)</button>
         <button class="botao botao--secundario" type="button" data-baixar-jpeg-manual>Baixar montagem manual (JPEG)</button>
         <button class="botao" type="button" data-baixar-pdf-manual>Gerar PDF A4</button>
@@ -929,7 +930,7 @@
       crossorigin="anonymous"
     ></script>
     <script src="supabase-config.js?v=endocarta-c272b9047729"></script>
-    <script src="contador-exportacoes.js?v=20261031-1"></script>
+    <script src="contador-exportacoes.js?v=20261125-copiar"></script>
     <script src="painel-adesao.js?v=privacidade-20261118"></script>
     <script src="configuracoes.js?v=transparencia-20261115"></script>
     <script src="app-auth.js?v=privacidade-20261118"></script>
@@ -955,7 +956,7 @@
     <script src="utero-coronal-editor.js?v=ordem-lesoes-20261118"></script>
     <script src="parede-abdominal.js?v=20261101-cor-lupa"></script>
     <script src="abdome-folha.js?v=20261104"></script>
-    <script src="istmocele.js?v=20261105"></script><script src="anastomoses-motores.js?v=20261124g"></script><script src="anastomoses-editor.js?v=20261124g"></script><script src="falha-peritoneal-proporcional.js?v=20261125-60"></script><script src="editor-manual.js?v=falha-peritoneal-20261125"></script>
+    <script src="istmocele.js?v=20261105"></script><script src="anastomoses-motores.js?v=20261124g"></script><script src="anastomoses-editor.js?v=20261124g"></script><script src="falha-peritoneal-proporcional.js?v=20261125-60"></script><script src="editor-manual.js?v=20261125-copiar"></script>
     <script src="historico-manual.js?v=lgpd-modelos-20261118"></script>
     <script src="fusao-integracao.js?v=contador-20261031-1"></script>
   <script src="ordem-lesoes.js?v=ordem-lesoes-20261118"></script></body>

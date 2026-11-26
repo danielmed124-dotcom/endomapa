@@ -43,5 +43,38 @@
       return { id: evento.id, acionamentoConfirmado: false };
     }
   }
-  window.endocartaExportacoes = Object.freeze({ baixar });
+  async function copiar(prepararImagem) {
+    const cliente = window.endomapaSupabase;
+    if (!cliente) throw falha();
+    if (!navigator.clipboard?.write || typeof ClipboardItem !== 'function') {
+      throw new Error('Este navegador não permite copiar imagens. Use a opção PNG.');
+    }
+    const evento = { id: crypto.randomUUID(), formato: 'png', ferramenta: 'mapa' };
+    let cancelado = false;
+    let erroPreparo;
+    // A escrita começa no clique, inclusive no Safari. A imagem só é entregue
+    // à área de transferência depois do registro confirmado, como no download.
+    const imagem = Promise.resolve().then(async () => {
+      const blob = await prepararImagem();
+      if (cancelado) throw new Error('Cópia cancelada');
+      await registrar(cliente, evento, 'preparado');
+      return blob;
+    }).catch(erro => { erroPreparo = erro; throw erro; });
+    // Alguns navegadores rejeitam a escrita antes de consumir a promessa.
+    imagem.catch(() => {});
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': imagem })]);
+    } catch (_) {
+      cancelado = true;
+      if (erroPreparo?.exportacao) throw erroPreparo;
+      throw new Error('Não foi possível copiar o mapa. Confira a permissão do navegador ou use a opção PNG.');
+    }
+    try {
+      await registrar(cliente, evento, 'acionado');
+      return { id: evento.id, acionamentoConfirmado: true };
+    } catch (_) {
+      return { id: evento.id, acionamentoConfirmado: false };
+    }
+  }
+  window.endocartaExportacoes = Object.freeze({ baixar, copiar });
 })();

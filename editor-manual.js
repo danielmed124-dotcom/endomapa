@@ -595,6 +595,7 @@
   });
   document.querySelector("[data-limpar-mapa]").addEventListener("click", limparMapa);
   const botaoBaixar = document.querySelector("[data-baixar-mapa-manual]");
+  const botaoCopiar = document.querySelector('[data-copiar-mapa-manual]');
   const botaoJpeg = document.querySelector('[data-baixar-jpeg-manual]');
   const botaoPdf = document.querySelector("[data-baixar-pdf-manual]");
   const exportarDivulgacao = document.querySelector("[data-exportar-divulgacao]");
@@ -653,6 +654,7 @@
     atualizarBotaoAnotacoes();
   });
   botaoBaixar?.addEventListener("click", () => baixarMontagemManual('png'));
+  botaoCopiar?.addEventListener('click', copiarMontagemManual);
   botaoJpeg?.addEventListener('click', () => baixarMontagemManual('jpeg'));
   botaoPdf?.addEventListener("click", baixarPdfManual);
   document.querySelectorAll("[data-editar-vista]").forEach(function (botao) {
@@ -1510,12 +1512,45 @@
     } finally {restaurandoMontagem=false; window.endocartaAtualizarLogoCoronal?.();}
   }
 
+  function vistaTemConteudo() {
+    return !(!window.endocartaAnastomoses.tem(vistaAtiva) && !camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaUteroCoronal?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal' && vistaAtiva !== vistaFalha);
+  }
+
+  async function copiarMontagemManual() {
+    if (exportacaoEmAndamento || window.endomapaHistoricoManual?.ocupado()) return;
+    estadoMapa.hidden = false;
+    if (!vistaTemConteudo()) {
+      estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaAtiva)} antes de copiar a montagem.`;
+      return;
+    }
+    if (!window.endocartaExportacoes?.copiar) {
+      estadoMapa.textContent = 'Não foi possível carregar o controle de cópia. Atualize a página e tente novamente.';
+      return;
+    }
+    const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
+    definirExportacaoEmAndamento(true);
+    estadoMapa.textContent = 'Preparando e registrando o mapa para copiar…';
+    try {
+      const registro = await window.endocartaExportacoes.copiar(async () => {
+        const imagem = await capturarMapa({ formato: 'image/png', divulgacao });
+        const bytes = Uint8Array.from(atob(imagem.split(',')[1]), caractere => caractere.charCodeAt(0));
+        return new Blob([bytes], { type: 'image/png' });
+      });
+      estadoMapa.textContent = 'Mapa copiado com sucesso! Cole como imagem no seu laudo ou em outro aplicativo compatível.';
+      if (!registro.acionamentoConfirmado) estadoMapa.textContent += ' O mapa foi registrado, mas a confirmação da cópia está pendente.';
+    } catch (erro) {
+      estadoMapa.textContent = erro.message || 'Não foi possível copiar o mapa. Sua montagem continua no editor.';
+    } finally {
+      definirExportacaoEmAndamento(false);
+    }
+  }
+
   async function baixarMontagemManual(formato = 'png') {
     if (exportacaoEmAndamento) return;
     const vistaDaCaptura = vistaAtiva;
     const divulgacao = podeExportarDivulgacao && Boolean(exportarDivulgacao?.checked);
     estadoMapa.hidden = false;
-    if (!window.endocartaAnastomoses.tem(vistaAtiva) && !camada.querySelector(".lesao-editavel") && !canetas.get(vistaAtiva)?.tracos.length && !documento?.temTexto(vistaAtiva) && !orgaosDaVista(vistaAtiva)?.alterado(vistaAtiva) && !window.endomapaUtero?.alterado(vistaAtiva) && !window.endomapaUteroCoronal?.alterado(vistaAtiva) && !window.endomapaTubas?.alterado(vistaAtiva) && vistaAtiva !== 'parede-abdominal' && vistaAtiva !== vistaFalha) {
+    if (!vistaTemConteudo()) {
       estadoMapa.textContent = `Adicione pelo menos uma lesão, um texto ou um desenho à vista ${nomeDaVista(vistaDaCaptura)} antes de baixar a montagem.`;
       return;
     }
@@ -1554,6 +1589,7 @@
   function definirExportacaoEmAndamento(ocupado) {
     exportacaoEmAndamento = ocupado;
     if (botaoBaixar) botaoBaixar.disabled = ocupado;
+    if (botaoCopiar) botaoCopiar.disabled = ocupado;
     if (botaoJpeg) botaoJpeg.disabled = ocupado;
     if (botaoPdf) botaoPdf.disabled = ocupado;
     if (exportarDivulgacao) exportarDivulgacao.disabled = ocupado;
